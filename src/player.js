@@ -97,7 +97,7 @@ export class Player {
   refreshCarry() {
     const hide = this.cameraMode || this.carryHidden;
     this.axe.visible = this.carry === 'axe' && !hide;
-    this.phone.visible = this.carry === 'phone' && !hide;
+    this.phone.visible = this.carry === 'phone' && !hide;   // carry 'none' = hands in pockets
   }
   setCarry(c) { this.carry = c; this.raiseTo = 0; this.refreshCarry(); }
   look(dx, dy) { this.yaw -= dx; this.pitch = clamp(this.pitch - dy, -1.45, 1.45); }

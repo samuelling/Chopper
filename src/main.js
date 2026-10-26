@@ -275,7 +275,7 @@ async function boot() {
   const phone = new Phone({ audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     onOpen: () => { phoneOn = true; player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry(player.carry === 'axe' ? 'phone' : 'axe'); ui.toast(player.carry === 'axe' ? 'Axe in hand. Q for your phone.' : 'Phone in hand.', 1.4); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry({ phone: 'axe', axe: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.4); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) {
       if (phone.isOpen) phone.close();
       else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 380); }
@@ -320,7 +320,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q axe · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q phone/axe/away · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }

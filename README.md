@@ -13,7 +13,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | | |
 |---|---|
 | WASD / Shift / Space | walk / hurry / hop |
-| Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** swaps it for the axe, and click swings the axe (a big tree takes several swings) |
+| Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe and empty hands, and click swings the axe (a big tree takes several swings) |
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
