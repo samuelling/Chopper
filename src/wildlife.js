@@ -94,7 +94,7 @@ export function makeInstanced(geo, cap) {
 export class Wildlife {
   /** @param lake the lake object (level / originalLevel) */
   constructor(scene, lake, { mobile = false } = {}) {
-    this.lake = lake;
+    this.lake = lake; this.chunks = null; this.fx = null;
     this.rng = mulberry32(4242);
     this.t = 0;
     const schools = mobile ? 2 : 3, perSchool = mobile ? 4 : 5, turtles = mobile ? 1 : 2;
@@ -126,6 +126,19 @@ export class Wildlife {
     this._b.compose(pivot, this._q2.setFromEuler(this._e2.set(rx, ry, rz, 'YXZ')), this._one);
     return out.multiplyMatrices(parent, this._b);
   }
+  /** pose one turtle from explicit parameters (basking, scurrying) */
+  _poseTurtle(n, o) {
+    const T = this._tv || (this._tv = new THREE.Vector3()), k = o.k;
+    this._body.compose(this._p.set(o.x, o.y, o.z), this._q.setFromEuler(this._e.set(o.pitch || 0, o.h, o.roll || 0, 'YXZ')), this._s.set(k, k, k));
+    this._set(this.turtle.shell, n, this._body);
+    this._attach(this._a, this._body, T.set(0, 0.04, 0.38 + o.ext * 0.5), o.hp || 0, o.hy || 0, 0);
+    this._set(this.turtle.head, n, this._a);
+    for (let f = 0; f < 4; f++) {
+      const sg = f & 1 ? -1 : 1, front = f < 2, [ry, rz] = o.fl(f);
+      this._attach(this._a, this._body, T.set(sg * 0.3, 0.0, front ? 0.2 : -0.2), 0, sg * ry, -sg * rz * 0.5);
+      this._set(sg > 0 ? this.turtle.flipR : this.turtle.flipL, n * 2 + (front ? 0 : 1), this._a);
+    }
+  }
   _set(g, i, m) { g.fill.setMatrixAt(i, m); g.line.setMatrixAt(i, m); }
 
   depthAt(x, z) { return this.lake.level - groundY(x, z); }
@@ -142,7 +155,7 @@ export class Wildlife {
     return null;
   }
 
-  update(dt, player) {
+  update(dt, player, speed = 0) {
     this.t += dt;
     const lake = this.lake, px = player.x, pz = player.z;
     const full = lake.level > lake.originalLevel - 1.4 && !lake.drained;
@@ -204,11 +217,70 @@ export class Wildlife {
 
     for (const tu of this.turtles) {
       if (full && (!tu.active || tu.bad > 2.5 || Math.hypot(tu.x - px, tu.z - pz) > 80)) {
-        const spot = this._place(px, pz, 0.7, 2.6, 8, 38);
-        if (spot) { [tu.x, tu.z] = spot; tu.active = true; tu.bad = 0; tu.surf = 0; tu.cycle = 6 + this.rng() * 20; } else tu.active = false;
+        if (tu.bask) { tu.bask.taken = false; tu.bask = null; }
+        tu.mode = 'swim';
+        let placed = false;
+        // often start out basking on a log or rock that breaks the surface
+        if (this.chunks && this.rng() < 0.6) {
+          const spots = this.chunks.baskSpots(px, pz, 10, 45).filter((q) => !q.taken);
+          if (spots.length) {
+            const sp = spots[(this.rng() * spots.length) | 0];
+            sp.taken = true; tu.bask = sp; tu.mode = 'bask';
+            const off = sp.len ? (this.rng() - 0.5) * sp.len * 1.2 : 0;
+            tu.x = sp.x + Math.cos(sp.yaw) * off; tu.z = sp.z - Math.sin(sp.yaw) * off;
+            tu.h = sp.len ? sp.yaw + Math.PI / 2 + (this.rng() < 0.5 ? 0 : Math.PI) : this.rng() * 6.28;
+            tu.active = true; tu.bad = 0; tu.surf = 0; tu.k = 0; tu.stroke = 0; tu.cycle = 30 + this.rng() * 30; placed = true;
+          }
+        }
+        if (!placed) {
+          const spot = this._place(px, pz, 0.7, 2.6, 8, 38);
+          if (spot) { [tu.x, tu.z] = spot; tu.active = true; tu.bad = 0; tu.surf = 0; tu.cycle = 6 + this.rng() * 20; } else tu.active = false;
+        }
       }
-      if (!full) tu.active = false;
+      if (!full) { tu.active = false; if (tu.bask) { tu.bask.taken = false; tu.bask = null; } }
       if (!tu.active) continue;
+      const dpT = Math.hypot(tu.x - px, tu.z - pz);
+      if (tu.mode === 'bask') {
+        // the player running past (faster = noticed from further away) sends it into the water
+        if (dpT < 6 + (speed || 0) * 1.4) {
+          const sp = tu.bask;
+          const gx = groundY(tu.x + 1, tu.z) - groundY(tu.x - 1, tu.z), gz = groundY(tu.x, tu.z + 1) - groundY(tu.x, tu.z - 1);
+          let vx = -gx * 2, vz = -gz * 2;                            // downhill: toward deeper water
+          const l = dpT || 1; vx += (tu.x - px) / l * 0.7; vz += (tu.z - pz) / l * 0.7;
+          tu.th = Math.atan2(vx, vz); tu.mode = 'scurry'; tu.st = 0; tu.splashed = false;
+          if (sp) { sp.taken = false; tu.bask = null; }
+        } else {
+          const bob = 0.004 * Math.sin(this.t * 1.1 + tu.ph);
+          const stretch = 0.5 + 0.5 * Math.sin(this.t * 0.35 + tu.ph);
+          const sp = tu.bask;
+          this._poseTurtle(nTur++, {
+            x: tu.x, y: (sp ? sp.top : lake.level + 0.1) + bob, z: tu.z, h: tu.h, k: tu.sc * 0.9, pitch: 0.02, roll: 0,
+            ext: 0.1 + 0.08 * stretch, hp: -0.18 - 0.1 * stretch, hy: Math.sin(this.t * 0.3 + tu.ph) * 0.5,
+            fl: (f) => (f < 2 ? [-0.55, 0.45] : [0.55, 0.4]),         // flippers splayed out flat to the sun
+          });
+          continue;
+        }
+      }
+      if (tu.mode === 'scurry') {
+        tu.st += dt;
+        const dh = Math.atan2(Math.sin(tu.th - tu.h), Math.cos(tu.th - tu.h)); tu.h += dh * Math.min(1, dt * 9);
+        const sp = Math.max(0, 1.9 - tu.st * 0.8);
+        tu.x += Math.sin(tu.h) * sp * dt; tu.z += Math.cos(tu.h) * sp * dt;
+        tu.pp = (tu.pp ?? 0) + dt * 17;                                // frantic paddling
+        const topY = (tu.top ??= lake.level + 0.1);
+        const drop = Math.min(1, tu.st / 0.55); const dE = drop * drop * (3 - 2 * drop);
+        const y = topY + (lake.level - 0.3 - topY) * dE;
+        if (!tu.splashed && tu.st > 0.4 && this.fx) { this.fx.splash(tu.x, lake.level, tu.z, 12); tu.splashed = true; }
+        this._poseTurtle(nTur++, {
+          x: tu.x, y, z: tu.z, h: tu.h, k: tu.sc * 0.9, pitch: 0.25 * (1 - dE), roll: Math.sin(tu.pp) * 0.08,
+          ext: 0.02, hp: 0.1, hy: 0,
+          fl: (f) => { const off = (f === 0 || f === 3) ? 0 : Math.PI; return [Math.sin(tu.pp + off) * 0.7, 0.3]; },
+        });
+        if (tu.st > 1.7) {
+          tu.mode = 'swim'; tu.surf = 0; tu.cycle = 40 + this.rng() * 40; tu.stroke = 1; tu.k = 0; tu.bad = -25; tu.top = undefined;
+        }
+        continue;
+      }
       tu.h += Math.sin(this.t * 0.2 + tu.ph) * 0.3 * dt;
       const lx = tu.x + Math.sin(tu.h) * 2.4, lz = tu.z + Math.cos(tu.h) * 2.4;
       if (this.depthAt(lx, lz) < 0.7 || sdfAt(lx, lz) > -3) tu.h += 1.8 * dt;

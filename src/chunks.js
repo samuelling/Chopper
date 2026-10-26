@@ -76,6 +76,7 @@ export class ChunkManager {
     propModels.beaverStumps.forEach((g, i) => {
       this.defs[`beaver:${i}`] = { geoNear: g, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 60, farDist: 110 };
     });
+    this.defs.baskRock = { geoNear: propModels.baskRock, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 90, farDist: 160 };
     this.defs.log = { geoNear: propModels.log, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 70, farDist: 150 };
     this.defs.reeds = { geoNear: propModels.reeds.geo, geoFar: propModels.reeds.geoFar, matFill: fillDouble, matOutline: null, castShadow: false, nearDist: 40, farDist: 100 };
     propModels.stones.forEach((g, i) => {
@@ -148,7 +149,7 @@ export class ChunkManager {
     this.root.add(group);
     const ch = {
       key, cx, cz, x0, z0, mx: x0 + CHUNK / 2, mz: z0 + CHUNK / 2,
-      group, batches: [], trees: [], colliders: [], stumpCount: 0,
+      group, batches: [], trees: [], colliders: [], stumpCount: 0, basks: [],
     };
     const buckets = new Map();
     const push = (name, matrix, color) => {
@@ -209,6 +210,16 @@ export class ChunkManager {
   // -------------------------------------------------------------------------
   // generation
   // -------------------------------------------------------------------------
+  /** basking logs/rocks (loaded chunks only) within [rmin, rmax] of a point */
+  baskSpots(x, z, rmin, rmax) {
+    const out = [], [cx, cz] = this.chunkAt(x, z), n = Math.ceil(rmax / CHUNK);
+    for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
+      const ch = this.chunks.get(this.keyOf(cx + dx, cz + dz));
+      if (!ch) continue;
+      for (const b of ch.basks) { const d = Math.hypot(b.x - x, b.z - z); if (d >= rmin && d <= rmax) out.push(b); }
+    }
+    return out;
+  }
   /** nearest live tree within r metres (for animals), or null */
   nearestTree(x, z, r) {
     const [cx, cz] = this.chunkAt(x, z);
@@ -464,6 +475,35 @@ export class ChunkManager {
           const sc = 0.9 + rng() * 0.5;
           mkItem(`beaver:${rng() > 0.45 ? 1 : 0}`, x, z, sc, rng() * 6.28, null, -0.04);
           ch.colliders.push(this.colliders.add(x, z, 0.3 * sc, { tag: 'stump' }));
+        }
+      }
+    }
+    // --- basking spots: logs and flat rocks just breaking the surface of the reservoir (turtles climb out on them) ---
+    {
+      const cell = 17;
+      let idx = 0;
+      for (let gz = ch.z0; gz < ch.z0 + CHUNK; gz += cell) {
+        for (let gx = ch.x0; gx < ch.x0 + CHUNK; gx += cell) {
+          idx++;
+          const rng = mulberry32(ch.cx * 6007 + ch.cz * 4421 + idx * 19 + 123);
+          const x = gx + rng() * cell, z = gz + rng() * cell, roll = rng(), kind = rng();
+          if (roll > 0.3 || !inBounds(x, z)) continue;
+          const sdf = sdfAt(x, z);
+          if (sdf > -2.5 || sdf < -16) continue;
+          const dep = LEVEL - groundY(x, z);
+          if (dep < 0.3 || dep > 0.75) continue;
+          if (z < DAM_Z + 16 || Math.hypot(x - BEACH.x, z - BEACH.z) < BEACH.r * 1.3 || Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r * 1.6) continue;
+          if (this._blocked(x, z, 0.5)) continue;
+          const yaw = rng() * 6.28, top = LEVEL + 0.1;
+          if (kind < 0.6) {
+            const sc = 0.85 + rng() * 0.3;
+            mkItem('log', x, z, sc, yaw, null, top - 0.58 * sc - groundY(x, z));
+            ch.basks.push({ x, z, top: top + 0.02, yaw, len: 1.0 * sc, taken: false });
+          } else {
+            const sc = 1.0 + rng() * 0.5;
+            mkItem('baskRock', x, z, sc, yaw, null, top - 0.28 * sc - groundY(x, z));
+            ch.basks.push({ x, z, top: top, yaw, len: 0, taken: false });
+          }
         }
       }
     }

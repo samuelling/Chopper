@@ -109,6 +109,25 @@ function buildBoulder(variant) {
 }
 
 // ---------------------------------------------------------------------------
+// Low flat rock that juts out of the water (a turtle's basking spot); top is at y = 0.28
+// ---------------------------------------------------------------------------
+function buildBaskRock() {
+  const b = new GeoBuilder();
+  const g = new THREE.IcosahedronGeometry(1, 1);
+  jitterGeometry(g, 0.12, 160);
+  const stone = new THREE.Color('#7f796f'), moss = new THREE.Color('#566c2c');
+  b.add(g, matrix(0, 0, 0, 0, 0.7, 0, 1.15, 0.28, 0.85), {
+    tint: 0,
+    faceColorFn: (c, n, tri) => {
+      const m = smoothstep(0.5, 0.9, n.y) * (0.4 + 0.5 * hash2(Math.round(c.x * 4), Math.round(c.z * 4), 5));
+      tc.copy(stone).multiplyScalar(0.8 + 0.3 * hash2(tri, 3, 7));
+      return tc.lerp(moss, m * 0.55);
+    },
+  });
+  return b.build();
+}
+
+// ---------------------------------------------------------------------------
 // Fallen log
 // ---------------------------------------------------------------------------
 function buildLog() {
@@ -224,6 +243,7 @@ export function buildPropModels() {
     shrub: { geo: buildShrub(0), geoFar: buildShrub(1) },
     boulders: [buildBoulder(0), buildBoulder(1), buildBoulder(2)],
     log: buildLog(),
+    baskRock: buildBaskRock(),
     beaverStumps: [buildBeaverStump(0), buildBeaverStump(1)],
     reeds: { geo: buildReeds(0), geoFar: buildReeds(1) },
     stones: [buildStone(0), buildStone(1), buildStone(2)],

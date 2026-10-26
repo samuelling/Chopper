@@ -98,6 +98,7 @@ async function boot() {
   ui.progress('Raking the leaves…', 0.6); await tick();
   const litter = MOBILE ? new Litter(scene, 3500, 34) : new Litter(scene);
   const fx = new FX(scene, MOBILE ? 350 : 900);
+  wildlife.chunks = chunks; wildlife.fx = fx;
   const audio = new Audio();
   chunks.preload(camera.position);
 
@@ -222,7 +223,7 @@ async function boot() {
     landmarks.update(dt, player);
     atmosphere.update(dt, camera, player.pos);
     water.update(dt);
-    wildlife.update(dt, player.pos);
+    wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
