@@ -3,7 +3,8 @@
 import { RUN } from './run.js';
 import { PRESSURE } from './pressure.js';
 import { Usage, LEVELS } from './usage.js';
-import { renderChoices } from './choices.js';
+import { renderChoices, pickChoices } from './choices.js';
+import { CARE, fmt$ } from './care.js';
 import { SEASON_DEF } from './season.js';
 
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
@@ -34,7 +35,7 @@ export function showInterlude(el, ctx, onContinue) {
     const l = Usage.level(); if (l === null) { changes.innerHTML = ''; return; }
     const lv = LEVELS[Math.round(l)].name;
     const p = PULSE * LEVELS[Math.round(l)].p;
-    changes.innerHTML = `<small>Your footprint: <b>${lv}</b>. This turn adds ${(p * 100).toFixed(1)}% lasting harm, and the park keeps taking harm while you play at this level. Lasting harm so far: <b>${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, colour at ${Math.round(PRESSURE.saturate * 100)}%.</small>`;
+    changes.innerHTML = `<small>Your footprint: <b>${lv}</b>. This turn adds ${(p * 100).toFixed(1)}% lasting harm, and the park keeps taking harm while you play at this level (${Math.round(CARE.shield * 100)}% slower thanks to early warning). <b>Harm ${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, colour at ${Math.round(PRESSURE.saturate * 100)}%. <b>Care ${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative, invented figures), ${CARE.built.length} thing${CARE.built.length === 1 ? '' : 's'} built.</small>`;
   };
   if (need) {
     const mount = el.querySelector('[data-usage-panel2]'); mount.setAttribute('data-usage-panel', '');
@@ -42,9 +43,9 @@ export function showInterlude(el, ctx, onContinue) {
   }
   showChanges();
   const ch = el.querySelector('[data-i-choices]');
-  renderChoices(ch, ctx, () => { chose = true; ready(); showChanges(); });
-  const skip = document.createElement('button'); skip.className = 'choice'; skip.innerHTML = '<b>Make no choice</b><span>That is a choice too. Nothing changes, nothing is given.</span>';
-  skip.addEventListener('click', (e) => { e.stopPropagation(); chose = true; ch.querySelector('[data-choice-note]').textContent = 'You let the season pass.'; ready(); });
+  renderChoices(ch, ctx, () => { chose = true; skip.disabled = true; skip.style.opacity = '.35'; ready(); showChanges(); }, pickChoices(RUN.n));
+  var skip = document.createElement('button'); skip.className = 'choice'; skip.innerHTML = '<b>Make no choice</b><span>That is a choice too. Nothing changes, nothing is given.</span>';
+  skip.addEventListener('click', (e) => { e.stopPropagation(); if (skip.disabled) return; chose = true; ch.querySelectorAll('[data-choice]').forEach((o) => { o.disabled = true; o.style.opacity = '.35'; }); ch.querySelector('[data-choice-note]').textContent = 'You let the season pass.'; ready(); });
   ch.insertBefore(skip, ch.querySelector('[data-choice-note]'));
   ready();
   go.addEventListener('click', (e) => {

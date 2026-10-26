@@ -96,16 +96,46 @@ function buildRig(S) {
     faceColorFn: (c, n) => _c.copy(C(S.tailCol)).lerp(C(S.tailTip || S.tailCol), c.z < -S.tailLen * 0.8 ? 1 : 0),
   });
   rig.tail = t.build();
-  // wings: inner (shoulder to wrist) and outer (hand), one pair per side
+  // wings: inner (shoulder to wrist, secondaries) and outer (hand, primaries), one pair per side.  Each is a flat feathered
+  // planform: a swept leading edge and a scalloped trailing edge made of separate feather tips (not an ellipse).
+  const nSec = S.l1 > 0.3 ? 6 : S.l1 > 0.07 ? 4 : 3, nPri = S.l2 > 0.3 ? 5 : S.l2 > 0.1 ? 4 : 3;
   const wing = (side, outer) => {
     const w = new GeoBuilder();
-    const L = outer ? S.l2 : S.l1, ch = S.chord * (outer ? 0.78 : 1);
-    w.add(ball, matrix(side * L * 0.5, 0, outer ? -ch * 0.2 : 0, 0, 0, 0, L * 0.5, 0.012 + S.chord * 0.06, ch), {
+    const L = outer ? S.l2 : S.l1, ch = S.chord;
+    const sh = new THREE.Shape(), X = (x) => side * x;
+    if (!outer) {
+      // arm: straight leading edge, trailing edge steps out in secondary feathers, narrowing toward the wrist
+      const lead = (u) => -ch * (0.30 - 0.12 * u), trail = (u) => ch * (0.72 - 0.20 * u);
+      sh.moveTo(X(0), lead(0));
+      for (let k = 1; k <= 4; k++) sh.lineTo(X(L * k / 4), lead(k / 4));
+      for (let k = nSec - 1; k >= 0; k--) {                              // back along the trailing edge, feather by feather
+        const u1 = (k + 1) / nSec, u0 = k / nSec;
+        sh.lineTo(X(L * (u1 - 0.12 / nSec)), trail(u1) + ch * 0.05);   // outer corner of this feather
+        sh.lineTo(X(L * (u1 - 0.55 / nSec)), trail(u1 - 0.5 / nSec) - ch * 0.10);   // notch between feathers
+        sh.lineTo(X(L * (u0 + 0.35 / nSec)), trail(u0) + ch * 0.08);
+      }
+      sh.lineTo(X(0), trail(0));
+    } else {
+      // hand: pointed tip, trailing edge split into primaries that fan out like fingers
+      const c0 = ch * 0.78;
+      sh.moveTo(X(0), -c0 * 0.26);
+      sh.quadraticCurveTo(X(L * 0.55), -c0 * 0.34, X(L), c0 * 0.02);
+      for (let k = 0; k < nPri; k++) {                                   // tips step inward and back from the wingtip
+        const u = 1 - k * (0.78 / nPri), y = c0 * (0.10 + k * 0.17);
+        sh.lineTo(X(L * (u - 0.02)), y);
+        sh.lineTo(X(L * (u - 0.07)), y - c0 * 0.24);                     // narrow gap before the next primary
+      }
+      sh.lineTo(X(L * 0.10), c0 * 0.58); sh.lineTo(X(0), c0 * 0.55);
+    }
+    const th = 0.004 + ch * 0.05;
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: th, bevelEnabled: false, steps: 1 });
+    geo.rotateX(-Math.PI / 2); geo.translate(0, -th / 2, 0);
+    w.add(geo, matrix(0, 0, 0), {
       faceColorFn: (c, n) => {
         if (n.y < -0.2 && S.under) return _c.copy(C(S.under));
-        if (outer) return _c.copy(C(S.tip)).lerp(C(S.wing), 0.25);
-        if (S.bar && Math.abs(c.z) < ch * 0.25 && Math.abs(c.x) > L * 0.2) return _c.copy(C(S.bar));
-        return _c.copy(C(S.wing));
+        if (outer) return _c.copy(C(S.tip)).lerp(C(S.wing), c.z > -ch * 0.12 ? 0.3 : 0);
+        if (S.bar && Math.abs(c.z + ch * 0.1) < ch * 0.22 && Math.abs(c.x) > L * 0.15) return _c.copy(C(S.bar));
+        return _c.copy(C(S.wing)).lerp(C(S.tip), c.z < -ch * 0.38 ? 0.45 : 0);   // darker flight feathers at the trailing edge
       },
     });
     return w.build();

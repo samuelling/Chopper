@@ -19,12 +19,13 @@ export const PRESSURE = {
   target: clamp01(pick(num(P.get('pressure')), stored('ashland.pressure'))),
   damage: (RUN.dev || RUN.phaseTwo) ? clamp01(pick(num(P.get('damage')), stored('ashland.damage'))) : 0,
   get live() { return RUN.dev || RUN.phaseTwo; },
+  shield: 0,     // early-warning benefits slow new harm (never undo old harm)
   _save: 0,
   set(v) { this.target = clamp01(v); try { localStorage.setItem('ashland.pressure', String(this.target)); } catch {} },
   bump(x) { if (!this.live) return; this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
   update(dt) {
     if (!this.live) return;
-    this.damage = clamp01(this.damage + (this.target * UP - (1 - this.target) * DOWN) * dt);
+    this.damage = clamp01(this.damage + (this.target * UP * (1 - this.shield) - (1 - this.target) * DOWN) * dt);
     if ((this._save += dt) > 3) { this._save = 0; try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} }
   },
   get harm() { return this.damage; },

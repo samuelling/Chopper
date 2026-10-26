@@ -5,6 +5,9 @@ import { initUsageUI } from './usageui.js';
 import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
 import { RUN } from './run.js';
+import { CARE } from './care.js';
+import { Structures } from './structures.js';
+import { initHud, Gauge, HUD } from './hud.js';
 import { showInterlude } from './interlude.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
@@ -94,9 +97,12 @@ async function boot() {
   const propModels = buildPropModels();
   const walls = buildWalls();
   const chunks = new ChunkManager({ scene, colliders, layout, treeModels, propModels, walls, spawnClear: { x: SPAWN.x, z: SPAWN.z, r: 5 } });
+  const structures = new Structures(scene, colliders);
   // a playthrough carries its felled trees and lake level across seasons (each season is a page reload)
   if (!RUN.dev) {
     for (const { key, rec } of RUN.s.felled) { chunks.felled.set(rec.id, rec); if (!chunks.felledByChunk.has(key)) chunks.felledByChunk.set(key, []); chunks.felledByChunk.get(key).push(rec); chunks.felledCount++; }
+    for (const r of CARE.built) structures.add(r.type, r.x, r.z, r.yaw, { restore: true, flatten: r.type === 'kiosk' || r.type === 'table' });
+    PRESSURE.shield = CARE.shield;
     if (RUN.s.lake != null) lake.level = Math.min(lake.originalLevel, Math.max(lake.floor + 0.02, RUN.s.lake));
   }
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
@@ -219,8 +225,10 @@ async function boot() {
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
   const minimap = new Minimap(lake, player);
+  const gauge = new Gauge(document.getElementById('hud'));
+  initHud();
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
-  addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) minimap.cycle(); });
+  addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
   minimap.set(minimap.mode);
   // phase two: choices (C opens the pause menu with the choices panel)
   let waypoint = RUN.dev ? null : RUN.s.wp;
@@ -229,7 +237,7 @@ async function boot() {
   const showChoices = () => {
     const on = phaseTwo();
     document.getElementById('chint').hidden = !on;
-    document.querySelectorAll('[data-choices]').forEach((el) => { el.hidden = !on; if (on) renderChoices(el, { player, chunks, lake, setWaypoint }); });
+    document.querySelectorAll('[data-choices]').forEach((el) => { el.hidden = !on; if (on) renderChoices(el, { player, chunks, lake, structures, setWaypoint }); });
   };
   addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat && started && phaseTwo()) { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } });
   new MutationObserver(showChoices).observe(ui.els.paused, { attributes: true, attributeFilter: ['class'] });
@@ -257,7 +265,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · M map';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -275,7 +283,7 @@ async function boot() {
 
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
-    const ctx = { player, chunks, lake, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
+    const ctx = { player, chunks, lake, structures, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
     showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
       const felled = [];
       for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });
@@ -309,6 +317,7 @@ async function boot() {
       if (RUN.s.played >= RUN.len) beginInterlude();
     }
     minimap.update();
+    gauge.setVisible(RUN.dev ? phaseTwo() : RUN.phaseTwo); gauge.update(dt);
     if (waypoint) {
       const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);
       if (d < 9) { ui.toast(`You have arrived: ${waypoint.label}.`); setWaypoint(null); }
@@ -354,7 +363,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
