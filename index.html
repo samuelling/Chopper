@@ -106,6 +106,8 @@
   .knobpanel { margin-top:14px; max-width:520px; } .knobpanel .uh { text-align:center; }
   .adv summary { cursor:pointer; }
   .logtut code { font-size:12px; opacity:.9; }
+  #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:60; transition:opacity 1.5s ease; }
+  .fadein #fade { opacity:1; transition:none; }
   #credits { z-index:30; background:linear-gradient(rgba(14,10,12,.55), rgba(14,10,12,.15) 30%, rgba(14,10,12,.15) 70%, rgba(14,10,12,.6)); overflow:hidden; display:block; text-align:center; }
   #credits.hidden { display:none; }
   #credits .crscroll { position:absolute; left:0; right:0; top:0; will-change:transform; padding:0 8vw; }
@@ -156,6 +158,7 @@
   body.mobile #prompt { bottom:30%; font-size:15px; }
   #err { position:fixed; left:10px; bottom:10px; color:#ffb4a0; font:12px monospace; z-index:20; white-space:pre-wrap; max-width:80vw; }
 </style>
+<script>try{if(sessionStorage.getItem("ashland.fadein"))document.documentElement.classList.add("fadein")}catch(e){}</script>
 </head>
 <body>
 <div id="loading" class="overlay"><h1 style="font-size:clamp(40px,8vw,80px)">ASHLAND</h1><div class="sub" id="loadmsg">Surveying the reservoir…</div><div id="bar"><i></i></div></div>
@@ -190,6 +193,7 @@
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
 
+<div id="fade"></div>
 <div id="credits" class="overlay hidden"></div>
 <div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>

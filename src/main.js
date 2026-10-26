@@ -306,13 +306,15 @@ async function boot() {
   card.addEventListener('click', () => { if (autoCard) return; card.classList.add('hidden'); begin(); });
   // after the first season the card holds a moment, then the drone glides down to where you stand; no click needed
   let autoCard = false;
+  const clearFadeIn = () => { try { sessionStorage.removeItem('ashland.fadein'); } catch {} document.documentElement.classList.remove('fadein'); };
+  setTimeout(clearFadeIn, 6000);
   const autoSeason = (spawnFromDrone = false) => {
-    autoCard = true; newgame.hidden = true;
-    const nm = document.getElementById('scname'), yt = yearTitle(), hold = yt ? 1800 + 800 + 1300 : 1300;
+    autoCard = true; newgame.hidden = true; clearFadeIn();
+    const nm = document.getElementById('scname'), yt = yearTitle(), CARD = 2000, hold = yt ? 1800 + CARD + 800 + 1300 + CARD : 1300 + CARD;
     if (yt) {                               // Year One ... dissolve ... Autumn
       const ag = document.getElementById('scage'); ag.textContent = ageLine(); ag.classList.remove('dim');
-      setTimeout(() => { nm.classList.add('dim'); ag.classList.add('dim'); }, 1800);
-      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); ag.textContent = ''; }, 2600);
+      setTimeout(() => { nm.classList.add('dim'); ag.classList.add('dim'); }, 1800 + CARD);
+      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); ag.textContent = ''; }, 2600 + CARD);
     }
     setTimeout(() => {
       card.classList.add('hidden');
@@ -477,10 +479,13 @@ async function boot() {
       reloadIntoNext();
     });
   }
+  // the season turns through black: fade out, reload, and the next season's card fades up out of black
   function reloadIntoNext() {
     const p = new URLSearchParams(location.search); p.delete('season');
     p.set('x', player.pos.x.toFixed(1)); p.set('z', player.pos.z.toFixed(1)); p.set('yaw', (player.yaw ?? 0).toFixed(2));
-    location.search = p.toString();
+    try { sessionStorage.setItem('ashland.fadein', '1'); } catch {}
+    document.getElementById('fade').style.opacity = '1';
+    setTimeout(() => { location.search = p.toString(); }, 1700);
   }
   // part one: the season simply turns (the drone carries you on); no interlude until the year is done
   function quietTurn() {
