@@ -17,7 +17,8 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
-| P | phone (map, status, jobs, Clyde) |
+| P | phone (map, status, jobs, Clyde, Field Guide) |
+| V | camera: narrows the view; click to photograph a tree, bird or animal in the frame |
 | M | optional minimap: off, nearby, or whole park (also a Map button on the title and pause screens; north is up, the dam is at the bottom) |
 | C | (phase two) make choices |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
@@ -45,13 +46,17 @@ What is **not** real: the dam face and the area north of the survey, which are a
 
 **P** raises your phone: a Map tab (with heading), a Status tab (the harm/care gauge and figures), **Jobs** (Park Service Jobs: delegate tree work to the crew, who fell the trees over the next minute or two) and **Clyde**. Clyde is the AI assistant: at the end of each season you pick one of its offers (benches, a boardwalk, a kiosk, paperwork and so on), each showing its care and harm before you commit.
 
+## Field Guide, camera and birdsong
+
+You are a naturalist as much as anything. **V** raises a camera (narrow view, viewfinder); click to photograph the tree, bird, fish, turtle or squirrel in the middle of the frame. The first photo of each kind adds it to the **Guide** tab on the phone, with your own thumbnail. Songs and calls that you actually hear while walking (chickadee, cardinal, robin, wren, vireo, woodpecker, crow, jay, goose, hawk, spring peeper, bullfrog, cricket) are logged as you hear them, and can be replayed from the guide. Some species can only be collected by ear. The guide is saved in the browser (`ashland.guide`) and cleared by "New game". The species are typical of a Massachusetts reservoir forest, **not** a survey of the real park; plants are not catalogued yet.
+
 ## Fly-over
 
 The title screen and season cards sit over a slow drone flight along the real reservoir's centre line, up one shore and back the other (`?noflyover=1` to turn it off). It stops when you click to begin.
 
 ## The shape of a playthrough
 
-Part one is pure scenery: the first season is autumn, with no consequences and no AI question anywhere. Each season opens on a card showing only its name in the title font; click to go on. After a full season of play (6 minutes by default, `?season_len=` seconds to change it) an interlude appears: what has changed, a footprint check-in the first time, and a choice (including making none). Consequences go live from the second season (winter), then spring, summer and around again. Felled trees, lake level and your choices carry across seasons (each season is a page reload). "New game" on the season card resets everything. URLs with `?season=`, `?auto=` or `?dev=1` skip all of this and keep the old direct controls (season picker, T key, C choices with `?phase=2`).
+Part one is pure scenery: the first season is autumn, with no consequences and no AI question anywhere. Each season opens on a card showing only its name in the title font; the first one waits for a click, later ones hold a moment and the drone glides down to where you stand. After a full season of play (6 minutes by default, `?season_len=` seconds to change it) an interlude appears: what has changed, a footprint check-in the first time, and a choice (including making none). Consequences go live from the second season (winter), then spring, summer and around again. Felled trees, lake level and your choices carry across seasons (each season is a page reload). "New game" on the season card resets everything. URLs with `?season=`, `?auto=` or `?dev=1` skip all of this and keep the old direct controls (season picker, T key, C choices with `?phase=2`).
 
 ## Seasons
 

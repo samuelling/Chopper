@@ -38,7 +38,7 @@ export class Player {
       this.pitch = clamp(this.pitch - e.movementY * 0.0022, -1.45, 1.45);
     });
     addEventListener('mousedown', (e) => {
-      if (this.locked && e.button === 0) this.startSwing();
+      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === dom;

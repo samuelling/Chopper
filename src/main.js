@@ -32,6 +32,7 @@ import { IS_WINTER, SEASON, SEASONS, SEASON_DEF, goToSeason, WILDLIFE } from './
 import { Birds } from './birds.js';
 import { Wildlife } from './wildlife.js';
 import { Squirrels } from './squirrels.js';
+import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
 import { ui } from './ui.js';
@@ -202,6 +203,33 @@ async function boot() {
       touch.show();
     } else renderer.domElement.requestPointerLock?.();
   };
+  // ---- camera mode (V): a narrow view, click to photograph what is centred in the frame
+  const vf = document.createElement('div'); vf.id = 'viewfinder'; vf.className = 'hidden';
+  vf.innerHTML = '<div class="vfframe"><i></i><i></i><i></i><i></i></div><div class="vfhint">click to photograph &middot; V to put the camera away</div><div class="vfflash"></div>';
+  document.body.appendChild(vf);
+  const setCameraMode = (on) => {
+    player.cameraMode = on; camera.fov = on ? 26 : 68; camera.updateProjectionMatrix();
+    vf.classList.toggle('hidden', !on); if (player.axe) player.axe.visible = !on;
+  };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && started && player.locked && !interludeOn) setCameraMode(!player.cameraMode); });
+  audio.onHeard = (v) => GUIDE.addHeard(v);
+  GUIDE.onNew = (kind, en) => ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5);
+  player.events.photo = () => {
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen];
+    const pick = pickSubject(camera, cands);
+    audio.shutter?.();
+    const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
+    if (!pick) { ui.toast('Nothing in frame.', 1.4); return; }
+    const id = pick.kind === 'squirrel' ? 'squirrel' : pick.kind;
+    if (!BY_ID[id]) return;
+    renderer.render(scene, camera);
+    const src = renderer.domElement, tw = 192, th = 128, cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
+    const sw = Math.min(src.width, src.height * 1.5) * 0.7, sh = sw / 1.5;
+    cv.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, tw, th);
+    const had = GUIDE.photographed(id);
+    GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON);
+    if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
+  };
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
   const showCard = () => {
@@ -209,7 +237,20 @@ async function boot() {
     newgame.hidden = RUN.n === 0 && RUN.fresh;
     ui.els.title.classList.add('hidden'); card.classList.remove('hidden');
   };
-  card.addEventListener('click', () => { card.classList.add('hidden'); begin(); });
+  card.addEventListener('click', () => { if (autoCard) return; card.classList.add('hidden'); begin(); });
+  // after the first season the card holds a moment, then the drone glides down to where you stand; no click needed
+  let autoCard = false;
+  const autoSeason = () => {
+    autoCard = true; newgame.hidden = true;
+    setTimeout(() => {
+      card.classList.add('hidden');
+      flyover.glideTo(() => {
+        audio.init(); started = true; autoCard = false;
+        if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
+        else { ui.els.hud.classList.add('on'); ui.els.paused.classList.remove('hidden'); }   // the browser needs one click to capture the mouse
+      });
+    }, 2600);
+  };
   newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
   ui.els.title.addEventListener('click', () => (RUN.dev ? begin() : showCard()));
   ui.els.paused.addEventListener('click', begin);
@@ -231,7 +272,7 @@ async function boot() {
   const gauge = new Gauge(document.getElementById('hud'));
   initHud();
   const jobQueue = [];
-  const phone = new Phone({ el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+  const phone = new Phone({ audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     onOpen: () => { phoneOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; if (started && !interludeOn) begin(); } });
   addEventListener('keydown', (e) => { if (e.code === 'KeyP' && !e.repeat && started && !interludeOn) (phone.isOpen ? phone.close() : phone.open()); if (e.code === 'Escape' && phone.isOpen) phone.close(); });
@@ -268,14 +309,14 @@ async function boot() {
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
   } else {
-    if (!RUN.dev && !RUN.fresh) showCard(); else ui.els.title.classList.remove('hidden');
+    if (!RUN.dev && !RUN.fresh) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
     if (!params.has('noflyover')) flyover.start();
   }
   if (!RUN.dev) {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · P phone · M map · H hide dashboard';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -378,7 +419,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

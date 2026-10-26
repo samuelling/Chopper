@@ -163,3 +163,12 @@ export class Audio {
     if (s.geese) { this.honkT = (this.honkT ?? 0) - dt; if (this.honkT < 0) { this.honkT = 2.5 + Math.random() * 3; this.honk(); } }
   }
 }
+
+// Every voice reports itself so the Field Guide can log songs you actually hear.  Replays from the guide use the raw originals.
+export const RAW_VOICES = {};
+for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog']) {
+  const f = RAW_VOICES[v] = Audio.prototype[v];
+  Audio.prototype[v] = function (...a) { if (this.ready) this.onHeard?.(v); return f.apply(this, a); };
+}
+Audio.prototype.shutter = function () { if (!this.ready) return; this._burst(3000, 1.2, 0.05, 0.25, 'bandpass'); setTimeout(() => this._burst(1800, 1.2, 0.07, 0.2, 'bandpass'), 70); };
+Audio.prototype.replay = function (v) { if (this.ready) RAW_VOICES[v]?.call(this); };

@@ -23,8 +23,21 @@ export class Flyover {
   }
   start() { this.active = true; if (this.player.axe) this.player.axe.visible = false; }
   stop() { this.active = false; if (this.player.axe) this.player.axe.visible = true; }
+  /** leave the drone path and settle onto the player's eyes (position and view), then call done */
+  glideTo(done, secs = 6) {
+    this.glide = { t: 0, secs, done, from: this.camera.position.clone(), fq: this.camera.quaternion.clone() };
+  }
   update(dt) {
     if (!this.active) return;
+    const g = this.glide;
+    if (g) {                                   // player.update has just put the camera at the player's eyes: that is the target
+      const tp = this.camera.position.clone(), tq = this.camera.quaternion.clone();
+      g.t += dt; const k = Math.min(1, g.t / g.secs), u = k * k * (3 - 2 * k);
+      this.camera.position.lerpVectors(g.from, tp, u);
+      this.camera.quaternion.copy(g.fq).slerp(tq, u);
+      if (k >= 1) { this.glide = null; this.stop(); g.done?.(); }
+      return;
+    }
     this.t = (this.t + (this.speed * dt) / this.len) % 1;
     this.curve.getPointAt(this.t, this._p);
     this.curve.getPointAt((this.t + 70 / this.len) % 1, this._q);

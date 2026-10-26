@@ -179,6 +179,7 @@ export class Birds {
       chickadee: new Species('chickadee', 2, scene), jay: new Species('jay', 1, scene),
       heron: new Species('heron', 1, scene), goose: new Species('goose', 6, scene), hawk: new Species('hawk', 1, scene),
     };
+    this.seen = [];
     this.small = []; for (let i = 0; i < (mobile ? 1 : 2); i++) this.small.push({ active: false, wait: 12 + i * 20 });
     this.heron = { active: false, wait: 20 };
     this.geese = { mode: 'none', wait: 55 + this.rng() * 60, birds: [] };
@@ -199,6 +200,7 @@ export class Birds {
    *  neckP/neckY head posture, tailP, spread (tail fan), legP (legs trail back), scale */
   _pose(sp, o) {
     const S = sp.S, i = sp.n++, k = (o.scale ?? 1) * S.sc, T = this._tv;
+    this.seen.push({ kind: sp.name, x: o.x, y: o.y, z: o.z, r: Math.max(0.25, S.bl * k * 0.7) });
     this._root.compose(this._p.set(o.x, o.y, o.z), this._q.setFromEuler(this._e.set(o.pitch || 0, o.h, o.roll || 0, 'YXZ')), this._s.set(k, k, k));
     this._put(sp.parts, i, 'body', this._root);
     this._attach(this._a, this._root, T.set(0, S.bh * 0.35, S.bl * 0.8), o.neckP || 0, o.neckY || 0, 0);
@@ -234,6 +236,7 @@ export class Birds {
   update(dt, player) {
     this.t += dt;
     const px = player.x, pz = player.z, t = this.t;
+    this.seen.length = 0;
     for (const s of Object.values(this.sp)) s.begin();
     this._songbirds(dt, px, pz, t);
     this._heron(dt, px, pz, t);

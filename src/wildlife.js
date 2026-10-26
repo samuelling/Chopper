@@ -118,6 +118,7 @@ export class Wildlife {
       for (let i = 0; i < n; i++) mem.push({ ox: (this.rng() - 0.5) * 1.6, oz: -this.rng() * 1.8 - (i ? 0.2 : 0), ph: this.rng() * 6.28, sc: 0.85 + this.rng() * 0.4, x: 0, z: 0, h: 0 });
       this.schools.push({ bass, mem, x: 0, z: 0, h: this.rng() * 6.28, spd: bass ? 0.9 : 0.7, active: false, bad: 0, dy: 0.3 + this.rng() * 0.25 });
     }
+    this.seen = [];
     this.turtles = [];
     for (let i = 0; i < (WILDLIFE.turtles ? turtles : 0); i++) this.turtles.push({ x: 0, z: 0, h: this.rng() * 6.28, active: false, bad: 0, cycle: 8 + this.rng() * 25, surf: 0, sc: 0.9 + this.rng() * 0.5, ph: this.rng() * 6 });
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3(); this._e = new THREE.Euler(); this._up = new THREE.Vector3(0, 1, 0);
@@ -158,6 +159,7 @@ export class Wildlife {
   }
 
   update(dt, player, speed = 0) {
+    this.seen.length = 0;
     this.t += dt;
     const lake = this.lake, px = player.x, pz = player.z;
     const full = lake.level > lake.originalLevel - 1.4 && !lake.drained;
@@ -324,6 +326,8 @@ export class Wildlife {
       nTur++;
     }
 
+    for (const tu of this.turtles) if (tu.active) this.seen.push({ kind: 'turtle', x: tu.x, y: tu.bask ? tu.bask.top + 0.15 : lake.level, z: tu.z, r: 0.4 });
+    for (const sc of this.schools) if (sc.active) for (const m of sc.mem) this.seen.push({ kind: sc.bass ? 'bass' : 'sunfish', x: m.x, y: lake.level - (sc.dy || 0.4) - 0.1, z: m.z, r: 0.3 });
     const setCount = (g, n) => { g.fill.count = g.line.count = n; g.fill.instanceMatrix.needsUpdate = g.line.instanceMatrix.needsUpdate = true; g.fill.visible = g.line.visible = n > 0; };
     setCount(this.sunfish.body, nSun); setCount(this.sunfish.tail, nSun); setCount(this.sunfish.fin, nSun * 2);
     setCount(this.bass.body, nBass); setCount(this.bass.tail, nBass); setCount(this.bass.fin, nBass * 2);

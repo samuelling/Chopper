@@ -82,6 +82,7 @@ export class Squirrels {
     };
     for (const p of Object.values(this.parts)) { scene.add(p.fill); scene.add(p.line); }
     this.list = [];
+    this.seen = [];
     const n = mobile ? 1 : 2;
     for (let i = 0; i < n; i++) {
       this.list.push({
@@ -126,10 +127,12 @@ export class Squirrels {
 
   update(dt, player) {
     this.t += dt;
+    this.seen.length = 0;
     const t = this.t, px = player.x, pz = player.z;
     const P = this.parts;
     let n = 0;
     for (const a of this.list) {
+      if (a.active) this.seen.push({ kind: 'squirrel', x: a.x, y: groundY(a.x, a.z) + (a.climb || 0) + 0.2, z: a.z, r: 0.3 });
       if (!a.active) {
         a.wait -= dt;
         if (a.wait <= 0 && !this._spawn(a, px, pz)) a.wait = 6;
