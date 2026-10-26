@@ -324,6 +324,11 @@ async function boot() {
   // a returning player lands on the opening menu (continue or start over); season changes within a visit reload straight into play
   const inPlay = () => { try { return !!sessionStorage.getItem('ashland.inplay'); } catch { return false; } };
   if (!RUN.fresh && !RUN.dev) document.querySelectorAll('#title .go span:not(.only-mobile)').forEach((s) => { s.textContent = 'Click to continue'; });
+  document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    const t = b.dataset.copy, was = b.textContent;
+    try { await navigator.clipboard.writeText(t); b.textContent = 'Copied'; } catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); b.textContent = 'Copied'; } catch { b.textContent = t; } ta.remove(); }
+    setTimeout(() => { b.textContent = was; }, 1600);
+  }));
   document.querySelectorAll('.logtut').forEach((d) => d.addEventListener('click', (e) => e.stopPropagation()));
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);

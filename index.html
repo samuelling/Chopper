@@ -97,6 +97,7 @@
   .logtut summary { cursor:pointer; text-align:center; letter-spacing:.08em; }
   .logtut ol { margin:8px 0 0; padding-left:20px; line-height:1.5; }
   .dbg { margin-top:8px; font-size:12px; opacity:.85; } .dbg pre { margin:6px 0 0; padding:8px; background:rgba(0,0,0,.35); border-radius:6px; white-space:pre-wrap; font:12px monospace; }
+  .copybtn { font:inherit; font-size:11px; padding:1px 8px; margin-left:2px; color:inherit; background:transparent; border:1px solid rgba(244,230,200,.5); border-radius:4px; cursor:pointer; }
   .logtut code { font-size:12px; opacity:.9; }
   .newgame { position:absolute; bottom:22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; padding:6px 12px; }
   .newgame:hover { opacity:1; }
@@ -151,7 +152,7 @@
   <div class="fsbtn" data-restart hidden>Start over from Year One</div>
   <details class="logtut only-desktop"><summary>Optional: link your Claude Code log</summary>
     <ol>
-      <li>Claude Code keeps a log of your sessions as <code>.jsonl</code> files in a hidden folder: <code>~/.claude/projects</code> on Mac and Linux, <code>C:\Users\you\.claude\projects</code> on Windows. To see it on a Mac, press <kbd>Cmd</kbd> <kbd>Shift</kbd> <kbd>G</kbd> in the file picker and type that path.</li>
+      <li>Claude Code keeps a log of your sessions as <code>.jsonl</code> files in a hidden folder: <code>~/.claude/projects</code> on Mac and Linux, <code>C:\Users\you\.claude\projects</code> on Windows. <button class="copybtn" data-copy="~/.claude/projects">Copy Mac/Linux path</button> <button class="copybtn" data-copy="%USERPROFILE%\.claude\projects">Copy Windows path</button> To see it on a Mac, press <kbd>Cmd</kbd> <kbd>Shift</kbd> <kbd>G</kbd> in the file picker and type that path.</li>
       <li>Press <b>Pick log folder</b> below (Chrome or Edge) or <b>Claude Code log files</b> (any browser) and choose the folder or the files. The browser asks for your permission itself. You can also do this later: Clyde's panel at the end of the first year, and <b>Esc</b> &rarr; "Your footprint" afterwards.</li>
       <li>The page adds up tokens per day and turns each day into a Light to Very heavy level. Only those daily totals are kept, on this device; the log itself never leaves the page. The thresholds are invented, so it is a nudge for an art piece, not a measurement. Skip it and just tell Clyde instead.</li>
     </ol>
