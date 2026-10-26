@@ -72,7 +72,7 @@ function heightCore(x, z) {
     const dn = (0.62 + 0.55 * smoothstep(0.95, 0.2, t)) * (0.85 + 0.3 * noise2(x * 0.03 + 4, z * 0.03, 5));
     let prof = smoothstep(0, -52, sdf);
     // the dam's upstream face is steep riprap, not a beach
-    const damProf = 0.92 * smoothstep(0, 9, z - DAM_Z) * smoothstep(DAM_HALF + 30, DAM_HALF - 5, Math.abs(x));
+    const damProf = 0.92 * smoothstep(0, 9, z - DAM_Z) * smoothstep(40, 14, z - DAM_Z) * smoothstep(DAM_HALF + 30, DAM_HALF - 5, Math.abs(x));
     const damDepth = (MAX_DEPTH + 0.45) * damProf * dn;
     // real MassWildlife depth survey (feet -> game metres at the terrain's vertical scale)
     const surveyFt = depthFtAt(x, z);

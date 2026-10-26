@@ -15,6 +15,7 @@ import { ChunkManager } from './chunks.js';
 import { Landmarks } from './landmarks.js';
 import { Litter } from './litter.js';
 import { FX } from './fx.js';
+import { Wildlife } from './wildlife.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
 import { ui } from './ui.js';
@@ -71,6 +72,7 @@ async function boot() {
   atmosphere.setPreset(startPreset);
   if (startPreset) { atmosphere.blend = 1; atmosphere.state = atmosphere._clone(atmosphere.target); atmosphere.applyState(atmosphere.state, PRESETS[startPreset]); }
   const water = new Water(scene, atmosphere);
+  const wildlife = new Wildlife(scene, lake, { mobile: MOBILE });
 
   ui.progress('Planting 40,000 trees…', 0.35); await tick();
   const colliders = new Colliders();
@@ -218,6 +220,7 @@ async function boot() {
     landmarks.update(dt, player);
     atmosphere.update(dt, camera, player.pos);
     water.update(dt);
+    wildlife.update(dt, player.pos);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
 
@@ -229,7 +232,7 @@ async function boot() {
   }
 
   const render = () => renderer.render(scene, camera);
-  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
