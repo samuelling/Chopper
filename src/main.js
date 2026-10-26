@@ -434,6 +434,13 @@ async function boot() {
     requestAnimationFrame(frame);
   }
 
+  // ---- time speed (a standing preference, not part of a run)
+  const SPEED = { v: 1 };
+  try { SPEED.v = [0.5, 1, 2, 4].includes(parseFloat(localStorage.getItem('ashland.speed'))) ? parseFloat(localStorage.getItem('ashland.speed')) : 1; } catch {}
+  const showSpeed = () => document.querySelectorAll('[data-speed]').forEach((b) => b.classList.toggle('on', parseFloat(b.dataset.speed) === SPEED.v));
+  document.querySelectorAll('[data-speed]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); SPEED.v = parseFloat(b.dataset.speed); try { localStorage.setItem('ashland.speed', String(SPEED.v)); } catch {} showSpeed(); }));
+  document.querySelectorAll('.speedbox').forEach((e) => e.addEventListener('click', (ev) => ev.stopPropagation()));
+  showSpeed(); window.__speed = SPEED;
   // ---- the endings
   let ending = false;
   const endStats = () => ({
@@ -538,9 +545,10 @@ async function boot() {
       if (lake.level < tgt) lake.level = Math.min(tgt, lake.level + 0.004 * dt);
       else if (lake.level > tgt + 0.01) lake.level = Math.max(tgt, lake.level - 0.03 * dt);
     }
-    PRESSURE.update(dt); checkEndings(dt);
+    const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
+    PRESSURE.update(tdt); checkEndings(tdt);
     if (!RUN.dev && started && player.locked && !interludeOn) {
-      RUN.s.played += dt;
+      RUN.s.played += tdt;
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
@@ -548,7 +556,7 @@ async function boot() {
     if ((pinT += dt) > 1) { pinT = 0; minimap.pins = [...PLACES.list.map((p) => ({ x: p.x, z: p.z, name: p.name })), ...discoveries.foundList().map((f) => ({ x: f.x, z: f.z, found: true }))]; }
     if (player.phone.visible && (screenT += dt) > 0.2) { screenT = 0; drawPhoneScreen(); }
     if (jobQueue.length && !phone.isOpen && !interludeOn) {                       // the crew works while you walk
-      for (const j of jobQueue) j.at -= dt;
+      for (const j of jobQueue) j.at -= tdt;
       while (jobQueue.length && jobQueue[0].at <= 0) { const j = jobQueue.shift(); if (j.tree.alive && !j.tree.gone) chunks.fell(j.tree, j.from[0], j.from[1]); }
     }
     gauge.setVisible(RUN.dev ? phaseTwo() : RUN.phaseTwo); gauge.update(dt);
