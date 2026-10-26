@@ -38,6 +38,12 @@ export function project(p) {
   const dx = x - MX, dz = z - MZ;
   return [dx * UX + dz * UZ, dx * VX + dz * VZ + DAM_Z];
 }
+// inverse of project(): game metres -> [lat, lon]
+export function unproject(x, z) {
+  const v = z - DAM_Z;
+  const dx = x * UX + v * VX, dz = x * UZ + v * VZ;
+  return [LAT0 - (dz + MZ) / (KZ * SCALE), LON0 + (dx + MX) / (KX * SCALE)];
+}
 const projLine = (l) => l.map(project);
 
 // --- the reservoir ------------------------------------------------------------

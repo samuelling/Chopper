@@ -3,9 +3,10 @@ import { fbm, noise2, smoothstep, clamp, lerp, GLSL_NOISE } from './noise.js';
 import { gradientMap } from './toon.js';
 import {
   LEVEL, MAX_DEPTH, DAM_Z, DAM_CREST, VALLEY_Y, WORLD, NX, NZ, CL_LEN, DAM_HALF, GATE,
-  lakeSdf, islandSdf, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
+  lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
+import { elevLatLon, DEM } from './ashland_dem.js';
 export { NX, NZ, WORLD, LEVEL, lakeSdf };
 export const CELL = WORLD.cell;
 export const TRAIL = buildTrail();
@@ -31,17 +32,24 @@ function hillNoise(x, z) {
     + (fbm(x * 0.09, z * 0.09, 2, 9) - 0.5) * 1.4;
 }
 
+// Real USGS 3DEP terrain, relative to the reservoir surface, vertically scaled for the game.
+const VS = 0.6;
+function realRel(x, z) {
+  const [lat, lon] = unproject(x, z);
+  return (elevLatLon(lat, lon) - DEM.RES_ELEV) * VS;
+}
 function heightCore(x, z) {
   const sdf = lakeSdf(x, z);
-  const hills = hillNoise(x, z);
+  const fine = (fbm(x * 0.09, z * 0.09, 2, 9) - 0.5) * 1.0 + (fbm(x * 0.022 - 5.0, z * 0.022 + 2.0, 3, 5) - 0.5) * 2.0;
+  const real = realRel(x, z);
+  const hills = real + fine;
 
   // --- south of the dam: hills rise away from a gentle shore ---
   const rim = LEVEL + 0.45 + 2.0 * smoothstep(0, 60, sdf);
-  let hs = lerp(rim, LEVEL + 9 + hills, smoothstep(0, 115, sdf));
-  hs += 24 * smoothstep(175, 290, sdf);
+  let hs = lerp(rim, Math.max(rim, LEVEL + hills), smoothstep(0, 90, sdf));
 
   // --- north of the dam: the Cold Spring Brook valley ---
-  const valley = VALLEY_Y + hills * 0.5 + 10 * smoothstep(50, 230, Math.abs(x - (GATE.x + 30))) + 24 * smoothstep(175, 290, sdf);
+  const valley = VALLEY_Y + Math.max(0, LEVEL + hills - VALLEY_Y) * smoothstep(20, 140, DAM_Z - z);
   const nw = smoothstep(DAM_Z - 6, DAM_Z - 42, z);
   let h = lerp(hs, valley, nw);
 

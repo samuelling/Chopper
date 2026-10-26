@@ -27,7 +27,9 @@ Phones and tablets are detected automatically (or force it with `?mobile=1`; `?d
 The map is built from **real OpenStreetMap data** (© OpenStreetMap contributors, ODbL), exported with Overpass Turbo and stored in `data/ashland_osm.json` / `src/ashland_data.js`:
 the reservoir shoreline and both islands, the dam, the beach, the boat launch, both parking lots, the loop trail and spur paths, service roads, and Cold Spring Brook below the dam.
 
-What is **not** real: ground elevation (OSM has none, so hills and lake depth are invented), the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
+The hills use **real USGS 3DEP lidar elevation** (public domain), 15 m grid in `src/ashland_dem.js`, measured relative to the reservoir surface (66.2 m) and vertically scaled by 0.6 (`VS` in `src/world.js`).
+
+What is **not** real: lake depth (lidar only sees the water surface, so the bowl is invented), the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 
 ## How it is built
 
