@@ -6,6 +6,7 @@ import {
   lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
+import { wetlandAt } from './ashland_wetlands.js';
 import { depthFtAt } from './ashland_bathy.js';
 import { elevLatLon, DEM } from './ashland_dem.js';
 export { NX, NZ, WORLD, LEVEL, lakeSdf };
@@ -300,6 +301,13 @@ export function buildTerrain() {
         const deep = smoothstep(LEVEL - 0.2, LEVEL - 4, h);
         tmp.lerp(MUD.clone().lerp(MUD_OLIVE, deep * 0.8), wet);
         litterW *= 1 - wet;
+      }
+      // real mapped wetlands (NWI): mossy, muddy ground
+      const wl = wetlandAt(x, z);
+      if (wl > 0 && sdf > 0) {
+        const ww = wl >= 3 ? 0.85 : wl === 2 ? 0.6 : 0.35;
+        tmp.lerp(wl >= 3 ? MUD_OLIVE : MUD, ww);
+        litterW *= 1 - ww;
       }
       // sandy beach on the west shore
       const bd = Math.hypot(x - BEACH.x, z - BEACH.z);

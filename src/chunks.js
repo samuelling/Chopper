@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
 import { treeColor, SPECIES, buildStump } from './trees.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
+import { wetlandAt } from './ashland_wetlands.js';
 import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
@@ -226,6 +227,8 @@ export class ChunkManager {
         const dens = lc ? lc.dens * thick : 0.2 + 0.8 * smoothstep(0.34, 0.54, dn);
         if (roll > dens * 0.9) continue;
         const pf = lc ? lc.pine : 0.2;
+        const wl = wetlandAt(x, z);   // real NWI wetland class
+        if (wl >= 3 || (wl === 2 && roll > 0.3 * dens)) continue;   // open marsh / pond / shrub swamp
         const y = groundY(x, z);
         if (y < LEVEL + 0.8 && sdf < 12 && sdf >= 0) continue;
         if (this._blocked(x, z, 1.4)) continue;
@@ -249,6 +252,7 @@ export class ChunkManager {
           wPine = 0.3 * wPine + 0.7 * tw * sw[2] / ss;
           wBirch = 0.3 * wBirch + 0.7 * tw * sw[3] / ss;
         }
+        if (wl === 1) { wPine *= 0.4; wOak *= 0.4; wMaple *= 1.8; wBirch *= 1.4; }   // red-maple swamp
         const tot = wPine + wBirch + wMaple + wOak;
         let r = rng() * tot, sp;
         if ((r -= wMaple) < 0) sp = 'maple';
@@ -398,12 +402,16 @@ export class ChunkManager {
           const rng = mulberry32(ch.cx * 3361 + ch.cz * 1759 + idx * 23 + 57);
           const x = gx + rng() * cell, z = gz + rng() * cell, roll = rng();
           const sdf = sdfAt(x, z);
-          if (sdf < -2.5 || sdf > 8) continue;
+          const wl = wetlandAt(x, z);
+          const marsh = wl >= 2 && sdf > 4;   // real marsh / pond / shrub swamp away from the reservoir
+          if (!marsh && (sdf < -2.5 || sdf > 8)) continue;
           if (!inBounds(x, z)) continue;
           const y = groundY(x, z);
-          if (y < LEVEL - 0.45 || y > LEVEL + 0.8) continue;
+          if (!marsh && (y < LEVEL - 0.45 || y > LEVEL + 0.8)) continue;
           const patch = fbm(x * 0.05, z * 0.05, 2, 87);
-          if (roll > 0.12 + 0.75 * smoothstep(0.5, 0.65, patch)) continue;
+          if (marsh) { if (roll > (wl === 2 ? 0.25 : 0.7)) continue; }
+          else if (roll > 0.12 + 0.75 * smoothstep(0.5, 0.65, patch)) continue;
+          if (this._blocked(x, z, 0.5)) continue;
           if (Math.hypot(x - BEACH.x, z - BEACH.z) < BEACH.r * 1.05) continue;
           if (Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r * 1.2) continue;
           if (z < DAM_Z + 14) continue;

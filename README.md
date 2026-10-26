@@ -29,7 +29,7 @@ the reservoir shoreline and both islands, the dam, the beach, the boat launch, b
 
 The hills use **real USGS 3DEP lidar elevation** (public domain), 15 m grid in `src/ashland_dem.js`, measured relative to the reservoir surface (66.2 m) and vertically scaled by 0.6 (`VS` in `src/world.js`).
 
-Where trees grow comes from **real NLCD 2021 land cover** (public domain, `src/ashland_landcover.js`): deciduous, evergreen and mixed forest, woody wetland, and cleared or developed land set tree density and the pine-versus-hardwood mix. Tree height follows **real LANDFIRE 2024 canopy height** (USGS/USFS, `src/ashland_canopy.js`), so taller stands in the real park have taller trees here. Individual tree positions within those areas are still scattered procedurally.
+Where trees grow comes from **real NLCD 2021 land cover** (public domain, `src/ashland_landcover.js`): deciduous, evergreen and mixed forest, woody wetland, and cleared or developed land set tree density and the pine-versus-hardwood mix. Tree species follow the **real LANDFIRE forest type** (`src/ashland_species.js`) and the **real National Wetlands Inventory** (`src/ashland_wetlands.js`) decides where the swamps, marshes and ponds are: red-maple swamp, open marsh with cattails, boggy ground. Tree height follows **real LANDFIRE 2024 canopy height** (USGS/USFS, `src/ashland_canopy.js`), so taller stands in the real park have taller trees here. Individual tree positions within those areas are still scattered procedurally.
 
 The lakebed follows the **real MassWildlife depth survey** of Ashland Reservoir (contours up to 48 ft, MassGIS; `src/ashland_bathy.js`), scaled with the same 0.6 vertical factor as the hills.
 
