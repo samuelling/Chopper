@@ -40,6 +40,10 @@ Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like every
 
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 
+## Fly-over
+
+The title screen and season cards sit over a slow drone flight along the real reservoir's centre line, up one shore and back the other (`?noflyover=1` to turn it off). It stops when you click to begin.
+
 ## The shape of a playthrough
 
 Part one is pure scenery: the first season is autumn, with no consequences and no AI question anywhere. Each season opens on a card showing only its name in the title font; click to go on. After a full season of play (6 minutes by default, `?season_len=` seconds to change it) an interlude appears: what has changed, a footprint check-in the first time, and a choice (including making none). Consequences go live from the second season (winter), then spring, summer and around again. Felled trees, lake level and your choices carry across seasons (each season is a page reload). "New game" on the season card resets everything. URLs with `?season=`, `?auto=` or `?dev=1` skip all of this and keep the old direct controls (season picker, T key, C choices with `?phase=2`).

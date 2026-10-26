@@ -5,6 +5,7 @@ import { initUsageUI } from './usageui.js';
 import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
 import { RUN } from './run.js';
+import { Flyover } from './flyover.js';
 import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
@@ -192,7 +193,7 @@ async function boot() {
   let started = false, interludeOn = false;
   const begin = () => {
     audio.init();
-    started = true;
+    started = true; flyover.stop();
     if (MOBILE) {
       player.locked = true;
       ui.els.title.classList.add('hidden');
@@ -224,6 +225,7 @@ async function boot() {
     b.classList.toggle('on', b.dataset.season === SEASON);
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
+  const flyover = new Flyover(camera, player);
   const minimap = new Minimap(lake, player);
   const gauge = new Gauge(document.getElementById('hud'));
   initHud();
@@ -259,8 +261,10 @@ async function boot() {
     if (MOBILE) touch.show();
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
-  } else if (!RUN.dev && !RUN.fresh) showCard();
-  else ui.els.title.classList.remove('hidden');
+  } else {
+    if (!RUN.dev && !RUN.fresh) showCard(); else ui.els.title.classList.remove('hidden');
+    if (!params.has('noflyover')) flyover.start();
+  }
   if (!RUN.dev) {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
@@ -336,6 +340,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.update(dt);
+    flyover.update(dt);
     // camera shake from big falls
     if (shake > 0.001) {
       camera.position.x += (Math.random() - 0.5) * shake * 0.25;
@@ -344,7 +349,7 @@ async function boot() {
     }
     chunks.update(dt, camera.position, null, 2);
     landmarks.update(dt, player);
-    atmosphere.update(dt, camera, player.pos);
+    atmosphere.update(dt, camera, flyover.active ? camera.position : player.pos);
     water.update(dt);
     wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
