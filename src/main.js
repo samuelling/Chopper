@@ -230,6 +230,38 @@ async function boot() {
     GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON);
     if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
   };
+  // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
+  const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
+  const tut = {
+    i: -1, t: 0, done: (() => { try { return localStorage.getItem('ashland.tut') === '1'; } catch { return false; } })(),
+    steps: [
+      { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
+      { text: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
+      { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
+      { text: '<kbd>P</kbd> raises your phone: map, jobs, field guide', ok: () => tut.phoned, max: 30 },
+      { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
+      { text: '<kbd>Q</kbd> changes what is in your hands &nbsp; <kbd>E</kbd> works things &nbsp; <kbd>Esc</kbd> opens the menu with every control', ok: () => false, max: 14 },
+    ],
+    moved: 0, turned: 0, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
+    start() { this.active = true; this.go(0); },
+    go(i) {
+      if (this.done && i >= 1) i = this.steps.length;
+      this.i = i; this.t = 0; this.moved = 0; this.turned = 0; this._p = null;
+      const s = this.steps[i];
+      if (!s) { tutEl.classList.remove('on'); this.active = false; try { localStorage.setItem('ashland.tut', '1'); } catch {} return; }
+      tutEl.innerHTML = s.text; tutEl.classList.add('on');
+    },
+    update(dt) {
+      if (!this.active || !started) return;
+      const s = this.steps[this.i]; if (!s) return;
+      this.t += dt;
+      if (this._p) { this.moved += Math.hypot(player.pos.x - this._p.x, player.pos.z - this._p.z); this.turned += Math.abs(player.yaw - this._y); }
+      this._p = { x: player.pos.x, z: player.pos.z }; this._y = player.yaw;
+      if (s.ok() || (!s.always && this.t > s.max)) this.go(this.i + 1);
+    },
+  };
+  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; });
+  document.addEventListener('click', () => { if (started && !player.locked && !MOBILE && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden') && tut.active) begin(); });
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
   const showCard = () => {
@@ -248,7 +280,7 @@ async function boot() {
       flyover.glideTo(() => {
         audio.init(); started = true; autoCard = false;
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
-        else { ui.els.hud.classList.add('on'); ui.els.paused.classList.remove('hidden'); }   // the browser needs one click to capture the mouse
+        else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
       });
     }, 1200);
   };
@@ -425,7 +457,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.update(dt);
-    flyover.update(dt);
+    flyover.update(dt); tut.update(dt);
     // camera shake from big falls
     if (shake > 0.001) {
       camera.position.x += (Math.random() - 0.5) * shake * 0.25;

@@ -50,6 +50,8 @@ What is **not** real: the dam face and the area north of the survey, which are a
 
 You are a naturalist as much as anything. **V** raises a camera (narrow view, viewfinder); click to photograph the tree, bird, fish, turtle or squirrel in the middle of the frame. The first photo of each kind adds it to the **Guide** tab on the phone, with your own thumbnail. Songs and calls that you actually hear while walking (chickadee, cardinal, robin, wren, vireo, woodpecker, crow, jay, goose, hawk, spring peeper, bullfrog, cricket) are logged as you hear them, and can be replayed from the guide. Some species can only be collected by ear. The guide is saved in the browser (`ashland.guide`) and cleared by "New game". The species are typical of a Massachusetts reservoir forest, **not** a survey of the real park; plants are not catalogued yet.
 
+A gentle on-screen tutorial introduces the controls one at a time after the first landing (walk and look, hop, phone, camera, the rest), and clears itself as you do each thing. Esc opens the full list at any time.
+
 ## Fly-over
 
 The title screen and season cards sit over a slow drone flight along the real reservoir's centre line, up one shore and back the other (`?noflyover=1` to turn it off). It stops when you click to begin.
