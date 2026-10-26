@@ -25,7 +25,7 @@ export const Usage = {
   todayLevel() { return S.days[today()]; },
   needsCheckin() { return S.days[today()] === undefined; },
   setTier(l) { S.tier = l; save(); this.apply(); },
-  checkin(l) { S.days[today()] = l; S.source[today()] = 'checkin'; save(); this.apply(); },
+  checkin(l, src = 'checkin') { S.days[today()] = l; S.source[today()] = src; save(); this.apply(); },
   // pressure target: today's answer if there is one, else the typical-day tier, else a rolling average of recent days
   level() {
     const t = S.days[today()];

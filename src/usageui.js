@@ -7,17 +7,22 @@ const fmt = (t) => (t >= 1e6 ? `${t / 1e6}M` : `${t / 1e3}k`);
 const folderBtns = () => canPickFolder()
   ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>'
   : '<label class="ubtn">Pick log folder<input type="file" webkitdirectory hidden data-logfiles></label>';
+// the check-in knob: "how much of your Claude limit have you used?" 0-100%, read off claude.ai Settings > Usage; mapped to None..Very heavy (invented bands)
+const knobLevel = (pct) => (pct <= 0 ? 0 : Math.min(4, Math.ceil(pct / 25)));
+const knobHTML = () => `<div class="knobrow">
+  <div class="knob" tabindex="0" role="slider" aria-label="Share of your Claude limit used" aria-valuemin="0" aria-valuemax="100" data-knob><div class="kneedle"></div><div class="kticks"></div></div>
+  <div class="kread"><b data-kpct>turn me</b><span data-klevel></span><small>Take a peek at Settings &rarr; Usage on claude.ai, then turn the knob to how much of your limit you have used.</small></div></div>`;
 const dbgHTML = '<details class="dbg"><summary>Debug: what the game has stored</summary><pre data-usage-debug></pre></details>';
 const panelHTML = () => `
 <div class="usage">
   <div class="uh">Your footprint</div>
   <small>An art experiment, not a measurement. You tell the park how much you lean on AI; its effects are invented and exaggerated on purpose. Harm done stays done, and the park heals slowly. Everything stays on this device. Lasting harm: <b data-harm-val>none</b></small>
   <div class="urow"><span>Typical day</span>${LEVELS.map((l, i) => `<button data-tier="${i}">${l.name}</button>`).join('')}</div>
-  <div class="urow ask"><span data-ask>Today</span>${LEVELS.map((l, i) => `<button data-today="${i}">${l.name}</button>`).join('')}</div>
-  <div class="urow"><span>Or count it</span>
+  <div class="urow ask"><span data-ask>Today</span>${knobHTML()}</div>
+  <details class="dbg adv"><summary>Advanced: count a Claude Code log instead</summary><div class="urow">
     <label class="ubtn">Claude Code log files<input type="file" accept=".jsonl" multiple hidden data-logfiles></label>
     ${folderBtns()}
-  </div>
+  </div></details>
   <small data-usage-note></small>
   ${dbgHTML}
   ${RUN.dev ? '<details><summary>Manual dial (testing)</summary><label>Pressure <input type="range" min="0" max="100" value="0" data-pressure> <b data-pressure-val></b></label></details>' : ''}
@@ -30,6 +35,7 @@ const logOnlyHTML = () => `<div class="urow"><span>Link it now</span>
   </div><small data-usage-note></small>${dbgHTML}`;
 
 export function initUsageUI(root = document, onChange) {
+  root.querySelectorAll('[data-knob-panel]').forEach((el) => { el.innerHTML = `<div class="uh">Today's check-in</div>${knobHTML()}<small data-usage-note></small>${dbgHTML}`; el.addEventListener("click", (e) => e.stopPropagation()); });
   root.querySelectorAll('[data-log-panel]').forEach((el) => { el.innerHTML = logOnlyHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   root.querySelectorAll('[data-usage-panel]').forEach((el) => { el.innerHTML = panelHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   const note = (t) => { root.querySelectorAll('[data-usage-note]').forEach((e) => { e.textContent = t; }); onChange?.(); };
@@ -40,8 +46,26 @@ export function initUsageUI(root = document, onChange) {
       days.length ? 'days:' : 'days: none yet', ...days.slice(-14).map((k) => `  ${k}  ${LEVELS[Usage.days[k]].name}  (${Usage.source[k] || '?'})`)].join('\n');
     root.querySelectorAll('[data-usage-debug]').forEach((e) => { e.textContent = txt; });
   };
+  // ---- the knob
+  const setKnob = (pct, commit) => {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    root.querySelectorAll('[data-knob]').forEach((k) => { k.style.setProperty('--ang', `${-135 + pct * 2.7}deg`); k.setAttribute('aria-valuenow', pct); });
+    root.querySelectorAll('[data-kpct]').forEach((e) => { e.textContent = `${pct}% of your limit`; });
+    root.querySelectorAll('[data-klevel]').forEach((e) => { e.textContent = `\u2192 ${LEVELS[knobLevel(pct)].name}`; });
+    if (commit) { Usage.checkin(knobLevel(pct), `limit:${pct}%`); refresh(); note(`Today: ${pct}% of your limit used, counted as ${LEVELS[knobLevel(pct)].name}.`); }
+  };
+  const syncKnob = () => { const m = /^limit:(\d+)%/.exec(Usage.source[Usage.today()] || ''); if (m) setKnob(+m[1], false); };
+  root.querySelectorAll('[data-knob]').forEach((k) => {
+    let drag = false, last = 0;
+    const from = (e) => { const r = k.getBoundingClientRect(); let a = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI; if (a > 135 || a < -135) a = a > 0 ? 135 : -135; return (a + 135) / 2.7; };
+    k.addEventListener('pointerdown', (e) => { drag = true; k.setPointerCapture(e.pointerId); last = from(e); setKnob(last, false); e.preventDefault(); });
+    k.addEventListener('pointermove', (e) => { if (!drag) return; last = from(e); setKnob(last, false); });
+    const up = () => { if (!drag) return; drag = false; setKnob(last, true); };
+    k.addEventListener('pointerup', up); k.addEventListener('pointercancel', up);
+    k.addEventListener('keydown', (e) => { const cur = +(k.getAttribute('aria-valuenow') || 0), d = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5 }[e.key]; if (d) { e.preventDefault(); e.stopPropagation(); setKnob(cur + d, true); } });
+  });
   const refresh = () => {
-    dbg();
+    dbg(); syncKnob();
     const today = Usage.todayLevel();
     root.querySelectorAll('[data-tier]').forEach((b) => b.classList.toggle('on', Usage.tier === +b.dataset.tier));
     root.querySelectorAll('[data-today]').forEach((b) => b.classList.toggle('on', today === +b.dataset.today));
