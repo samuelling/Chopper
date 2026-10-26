@@ -19,6 +19,7 @@ import { Audio } from './audio.js';
 import { Player } from './player.js';
 import { ui } from './ui.js';
 import { TouchControls } from './touch.js';
+import { initFullscreen } from './fullscreen.js';
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
@@ -171,6 +172,7 @@ async function boot() {
   let mood = startPreset;
   function setMood(i) { mood = i; atmosphere.setPreset(i); }
 
+  initFullscreen({ mobile: MOBILE });
   ui.els.loading.classList.add('hidden');
   if (AUTO) {
     started = true; player.locked = true;

@@ -16,7 +16,7 @@ export class TouchControls {
       for (const t of e.changedTouches) {
         const el = document.elementFromPoint(t.clientX, t.clientY);
         const btn = el && el.closest && el.closest('.tbtn');
-        if (btn) { this._button(btn, true); continue; }
+        if (btn) { if (!btn.hasAttribute('data-fullscreen')) this._button(btn, true); continue; }
         const r = this.stick.getBoundingClientRect();
         const inStick = t.clientX < innerWidth * 0.42 && t.clientY > innerHeight * 0.35;
         if (inStick && !this.joy) {

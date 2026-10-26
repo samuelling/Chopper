@@ -16,6 +16,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | Mouse, click | look, swing the axe (a big tree takes several swings) |
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
+| F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 
 ## On a phone
 

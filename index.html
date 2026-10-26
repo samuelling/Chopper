@@ -57,6 +57,10 @@
   #bSwing { right:max(30px, env(safe-area-inset-right)); bottom:max(34px, env(safe-area-inset-bottom)); width:92px; height:92px; background:rgba(217,87,43,.6); font-size:15px; }
   #bHop { right:max(140px, calc(env(safe-area-inset-right) + 110px)); bottom:max(30px, env(safe-area-inset-bottom)); width:62px; height:62px; }
   #bUse { right:max(44px, env(safe-area-inset-right)); bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); width:66px; height:66px; }
+  #bFull { right:max(70px, calc(env(safe-area-inset-right) + 62px)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:20px; }
+  body.fs #bFull { background:rgba(217,87,43,.6); }
+  .fsbtn { margin-top:14px; padding:6px 16px; border:2px solid rgba(244,230,200,.6); border-radius:6px; font-size:14px; letter-spacing:.1em; cursor:pointer; pointer-events:auto; }
+  .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
   #rotate { display:none; position:fixed; inset:0; z-index:30; background:#1c1517; color:var(--paper); text-align:center; align-items:center; justify-content:center; font-size:20px; padding:30px; }
   @media (orientation: portrait) { body.mobile #rotate { display:flex; } }
@@ -73,17 +77,19 @@
   <div class="sub">fell trees · drain lakes · wander</div>
   <div class="place">Ashland State Park, Massachusetts — late October</div>
   <div class="go"><span class="only-desktop">Click to begin</span><span class="only-mobile">Tap to begin</span></div>
+  <div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen<span class="only-desktop"> (F)</span></div>
   <div class="desk-note only-mobile">Best played on a desktop computer with a keyboard and mouse. This phone version runs at reduced quality.</div>
   <div class="controls only-desktop">
     <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop<br>
     <kbd>Click</kbd> swing the axe &nbsp; <kbd>E</kbd> work the gate wheel<br>
-    <kbd>1</kbd> golden hour &nbsp; <kbd>2</kbd> morning mist &nbsp; <kbd>3</kbd> dusk
+    <kbd>1</kbd> golden hour &nbsp; <kbd>2</kbd> morning mist &nbsp; <kbd>3</kbd> dusk &nbsp; <kbd>F</kbd> fullscreen
   </div>
+  <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone: Share &rarr; Add to Home Screen, then open Ashland from there.</div>
   <div class="controls only-mobile">Left thumb: walk (push far to hurry)<br>Drag the right side: look around<br>SWING chops · HOP jumps · USE works the gate<br>The sun button changes the light</div>
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
 
-<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div></div>
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div></div>
 
 <div id="hud">
   <div class="card"><b>Trees felled</b><div class="v" id="felled">0</div>
@@ -96,7 +102,7 @@
   <div id="hint">Click swing · E gate · 1 2 3 light</div>
 </div>
 <div id="touch"><div id="stick"><i></i></div>
-  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div></div>
+  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>
 
