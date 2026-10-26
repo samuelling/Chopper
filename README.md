@@ -46,6 +46,10 @@ Wildlife follows the season (for example no turtles or fish in winter, geese pas
 
 Turtles bask on logs and rocks and slip into the water when you run past.
 
+## Pressure (art experiment)
+
+A single dial, **Pressure** (0-100%, pause menu or `?pressure=0.5`), stands in for how heavily AI and data-center use leans on a place. As it rises the reservoir is held lower, colours fade, and fish, turtles, songbirds, squirrels and geese show up less. It is **not a measurement**: the mapping is invented and exaggerated on purpose so the cost is visible. The idea for later phases is a coarse, consented, locally-computed usage number feeding the same dial; nothing is sent anywhere.
+
 ## Sound
 
 All audio is synthesised with WebAudio, no sample files. The ambience changes by season (spring peepers and song, summer crickets and cicadas, autumn wind and crows, winter near-silence). Footsteps depend on the surface: paving on the dam and ramp, gravel in the lots, sand on the beach, mud in wetlands, dirt on trails, leaves in autumn, crunchy snow in winter, grass otherwise. Only checked for errors in a headless browser, so tune it by ear.

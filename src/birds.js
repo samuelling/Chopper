@@ -11,6 +11,7 @@ import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt } from './world.js';
 import { mulberry32 } from './noise.js';
 import { WILDLIFE } from './season.js';
+import { PRESSURE } from './pressure.js';
 
 const C = (h) => new THREE.Color(h);
 const _c = new THREE.Color();
@@ -216,7 +217,7 @@ export class Birds {
   _songbirds(dt, px, pz, t) {
     for (const b of this.small) {
       if (!b.active) {
-        b.wait -= dt;
+        b.wait -= dt * PRESSURE.life;
         if (b.wait > 0) continue;
         const tree = this._randomTree(px, pz, 12, 38, null);
         if (!tree) { b.wait = 5; continue; }

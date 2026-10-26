@@ -63,6 +63,9 @@
   .seasons button { font:inherit; font-size:14px; letter-spacing:.08em; color:var(--paper); background:rgba(28,21,23,.55); border:2px solid rgba(244,230,200,.45); border-radius:6px; padding:6px 14px; cursor:pointer; }
   .seasons button.on { background:rgba(217,87,43,.75); border-color:rgba(255,226,170,.9); }
   .seasons button:hover { border-color:rgba(255,226,170,.9); }
+  .pressure { margin:16px auto 0; max-width:440px; font-size:14px; letter-spacing:.06em; pointer-events:auto; }
+  .pressure small { display:block; margin-top:6px; font-size:11px; letter-spacing:.02em; opacity:.8; line-height:1.4; }
+  .pressure input { vertical-align:middle; width:160px; }
   .fsbtn { margin-top:14px; padding:6px 16px; border:2px solid rgba(244,230,200,.6); border-radius:6px; font-size:14px; letter-spacing:.1em; cursor:pointer; pointer-events:auto; }
   .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
@@ -94,7 +97,7 @@
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
 
-<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div></div>
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="pressure"><label>Pressure <input type="range" min="0" max="100" value="0" data-pressure> <b data-pressure-val></b></label><small>An art experiment, not a measurement. This dial stands in for how heavily AI and data-center use leans on a place. Effects are invented and deliberately exaggerated: less water, paler colour, quieter wildlife. Later it may take a coarse number you choose to share.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div></div>
 
 <div id="hud">
   <div class="card"><b>Trees felled</b><div class="v" id="felled">0</div>

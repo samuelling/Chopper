@@ -8,6 +8,7 @@ import { fillMaterial, outlineMaterial } from './toon.js';
 import { groundY, sdfAt } from './world.js';
 import { mulberry32 } from './noise.js';
 import { WILDLIFE } from './season.js';
+import { PRESSURE } from './pressure.js';
 
 const C = (h) => new THREE.Color(h);
 const _c = new THREE.Color();
@@ -162,7 +163,10 @@ export class Wildlife {
     const full = lake.level > lake.originalLevel - 1.4 && !lake.drained;
     let nSun = 0, nBass = 0, nTur = 0;
     const T = this._tv || (this._tv = new THREE.Vector3());
+    const keepS = Math.ceil(this.schools.length * PRESSURE.life - 1e-6), keepT = Math.ceil(this.turtles.length * PRESSURE.life - 1e-6);
+    let si = 0;
     for (const sc of this.schools) {
+      if (si++ >= keepS) { sc.active = false; continue; }
       // (re)place the school on water 10..42 m from the player
       if (full && (!sc.active || sc.bad > 2.5 || Math.hypot(sc.x - px, sc.z - pz) > 75)) {
         const spot = this._place(px, pz, 0.9, 3.2, 9, 42);
@@ -216,7 +220,9 @@ export class Wildlife {
       }
     }
 
+    let ti = 0;
     for (const tu of this.turtles) {
+      if (ti++ >= keepT) { if (tu.bask) { tu.bask.taken = false; tu.bask = null; } tu.active = false; continue; }
       if (full && (!tu.active || tu.bad > 2.5 || Math.hypot(tu.x - px, tu.z - pz) > 80)) {
         if (tu.bask) { tu.bask.taken = false; tu.bask = null; }
         tu.mode = 'swim';

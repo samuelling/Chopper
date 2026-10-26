@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { shared } from './toon.js';
+import { PRESSURE } from './pressure.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -17,7 +18,7 @@ import { Landmarks } from './landmarks.js';
 import { Litter } from './litter.js';
 import { FX } from './fx.js';
 import { SnowTrail } from './snowtrail.js';
-import { IS_WINTER, SEASON, SEASONS, SEASON_DEF, goToSeason } from './season.js';
+import { IS_WINTER, SEASON, SEASONS, SEASON_DEF, goToSeason, WILDLIFE } from './season.js';
 import { Birds } from './birds.js';
 import { Wildlife } from './wildlife.js';
 import { Squirrels } from './squirrels.js';
@@ -199,6 +200,10 @@ async function boot() {
     b.classList.toggle('on', b.dataset.season === SEASON);
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
+  const pr = document.querySelectorAll('[data-pressure]'), prv = document.querySelectorAll('[data-pressure-val]');
+  const showP = () => prv.forEach((e) => { e.textContent = PRESSURE.target < 0.01 ? 'none (park as it is)' : `${Math.round(PRESSURE.target * 100)}%`; });
+  pr.forEach((s) => { s.value = PRESSURE.target * 100; s.addEventListener('input', () => { PRESSURE.set(s.value / 100); pr.forEach((o) => { o.value = s.value; }); showP(); }); s.addEventListener('click', (e) => e.stopPropagation()); });
+  showP();
   const place = document.getElementById('placeline');
   if (place) place.textContent = `Ashland State Park, Massachusetts — ${SEASON_DEF.place}`;
   addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
@@ -233,9 +238,17 @@ async function boot() {
         lake.drained = true;
         ui.toast('The reservoir is empty. Somewhere, a water authority is crying.', 5);
       }
-    } else if (!lake.gateOpen && lake.level < lake.originalLevel && !lake.drained) {
-      lake.level = Math.min(lake.originalLevel, lake.level + 0.004 * dt);
+    } else if (!lake.gateOpen && !lake.drained) {
+      const tgt = lake.originalLevel - PRESSURE.drop * (lake.originalLevel - lake.floor);
+      if (lake.level < tgt) lake.level = Math.min(tgt, lake.level + 0.004 * dt);
+      else if (lake.level > tgt + 0.01) lake.level = Math.max(tgt, lake.level - 0.03 * dt);
     }
+    PRESSURE.update(dt);
+    const cv = renderer.domElement, f = `saturate(${PRESSURE.saturate.toFixed(3)}) brightness(${PRESSURE.bright.toFixed(3)})`;
+    if (cv._pf !== f) { cv._pf = f; cv.style.filter = PRESSURE.shown > 0.002 ? f : ''; }
+    // squirrels and geese turn up less often as the pressure rises
+    WILDLIFE.squirrelRate = (WILDLIFE._sq ??= WILDLIFE.squirrelRate) / PRESSURE.life;
+    WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.update(dt);
