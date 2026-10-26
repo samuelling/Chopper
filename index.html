@@ -119,6 +119,7 @@
   #credits .crend button { font:inherit; font-size:15px; letter-spacing:.12em; color:var(--paper); background:rgba(28,21,23,.65); border:2px solid rgba(244,230,200,.6); border-radius:8px; padding:9px 20px; cursor:pointer; }
   #scage { font-size:clamp(14px,2.2vw,22px); letter-spacing:.3em; text-transform:uppercase; opacity:.8; margin-top:10px; min-height:1.2em; text-shadow:0 2px 0 rgba(0,0,0,.4); transition:opacity .8s; } #scage.dim { opacity:0; }
   .birth { margin-top:14px; font-size:13px; opacity:.9; pointer-events:auto; text-align:center; } .birth input { font:inherit; width:90px; text-align:center; color:var(--paper); background:rgba(28,21,23,.55); border:2px solid rgba(244,230,200,.45); border-radius:6px; padding:3px 6px; } .birth small { display:block; max-width:430px; margin:5px auto 0; font-size:11px; opacity:.75; line-height:1.4; }
+  #title .fsbtn[data-fullscreen] { position:absolute; top:16px; left:16px; margin:0; padding:5px 12px; font-size:13px; }
   .newgame { position:absolute; bottom:22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; padding:6px 12px; }
   .newgame:hover { opacity:1; }
   h1.small { font-size:clamp(34px,6vw,64px); } .ibody { max-width:640px; text-align:left; margin-top:14px; } .ibody p { font-size:15px; line-height:1.55; }
@@ -167,7 +168,7 @@
   <h1>ASHLAND</h1>
   <div class="sub">wander. make decisions.</div>
   <div class="place" id="placeline">Ashland State Park, Massachusetts — late October</div>
-  <div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div>
+  <div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div data-usage-panel></div>
   <div class="go"><span class="only-desktop">Click to begin</span><span class="only-mobile">Tap to begin</span></div>
   <div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div>
   <div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen<span class="only-desktop"> (F)</span></div>
