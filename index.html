@@ -101,7 +101,9 @@
   @media (max-aspect-ratio:3/4){ .phone { height:auto; width:94vw; aspect-ratio:auto; max-height:92vh; min-height:70vh; } }
   .phone .pbar.home { visibility:hidden; height:0; padding:0; border:0; } .phone .pbar { align-items:center; } .pback { font:inherit; font-size:30px; line-height:1; background:none; border:0; color:#ffd9a0; cursor:pointer; padding:0 8px 4px 0; }
   .phone.onhome .pscroll { background:linear-gradient(#3b2b3a 0%,#7a4a3a 55%,#c27a45 100%); padding-top:44px; }
-  .appgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px 6px; padding:0 4px; }
+  .appgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px 2px; padding:0 2px; } .appgrid .app .lbl { font-size:10.5px; } .app .ico { width:58px !important; height:58px !important; border-radius:14px !important; }
+  .pdots { display:flex; justify-content:center; gap:6px; margin-top:20px; } .pdots i { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.35); } .pdots i.on { background:#fff; }
+  .dock { position:absolute; left:10px; right:10px; bottom:34px; display:flex; justify-content:space-around; padding:12px 6px; border-radius:26px; background:rgba(255,255,255,.2); backdrop-filter:blur(6px); } .phone.onhome .pscroll { position:relative; }
   .app { font:inherit; color:#fff; background:none; border:0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:7px; }
   .app .ico { position:relative; width:64px; height:64px; border-radius:16px; display:grid; place-items:center; box-shadow:0 3px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.35); transition:transform .1s; } .app:hover .ico { transform:scale(1.07); } .app:active .ico { transform:scale(.94); }
   .app .ico em { position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; background:#e0412e; font-style:normal; font-size:12px; line-height:20px; text-align:center; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.4); }

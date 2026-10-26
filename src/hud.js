@@ -26,13 +26,15 @@ export const HUD = {
   toggleAll() { hidden.all = !hidden.all; apply(); },
   visible(id) { return !(hidden[id] || hidden.all); },
 };
+export function mountHudPanel(el) {
+  el.innerHTML = `<div class="uh">Dashboard</div><div class="urow">${ITEMS.map((i) => `<button data-hud-item="${i.id}"></button>`).join('')}<button data-hud-all></button></div>`;
+  el.addEventListener('click', (e) => e.stopPropagation());
+  el.querySelectorAll('[data-hud-item]').forEach((b) => b.addEventListener('click', () => { hidden[b.dataset.hudItem] = !hidden[b.dataset.hudItem]; hidden.all = false; apply(); }));
+  el.querySelectorAll('[data-hud-all]').forEach((b) => b.addEventListener('click', () => HUD.toggleAll()));
+  apply();
+}
 export function initHud() {
-  document.querySelectorAll('[data-hud-panel]').forEach((el) => {
-    el.innerHTML = `<div class="uh">Dashboard</div><div class="urow">${ITEMS.map((i) => `<button data-hud-item="${i.id}"></button>`).join('')}<button data-hud-all></button></div>`;
-    el.addEventListener('click', (e) => e.stopPropagation());
-  });
-  document.querySelectorAll('[data-hud-item]').forEach((b) => b.addEventListener('click', () => { hidden[b.dataset.hudItem] = !hidden[b.dataset.hudItem]; hidden.all = false; apply(); }));
-  document.querySelectorAll('[data-hud-all]').forEach((b) => b.addEventListener('click', () => HUD.toggleAll()));
+  document.querySelectorAll('[data-hud-panel]').forEach((el) => mountHudPanel(el));
   addEventListener('keydown', (e) => { if (e.code === 'KeyH' && !e.repeat) HUD.toggleAll(); });
   apply();
 }

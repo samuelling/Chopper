@@ -4,20 +4,27 @@ import { CARE, fmt$ } from './care.js';
 import { RUN } from './run.js';
 import { JOBS, delegate } from './jobs.js';
 import { GUIDE, ENTRIES, BY_ID } from './guide.js';
+import { mountHudPanel } from './hud.js';
 
 const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
 const APPS = [
-  { id: 'map', name: 'Map', bg: 'linear-gradient(#4fb286,#2a7d6a)', svg: ic('<path d="M24 41s-12-11-12-20a12 12 0 0124 0c0 9-12 20-12 20z"/><circle cx="24" cy="21" r="4.5"/>') },
+  { id: 'compass', name: 'Compass', bg: 'linear-gradient(#5b6573,#2c313b)', svg: ic('<circle cx="24" cy="24" r="16"/><path d="M30 18l-4 9-8 3 4-9z" fill="#fff" stroke-width="2"/>') },
   { id: 'status', name: 'Park', bg: 'linear-gradient(#e0884a,#b24a34)', svg: ic('<path d="M8 33a16 16 0 0132 0"/><path d="M24 33l8-11"/>', '<circle cx="24" cy="33" r="2.5" fill="#fff"/>') },
-  { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>'), badge: () => '' },
-  { id: 'photos', name: 'Photos', bg: 'linear-gradient(#f2c14e,#e0803c)', svg: ic('<rect x="7" y="14" width="34" height="24" rx="5"/><circle cx="24" cy="26" r="7"/><path d="M17 14l3-5h8l3 5"/>'), badge: () => (GUIDE.photos.length || '') },
+  { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>') },
   { id: 'jobs', name: 'Park Jobs', bg: 'linear-gradient(#7a8ea8,#455a78)', svg: ic('<rect x="8" y="16" width="32" height="22" rx="4"/><path d="M18 16v-4a3 3 0 013-3h6a3 3 0 013 3v4M8 26h32"/>') },
+  { id: 'settings', name: 'Settings', bg: 'linear-gradient(#9a9aa3,#5d5d68)', svg: ic('<circle cx="24" cy="24" r="6"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4"/>') },
+];
+const DOCK = [
+  { id: 'map', name: 'Map', bg: 'linear-gradient(#4fb286,#2a7d6a)', svg: ic('<path d="M24 41s-12-11-12-20a12 12 0 0124 0c0 9-12 20-12 20z"/><circle cx="24" cy="21" r="4.5"/>') },
+  { id: 'camera', name: 'Camera', bg: 'linear-gradient(#cfd3da,#8d929c)', svg: ic('<rect x="7" y="14" width="34" height="24" rx="5"/><circle cx="24" cy="26" r="7"/><path d="M17 14l3-5h8l3 5"/>').replace('#fff', '#2a2d35') },
+  { id: 'photos', name: 'Photos', bg: 'linear-gradient(#f2c14e,#e0803c)', svg: ic('<circle cx="24" cy="24" r="4"/><path d="M24 20c-6-9 0-13 0-13s6 4 0 13zM28 24c9-6 13 0 13 0s-4 6-13 0zM24 28c6 9 0 13 0 13s-6-4 0-13zM20 24c-9 6-13 0-13 0s4-6 13 0z"/>'), badge: () => (GUIDE.photos.length || '') },
   { id: 'clyde', name: 'Clyde', bg: 'linear-gradient(#d98a6a,#a8503c)', svg: ic('<path d="M10 13h28a3 3 0 013 3v15a3 3 0 01-3 3H22l-8 7v-7h-4a3 3 0 01-3-3V16a3 3 0 013-3z"/>', '<circle cx="18" cy="23.5" r="1.8" fill="#fff"/><circle cx="25" cy="23.5" r="1.8" fill="#fff"/><circle cx="32" cy="23.5" r="1.8" fill="#fff"/>') },
 ];
+const ALL = [...APPS, ...DOCK];
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
-  constructor({ audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
-    Object.assign(this, { audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
+  constructor({ onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
+    Object.assign(this, { onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
   }
@@ -41,22 +48,31 @@ export class Phone {
     this.tab = tab; this._release();
     const body = this.el.querySelector('[data-ph-body]'); body.innerHTML = '';
     const home = tab === 'home', pb = this.el.querySelector('.pbar'), nm = this.el.querySelector('[data-ph-name]');
-    pb.classList.toggle('home', home); nm.textContent = home ? '' : (APPS.find((x) => x.id === tab)?.name || '');
+    pb.classList.toggle('home', home); nm.textContent = home ? '' : (ALL.find((x) => x.id === tab)?.name || '');
     this.el.querySelector('.phone').classList.toggle('onhome', home);
     if (home) {
       const now = new Date(), clock = document.createElement('div');
       clock.innerHTML = `<div style="font-size:54px;font-weight:300;letter-spacing:.02em">${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')}</div><div style="font-size:13px;opacity:.75;margin-top:-2px">${now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>`;
       clock.style.cssText = 'text-align:center;margin:6px 0 22px'; body.appendChild(clock);
       const grid = document.createElement('div'); grid.className = 'appgrid';
-      for (const ap of APPS) {
+      const mkApp = (ap, lbl = true) => {
         const badge = ap.badge?.();
         const d = document.createElement('button'); d.className = 'app';
-        d.innerHTML = `<span class="ico" style="background:${ap.bg}">${ap.svg}${badge ? `<em>${badge}</em>` : ''}</span><span class="lbl">${ap.name}</span>`;
-        d.addEventListener('click', (e) => { e.stopPropagation(); this.show(ap.id); });
-        grid.appendChild(d);
-      }
+        d.innerHTML = `<span class="ico" style="background:${ap.bg}">${ap.svg}${badge ? `<em>${badge}</em>` : ''}</span>${lbl ? `<span class="lbl">${ap.name}</span>` : ''}`;
+        d.addEventListener('click', (e) => { e.stopPropagation(); if (ap.id === 'camera') { this.close(); this.onCamera?.(); } else this.show(ap.id); });
+        return d;
+      };
+      for (const ap of APPS) grid.appendChild(mkApp(ap));
       body.appendChild(grid);
-      const hint = document.createElement('div'); hint.style.cssText = 'text-align:center;font-size:11px;opacity:.5;margin-top:26px;letter-spacing:.06em'; hint.textContent = 'P or Esc to put it away'; body.appendChild(hint);
+      const dots = document.createElement('div'); dots.className = 'pdots'; dots.innerHTML = '<i class="on"></i>'; body.appendChild(dots);
+      const dock = document.createElement('div'); dock.className = 'dock'; for (const ap of DOCK) dock.appendChild(mkApp(ap, false)); body.appendChild(dock);
+    } else if (tab === 'compass') {
+      const w = document.createElement('div'); w.style.cssText = 'text-align:center;padding-top:10px';
+      w.innerHTML = `<div data-compass style="font-size:30px;font-weight:700;margin-bottom:14px"></div><div style="position:relative;width:240px;height:240px;margin:0 auto"><div data-dial style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(244,230,200,.6);background:#25222c"><b style="position:absolute;left:50%;top:6px;transform:translateX(-50%);color:#e0412e">N</b><b style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%)">S</b><b style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">W</b><b style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">E</b></div><div style="position:absolute;left:50%;top:-12px;width:0;height:0;border:9px solid transparent;border-bottom:16px solid #ffd9a0;transform:translateX(-50%)"></div></div><div class="bubble" style="margin-top:22px">North is on the dial. The dam is south of the lake, the beach is on the east shore.</div>`;
+      body.appendChild(w);
+    } else if (tab === 'settings') {
+      const hp = document.createElement('div'); hp.className = 'usage'; hp.style.maxWidth = 'none'; body.appendChild(hp); mountHudPanel(hp);
+      const c = document.querySelector('#paused .controls'); if (c) { const k = document.createElement('div'); k.className = 'controls'; k.style.cssText = 'margin-top:16px;font-size:12px;line-height:2'; k.innerHTML = c.innerHTML; body.appendChild(k); }
     } else if (tab === 'map') {
       const comp = document.createElement('div'); comp.className = 'compass'; comp.dataset.compass = ''; body.appendChild(comp);
       this._prevMap = this.minimap.mode; this.minimap.set('full');
@@ -136,6 +152,7 @@ export class Phone {
     if (!this.isOpen) return;
     const p = this.player, b = ((Math.atan2(-Math.sin(p.yaw), -Math.cos(p.yaw)) * 180 / Math.PI) + 360) % 360;
     const c = this.el.querySelector('[data-compass]'); if (c) c.textContent = `HEADING ${Math.round(b)}° ${dirs[Math.round(b / 45) % 8]}`;
+    const dl = this.el.querySelector('[data-dial]'); if (dl) dl.style.transform = `rotate(${-b}deg)`;
     const s = this.el.querySelector('[data-ph-sub]'); if (s) s.textContent = `${Math.round(p.pos.y - 20)} m above the lake`;
   }
   close() {

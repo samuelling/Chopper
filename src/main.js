@@ -307,7 +307,7 @@ async function boot() {
   const gauge = new Gauge(document.getElementById('hud'));
   initHud();
   const jobQueue = [];
-  const phone = new Phone({ audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+  const phone = new Phone({ onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     onOpen: () => { phoneOn = true; player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry({ phone: 'axe', axe: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.4); }
