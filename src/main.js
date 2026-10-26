@@ -35,6 +35,7 @@ import { Squirrels } from './squirrels.js';
 import { Deer } from './deer.js';
 import { Flyers } from './flyers.js';
 import { Critters } from './critters.js';
+import { Weather } from './weather.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
@@ -114,6 +115,7 @@ async function boot() {
     if (RUN.s.lake != null) lake.level = Math.min(lake.originalLevel, Math.max(lake.floor + 0.02, RUN.s.lake));
   }
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
+  const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
   const flyers = new Flyers(scene, { mobile: MOBILE });
   const deer = new Deer(scene, chunks, { mobile: MOBILE });
@@ -511,7 +513,8 @@ async function boot() {
     fx.update(dt);
 
     const s = sdfAt(player.pos.x, player.pos.z);
-    audio.update(dt, { mood, hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
+    const wx = weather.update(dt, atmosphere, () => audio.thunder?.());
+    audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : '');
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
@@ -520,7 +523,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

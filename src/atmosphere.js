@@ -368,29 +368,35 @@ export class Atmosphere {
     return new THREE.Vector3(h.x * Math.cos(e), Math.sin(e), h.y * Math.cos(e)).normalize();
   }
 
+  /** weather dims and greys the light and thickens the fog (w 0..1) */
+  setWeather(w, snow = false) {
+    w = Math.round(w * 200) / 200;
+    if (w === this.wx && snow === this.wxSnow) return;
+    this.wx = w; this.wxSnow = snow; if (this.state) this.applyState(this.state);
+  }
   applyState(s) {
-    const u = this.skyUniforms;
-    u.uTop.value.copy(s.skyTop); u.uMid.value.copy(s.skyMid); u.uHorizon.value.copy(s.horizon);
-    u.uSunColor.value.copy(s.sunColor); u.uCloudLit.value.copy(s.cloudLit); u.uCloudShade.value.copy(s.cloudShade);
-    u.uCloudAmt.value = s.cloudAmt;
+    const u = this.skyUniforms, w = this.wx || 0, grey = this._grey || (this._grey = new THREE.Color()), gs = this.wxSnow ? '#dfe6ec' : '#7d8a98';
+    u.uTop.value.copy(s.skyTop).lerp(grey, w * 0.7); u.uMid.value.copy(s.skyMid).lerp(grey, w * 0.7); u.uHorizon.value.copy(s.horizon).lerp(grey, w * 0.6);
+    u.uSunColor.value.copy(s.sunColor); u.uCloudLit.value.copy(s.cloudLit).lerp(grey, w * 0.5); u.uCloudShade.value.copy(s.cloudShade).lerp(grey, w * 0.3);
+    u.uCloudAmt.value = s.cloudAmt + (1 - s.cloudAmt) * w * 0.8;
     const sd = this.sunDir();
     u.uSunDir.value.copy(sd);
-    this.scene.fog.color.copy(s.fog);
-    this.scene.fog.density = s.fogDensity;
+    this.scene.fog.color.copy(s.fog).lerp(grey.set(gs), w * 0.55);
+    this.scene.fog.density = s.fogDensity * (1 + w * (this.wxSnow ? 1.6 : 2.2));
     this.sun.color.copy(s.sunColor);
-    this.sun.intensity = s.sunInt;
+    this.sun.intensity = s.sunInt * (1 - 0.6 * w);
     this.hemi.color.copy(s.hemiSky);
     this.hemi.groundColor.copy(s.hemiGround);
-    this.hemi.intensity = s.hemiInt;
+    this.hemi.intensity = s.hemiInt * (1 - 0.12 * w);
     this._sunDir = sd;
     for (const r of this.ridges) {
-      r.mat.uniforms.uFog.value.copy(s.fog);
-      r.mat.uniforms.uHaze.value.copy(s.fog).lerp(s.skyMid, 0.45);
+      r.mat.uniforms.uFog.value.copy(s.fog).lerp(grey, w * 0.55);
+      r.mat.uniforms.uHaze.value.copy(s.fog).lerp(s.skyMid, 0.45).lerp(grey, w * 0.5);
     }
     for (const sh of this.shafts) {
       sh.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sd);
       sh.mat.uniforms.uColor.value.copy(s.sunColor);
-      sh.mat.uniforms.uAlpha.value = sh.alpha * s.shafts;
+      sh.mat.uniforms.uAlpha.value = sh.alpha * s.shafts * (1 - w);
     }
     this.state = s;
   }

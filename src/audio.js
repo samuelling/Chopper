@@ -18,6 +18,7 @@ export class Audio {
     this.lap = this._loop(900, 0.6, 0.0);
     this.gateSnd = this._loop(140, 1.5, 0.0);
     this.rustle = this._loop(3200, 0.6, 0.0);          // wind in the leaves
+    this.rainHi = this._loop(5200, 0.5, 0.0); this.rainLo = this._loop(1100, 0.4, 0.0);   // rain on leaves and on the ground
     this.cicada = this._loop(5600, 9, 0.0);            // summer: the drone of cicadas, pulsing
     const lfo = ctx.createOscillator(); lfo.frequency.value = 46; const lg = ctx.createGain(); lg.gain.value = 0.0;
     lfo.connect(lg); lg.connect(this.cicada.g.gain); lfo.start(); this.cicadaLfo = lg;
@@ -115,6 +116,7 @@ export class Audio {
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
   owl() { if (!this.ready) return; [[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].forEach(([d, l]) => setTimeout(() => this._tone(l > 0.4 ? 330 : 400, l, 0.06, 'sine', l > 0.4 ? 260 : 390), d * 1000)); }
   coyote() { if (!this.ready) return; const n = 5 + ((Math.random() * 5) | 0); for (let i = 0; i < n; i++) setTimeout(() => this._tone(700 + Math.random() * 500, 0.22, 0.03, 'sawtooth', 900 + Math.random() * 400), i * 190 + Math.random() * 80); setTimeout(() => this._tone(620, 1.4, 0.04, 'sine', 980), n * 190); }
+  thunder() { if (!this.ready) return; this._burst(110, 0.7, 2.6, 0.35, 'lowpass', 0.4); setTimeout(() => this._burst(70, 0.6, 2.2, 0.25, 'lowpass', 0.5), 600); }
   snort() { if (!this.ready) return; this._burst(900, 1.2, 0.18, 0.16, 'bandpass', 0.6); setTimeout(() => this._burst(700, 1.2, 0.22, 0.14, 'bandpass', 0.5), 260); }
   creak() { this._tone(110 + Math.random() * 60, 0.9, 0.025, 'sawtooth', 70 + Math.random() * 30); }
   bird() { this._song(SEASON); }
@@ -137,6 +139,7 @@ export class Audio {
     // lapping loudest at the water's edge
     const near = Math.max(0, 1 - Math.max(0, s.sdf) / 45) * (s.lakeFrac);
     this.lap.g.gain.setTargetAtTime((SEASON === 'winter' ? 0.025 : 0.045) * near, t, 0.5);
+    const rn = s.rain || 0; this.rainHi.g.gain.setTargetAtTime(s.snow ? 0 : 0.05 * rn, t, 0.8); this.rainLo.g.gain.setTargetAtTime(s.snow ? 0 : 0.035 * rn, t, 0.8);
     this.gateSnd.g.gain.setTargetAtTime(s.gate ? 0.18 : 0, t, 0.3);
     // summer: cicadas through the day, swelling and fading
     const cic = SEASON === 'summer' ? (1 - evening * 0.7) * (0.55 + 0.45 * Math.sin(t * 0.13)) : 0;
@@ -147,7 +150,7 @@ export class Audio {
     if (this.birdT < 0) {
       const iv = { spring: [1.5, 3.5], summer: [2.5, 6], autumn: [3, 8], winter: [9, 20] }[SEASON];
       this.birdT = (iv[0] + Math.random() * (iv[1] - iv[0])) * (1 + evening * 1.5);
-      if (s.sdf > -5) this.bird();
+      if (s.sdf > -5 && !(s.rain > 0.35)) this.bird();
     }
     // night-ish insects and frogs
     this.insectT -= dt;
