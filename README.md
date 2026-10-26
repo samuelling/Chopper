@@ -29,7 +29,7 @@ the reservoir shoreline and both islands, the dam, the beach, the boat launch, b
 
 The hills use **real USGS 3DEP lidar elevation** (public domain), 15 m grid in `src/ashland_dem.js`, measured relative to the reservoir surface (66.2 m) and vertically scaled by 0.6 (`VS` in `src/world.js`).
 
-Where trees grow comes from **real NLCD 2021 land cover** (public domain, `src/ashland_landcover.js`): deciduous, evergreen and mixed forest, woody wetland, and cleared or developed land set tree density and the pine-versus-hardwood mix. Individual tree positions within those areas are still scattered procedurally.
+Where trees grow comes from **real NLCD 2021 land cover** (public domain, `src/ashland_landcover.js`): deciduous, evergreen and mixed forest, woody wetland, and cleared or developed land set tree density and the pine-versus-hardwood mix. Tree height follows **real LANDFIRE 2024 canopy height** (USGS/USFS, `src/ashland_canopy.js`), so taller stands in the real park have taller trees here. Individual tree positions within those areas are still scattered procedurally.
 
 What is **not** real: lake depth (lidar only sees the water surface, so the bowl is invented), the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
 import { treeColor, SPECIES, buildStump } from './trees.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
+import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
@@ -249,7 +250,9 @@ export class ChunkManager {
         const models = this.treeModels[sp];
         const v = Math.floor(rng() * models.length);
         const g = models[v];
-        const s = 0.78 + rng() * 0.62;
+        const hc = canopyAt(x, z);   // real canopy height (m); 0 = unknown
+        const real = hc > 0 ? Math.min(1.3, Math.max(0.7, 0.55 + 0.45 * hc / 19)) : 1;
+        const s = (0.78 + rng() * 0.62) * real;
         const sy = s * (0.9 + rng() * 0.22);
         const yaw = rng() * Math.PI * 2;
         const leanMax = sp === 'pine' ? 0.025 : 0.06;
