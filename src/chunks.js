@@ -73,6 +73,9 @@ export class ChunkManager {
     propModels.boulders.forEach((g, i) => {
       this.defs[`boulder:${i}`] = { geoNear: g, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 120, farDist: 240 };
     });
+    propModels.beaverStumps.forEach((g, i) => {
+      this.defs[`beaver:${i}`] = { geoNear: g, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 60, farDist: 110 };
+    });
     this.defs.log = { geoNear: propModels.log, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 70, farDist: 150 };
     this.defs.reeds = { geoNear: propModels.reeds.geo, geoFar: propModels.reeds.geoFar, matFill: fillDouble, matOutline: null, castShadow: false, nearDist: 40, farDist: 100 };
     propModels.stones.forEach((g, i) => {
@@ -197,6 +200,22 @@ export class ChunkManager {
   // -------------------------------------------------------------------------
   // generation
   // -------------------------------------------------------------------------
+  /** nearest live tree within r metres (for animals), or null */
+  nearestTree(x, z, r) {
+    const [cx, cz] = this.chunkAt(x, z);
+    let best = null, bd = r;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const ch = this.chunks.get(this.keyOf(cx + dx, cz + dz));
+      if (!ch) continue;
+      for (const t of ch.trees) {
+        if (!t.alive) continue;
+        const d = Math.hypot(t.x - x, t.z - z) - t.radius;
+        if (d < bd) { bd = d; best = t; }
+      }
+    }
+    return best;
+  }
+
   _blocked(x, z, pad) {
     if (this.layout.blocked(x, z, pad)) return true;
     if (trailDistAt(x, z) < 2.6 + pad) return true;
@@ -389,6 +408,32 @@ export class ChunkManager {
           if (under && sdf > -14) continue;
           if (inLot(x, z, 4)) continue;
           mkItem('log', x, z, 0.8 + rng() * 0.7, rng() * 6.28, null, -0.05);
+        }
+      }
+    }
+    // --- beaver-gnawed stumps along the shore (clustered, sparse) ---
+    {
+      const cell = 7;
+      let idx = 0;
+      for (let gz = ch.z0; gz < ch.z0 + CHUNK; gz += cell) {
+        for (let gx = ch.x0; gx < ch.x0 + CHUNK; gx += cell) {
+          idx++;
+          const rng = mulberry32(ch.cx * 5113 + ch.cz * 3571 + idx * 13 + 91);
+          const x = gx + rng() * cell, z = gz + rng() * cell, roll = rng();
+          if (!inBounds(x, z)) continue;
+          const sdf = sdfAt(x, z);
+          if (sdf < 1.5 || sdf > 20) continue;
+          const y = groundY(x, z);
+          if (y < LEVEL + 0.15 || y > LEVEL + 3.2) continue;
+          const lodge = fbm(x * 0.012 + 31, z * 0.012 - 17, 2, 97);     // beavers work a few stretches of shore
+          if (roll > 0.55 * smoothstep(0.55, 0.7, lodge)) continue;
+          if (z < DAM_Z + 14) continue;
+          if (Math.hypot(x - BEACH.x, z - BEACH.z) < BEACH.r * 1.2) continue;
+          if (Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r * 1.5) continue;
+          if (this._blocked(x, z, 1.0) || inLot(x, z, 5)) continue;
+          const sc = 0.9 + rng() * 0.5;
+          mkItem(`beaver:${rng() > 0.45 ? 1 : 0}`, x, z, sc, rng() * 6.28, null, -0.04);
+          ch.colliders.push(this.colliders.add(x, z, 0.3 * sc, { tag: 'stump' }));
         }
       }
     }

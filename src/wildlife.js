@@ -70,7 +70,7 @@ function turtleGeo() {
 
 const FILL = { sway: false };
 
-function makeInstanced(geo, cap) {
+export function makeInstanced(geo, cap) {
   const fill = new THREE.InstancedMesh(geo, fillMaterial(FILL), cap);
   const line = new THREE.InstancedMesh(geo, outlineMaterial({ ...FILL, color: new THREE.Color(0.12, 0.17, 0.14) }), cap);
   for (const m of [fill, line]) { m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); }

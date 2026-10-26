@@ -33,7 +33,7 @@ Where trees grow comes from **real NLCD 2021 land cover** (public domain, `src/a
 
 The lakebed follows the **real MassWildlife depth survey** of Ashland Reservoir (contours up to 48 ft, MassGIS; `src/ashland_bathy.js`), scaled with the same 0.6 vertical factor as the hills.
 
-Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like everything else, and only appears while the lake is full.
+Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like everything else, and only appears while the lake is full. The gray squirrels (they dart between pauses and scamper up the nearest tree if you get close) and the beaver-gnawed stumps along the shore are invented too: the stumps are scattered procedurally near the water, with no survey of real beaver activity behind them.
 
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 

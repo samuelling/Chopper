@@ -16,6 +16,7 @@ import { Landmarks } from './landmarks.js';
 import { Litter } from './litter.js';
 import { FX } from './fx.js';
 import { Wildlife } from './wildlife.js';
+import { Squirrels } from './squirrels.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
 import { ui } from './ui.js';
@@ -83,6 +84,7 @@ async function boot() {
   const propModels = buildPropModels();
   const walls = buildWalls();
   const chunks = new ChunkManager({ scene, colliders, layout, treeModels, propModels, walls, spawnClear: { x: SPAWN.x, z: SPAWN.z, r: 5 } });
+  const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
 
   if (MOBILE) {
     chunks.loadR = 190; chunks.unloadR = 240;
@@ -221,6 +223,7 @@ async function boot() {
     atmosphere.update(dt, camera, player.pos);
     water.update(dt);
     wildlife.update(dt, player.pos);
+    squirrels.update(dt, player.pos);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
 
@@ -232,7 +235,7 @@ async function boot() {
   }
 
   const render = () => renderer.render(scene, camera);
-  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

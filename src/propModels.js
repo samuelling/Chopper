@@ -186,12 +186,45 @@ function buildStone(variant) {
   return b.build();
 }
 
+// ---------------------------------------------------------------------------
+// Beaver-gnawed stump: pencil-pointed top, pale chewed wood, a ring of chips
+// ---------------------------------------------------------------------------
+function buildBeaverStump(variant) {
+  const rng = mulberry32(1300 + variant * 11);
+  const b = new GeoBuilder();
+  const R = 0.2 + variant * 0.07, trunkH = 0.42 + variant * 0.12;
+  const bark = new THREE.Color('#5b4636'), bark2 = new THREE.Color('#4a382b'), wood = new THREE.Color('#d9b97f'), wood2 = new THREE.Color('#c79f62');
+  const trunk = new THREE.CylinderGeometry(R, R * 1.18, trunkH, 8, 1, false);
+  jitterGeometry(trunk, 0.02, 300 + variant);
+  b.add(trunk, matrix(0, trunkH / 2, 0), {
+    tint: 0,
+    faceColorFn: (c, n, tri) => (c.y > trunkH * 0.72 ? tc.copy(tri % 2 ? wood : wood2) : tc.copy(hash2(tri, 2, variant) > 0.5 ? bark : bark2)),
+  });
+  // the gnawed point
+  const tip = new THREE.ConeGeometry(R * 0.98, R * 2.1, 8, 1, false);
+  jitterGeometry(tip, 0.025, 310 + variant);
+  b.add(tip, matrix(0.01, trunkH + R * 1.05 - 0.02, 0, 0, rng() * 6, 0.05), {
+    tint: 0,
+    faceColorFn: (c, n, tri) => tc.copy(tri % 2 ? wood : wood2).multiplyScalar(0.92 + 0.12 * hash2(tri, 9, variant)),
+  });
+  // chips on the ground
+  const chip = new THREE.BoxGeometry(0.14, 0.04, 0.05);
+  for (let i = 0; i < 7; i++) {
+    const a = rng() * 6.28, r = R * 1.5 + rng() * 0.45;
+    b.add(chip, matrix(Math.cos(a) * r, 0.03, Math.sin(a) * r, 0, rng() * 6.28, 0, 0.8 + rng() * 0.7), {
+      tint: 0, color: tc.set(rng() > 0.5 ? '#e0c68f' : '#cfa96b'),
+    });
+  }
+  return b.build();
+}
+
 export function buildPropModels() {
   return {
     fern: { geo: buildFern(0), geoFar: buildFern(1) },
     shrub: { geo: buildShrub(0), geoFar: buildShrub(1) },
     boulders: [buildBoulder(0), buildBoulder(1), buildBoulder(2)],
     log: buildLog(),
+    beaverStumps: [buildBeaverStump(0), buildBeaverStump(1)],
     reeds: { geo: buildReeds(0), geoFar: buildReeds(1) },
     stones: [buildStone(0), buildStone(1), buildStone(2)],
   };
