@@ -21,6 +21,7 @@ export const Usage = {
   today,
   get tier() { return S.tier; },
   get days() { return S.days; },
+  get source() { return S.source; },
   todayLevel() { return S.days[today()]; },
   needsCheckin() { return S.days[today()] === undefined; },
   setTier(l) { S.tier = l; save(); this.apply(); },

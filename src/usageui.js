@@ -1,4 +1,5 @@
 import { RUN } from './run.js';
+import { PRESSURE } from './pressure.js';
 import { Usage, LEVELS, TOKEN_STEPS, importLogFiles, pickLogFolder, recheckLogFolder, canPickFolder, hasSavedFolder } from './usage.js';
 
 const fmt = (t) => (t >= 1e6 ? `${t / 1e6}M` : `${t / 1e3}k`);
@@ -6,6 +7,7 @@ const fmt = (t) => (t >= 1e6 ? `${t / 1e6}M` : `${t / 1e3}k`);
 const folderBtns = () => canPickFolder()
   ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>'
   : '<label class="ubtn">Pick log folder<input type="file" webkitdirectory hidden data-logfiles></label>';
+const dbgHTML = '<details class="dbg"><summary>Debug: what the game has stored</summary><pre data-usage-debug></pre></details>';
 const panelHTML = () => `
 <div class="usage">
   <div class="uh">Your footprint</div>
@@ -17,6 +19,7 @@ const panelHTML = () => `
     ${folderBtns()}
   </div>
   <small data-usage-note></small>
+  ${dbgHTML}
   ${RUN.dev ? '<details><summary>Manual dial (testing)</summary><label>Pressure <input type="range" min="0" max="100" value="0" data-pressure> <b data-pressure-val></b></label></details>' : ''}
 </div>`;
 
@@ -24,13 +27,21 @@ const panelHTML = () => `
 const logOnlyHTML = () => `<div class="urow"><span>Link it now</span>
     <label class="ubtn">Claude Code log files<input type="file" accept=".jsonl" multiple hidden data-logfiles></label>
     ${folderBtns()}
-  </div><small data-usage-note></small>`;
+  </div><small data-usage-note></small>${dbgHTML}`;
 
 export function initUsageUI(root = document, onChange) {
   root.querySelectorAll('[data-log-panel]').forEach((el) => { el.innerHTML = logOnlyHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   root.querySelectorAll('[data-usage-panel]').forEach((el) => { el.innerHTML = panelHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   const note = (t) => { root.querySelectorAll('[data-usage-note]').forEach((e) => { e.textContent = t; }); onChange?.(); };
+  const dbg = () => {
+    const days = Object.keys(Usage.days).sort(), lv = Usage.level();
+    const txt = [`typical-day tier: ${Usage.tier === null ? 'not set' : LEVELS[Usage.tier].name}`,
+      `level used now: ${lv === null ? 'none' : `${lv.toFixed(2)} (${LEVELS[Math.round(lv)].name})`}`, `pressure target: ${Math.round(PRESSURE.target * 100)}%`,
+      days.length ? 'days:' : 'days: none yet', ...days.slice(-14).map((k) => `  ${k}  ${LEVELS[Usage.days[k]].name}  (${Usage.source[k] || '?'})`)].join('\n');
+    root.querySelectorAll('[data-usage-debug]').forEach((e) => { e.textContent = txt; });
+  };
   const refresh = () => {
+    dbg();
     const today = Usage.todayLevel();
     root.querySelectorAll('[data-tier]').forEach((b) => b.classList.toggle('on', Usage.tier === +b.dataset.tier));
     root.querySelectorAll('[data-today]').forEach((b) => b.classList.toggle('on', today === +b.dataset.today));

@@ -7,7 +7,10 @@
 <meta name="theme-color" content="#1c1517">
 <title>Ashland</title>
 <style>
-  :root { --ink:#2b1d1a; --paper:#f4e6c8; --ember:#d9572b; --gold:#f2b229; }
+  :root { --ink:#2b1d1a; --paper:#f4e6c8; --ember:#d9572b; --gold:#f2b229; --sh1:#d9572b; --sh2:#7b2a1c; }
+  :root[data-season=winter] { --sh1:#6fa3cf; --sh2:#2b4a73; --paper:#eef4f8; }
+  :root[data-season=spring] { --sh1:#7dbd5c; --sh2:#2f6a3c; }
+  :root[data-season=summer] { --sh1:#efb43a; --sh2:#a0541a; }
   html,body { margin:0; height:100%; overflow:hidden; background:#1c1517; font-family: "Avenir Next", "Trebuchet MS", Georgia, serif; color:var(--paper); }
   canvas { display:block; position:fixed; inset:0; width:100%; height:100%; }
   .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
@@ -15,7 +18,7 @@
   .overlay.hidden { display:none; }
   #title, #seasoncard { background: linear-gradient(rgba(20,12,16,.18), rgba(20,12,16,.62)); }
   #paused { overflow-y:auto; justify-content:flex-start; padding:24px 0 40px; }
-  h1 { font-size: clamp(54px, 11vw, 120px); letter-spacing:.06em; margin:0; color:var(--paper); text-shadow: 0 4px 0 var(--ember), 0 8px 0 #7b2a1c; font-weight:900; }
+  h1 { font-size: clamp(54px, 11vw, 120px); letter-spacing:.06em; margin:0; color:var(--paper); text-shadow: 0 4px 0 var(--sh1), 0 8px 0 var(--sh2); font-weight:900; }
   .sub { margin:22px 0 4px; font-size:clamp(15px,2.2vw,20px); letter-spacing:.28em; text-transform:uppercase; color:var(--gold); }
   .place { opacity:.8; font-style:italic; margin-bottom:28px; }
   .go { padding:14px 38px; border:3px solid var(--paper); border-radius:4px; font-size:20px; letter-spacing:.2em; text-transform:uppercase; background:rgba(217,87,43,.9); color:#fff; }
@@ -51,7 +54,7 @@
   .overlay { overflow-y:auto; touch-action: pan-y; }
   @media (max-height: 520px) {
     .overlay { justify-content:flex-start; padding:14px 18px; }
-    .overlay h1 { font-size:46px !important; text-shadow:0 3px 0 var(--ember), 0 5px 0 #7b2a1c; }
+    .overlay h1 { font-size:46px !important; text-shadow:0 3px 0 var(--sh1), 0 5px 0 var(--sh2); }
     .sub { margin:10px 0 2px; font-size:13px; } .place { margin-bottom:12px; font-size:13px; }
     .go { padding:9px 26px; font-size:16px; } .controls { margin-top:12px; font-size:12px; line-height:1.6; }
     .desk-note { margin-top:10px; padding:5px 10px; font-size:12px; } .note { display:none; }
@@ -93,6 +96,7 @@
   .logtut { max-width:560px; margin-top:12px; font-size:13px; text-align:left; opacity:.8; pointer-events:auto; }
   .logtut summary { cursor:pointer; text-align:center; letter-spacing:.08em; }
   .logtut ol { margin:8px 0 0; padding-left:20px; line-height:1.5; }
+  .dbg { margin-top:8px; font-size:12px; opacity:.85; } .dbg pre { margin:6px 0 0; padding:8px; background:rgba(0,0,0,.35); border-radius:6px; white-space:pre-wrap; font:12px monospace; }
   .logtut code { font-size:12px; opacity:.9; }
   .newgame { position:absolute; bottom:22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; padding:6px 12px; }
   .newgame:hover { opacity:1; }

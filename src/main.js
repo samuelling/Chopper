@@ -45,6 +45,7 @@ import { Player } from './player.js';
 import { ui } from './ui.js';
 import { TouchControls } from './touch.js';
 import { initFullscreen } from './fullscreen.js';
+document.documentElement.dataset.season = SEASON;   // the ASHLAND title takes the colours of the season you are in
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
