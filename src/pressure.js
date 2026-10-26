@@ -25,10 +25,12 @@ export const PRESSURE = {
   bump(x) { if (!this.live) return; this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
   update(dt) {
     if (!this.live) return;
-    this.damage = clamp01(this.damage + (this.target * UP * (1 - this.shield) - (1 - this.target) * DOWN) * dt);
+    this.damage = clamp01(this.damage + (this.target * UP * (1 - this.shield) - (1 - this.target) * DOWN * (1 + (RUN.s.recover || 0))) * dt);
     if ((this._save += dt) > 3) { this._save = 0; try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} }
   },
-  get harm() { return this.damage; },
+  heal(x) { this.damage = clamp01(this.damage - x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
+  // what shows on the land: lasting damage, softened by the upkeep you have paid for (never below 60% of the damage)
+  get harm() { return this.damage * (1 - Math.min(0.4, RUN.s.buffer || 0)); },
   // the effects (all exaggerated on purpose)
   get life() { return 1 - 0.9 * this.harm; },            // share of wildlife that still shows up
   get drop() { return 0.55 * this.harm; },                // fraction of the reservoir's depth held back

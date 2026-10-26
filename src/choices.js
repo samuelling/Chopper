@@ -13,11 +13,11 @@ const smooth = (edge0, x) => { const t = Math.min(1, Math.max(0, (x - edge0) / 0
 const build = (type) => ({ player, structures }) => { const r = structures.place(type, player); return r.ok ? { msg: r.msg, rec: r.rec } : { ok: false, msg: r.msg }; };
 
 export const CHOICES = [
-  { id: 'bench', kind: 'AI', title: 'Build a bench here', gain: 'A bench in front of you. AI drafts the design and the volunteer schedule, saving about 6 staff hours', care: 0.05, cost: 0.008, hours: 6, saved: 400, run: build('bench') },
-  { id: 'boardwalk', kind: 'AI', title: 'Lay a boardwalk', gain: 'A 14 m raised path ahead of you, so visitors stay out of the mud. AI plans the route and the materials list', care: 0.08, cost: 0.015, hours: 16, saved: 2500, run: build('boardwalk') },
-  { id: 'kiosk', kind: 'AI', title: 'Put up a trail kiosk', gain: 'A shelter with a map and interpretive sign. AI writes the signs and the accessibility notes', care: 0.06, cost: 0.010, hours: 10, saved: 900, run: build('kiosk') },
-  { id: 'table', kind: 'AI', title: 'Set a picnic area', gain: 'A level picnic table in front of you. Families have somewhere to stop', care: 0.06, cost: 0.010, hours: 6, saved: 600, run: build('table') },
-  { id: 'cameras', kind: 'AI', title: 'Sort the trail-camera photos', gain: 'A sightings log of the wildlife around now. Staff stop sorting thousands of photos by hand', care: 0.04, cost: 0.010, hours: 30, saved: 1200,
+  { id: 'bench', kind: 'AI', title: 'Build a bench here', gain: 'A bench in front of you. AI drafts the design and the volunteer schedule, saving about 6 staff hours', care: 0.05, cost: 0.008, buffer: 0.02, hours: 6, saved: 400, run: build('bench') },
+  { id: 'boardwalk', kind: 'AI', title: 'Lay a boardwalk', gain: 'A 14 m raised path ahead of you, so visitors stay out of the mud. AI plans the route and the materials list', care: 0.08, cost: 0.015, shield: 0.08, buffer: 0.04, hours: 16, saved: 2500, run: build('boardwalk') },
+  { id: 'kiosk', kind: 'AI', title: 'Put up a trail kiosk', gain: 'A shelter with a map and interpretive sign. AI writes the signs and the accessibility notes', care: 0.06, cost: 0.010, shield: 0.06, buffer: 0.03, hours: 10, saved: 900, run: build('kiosk') },
+  { id: 'table', kind: 'AI', title: 'Set a picnic area', gain: 'A level picnic table in front of you. Families have somewhere to stop', care: 0.06, cost: 0.010, buffer: 0.02, hours: 6, saved: 600, run: build('table') },
+  { id: 'cameras', kind: 'AI', title: 'Sort the trail-camera photos', gain: 'A sightings log of the wildlife around now. Staff stop sorting thousands of photos by hand', care: 0.04, cost: 0.010, buffer: 0.05, hours: 30, saved: 1200,
     run() {
       const names = [[WILDLIFE.fish, 'sunfish and bass'], [WILDLIFE.turtles, 'painted turtles'], [WILDLIFE.heron, 'a great blue heron'], [WILDLIFE.geese || WILDLIFE.floatingGeese, 'Canada geese'], [WILDLIFE.hawk, 'a red-tailed hawk'], [WILDLIFE.songbirds, 'chickadees and blue jays'], [WILDLIFE.squirrels, 'gray squirrels']].filter((n) => n[0]).map((n) => n[1]);
       for (const n of names) if (!CARE.sightings.includes(n)) CARE.sightings.push(n);
@@ -25,10 +25,12 @@ export const CHOICES = [
     } },
   { id: 'pests', kind: 'AI', title: 'Scan for pests and disease', gain: 'Early warning on invasive plants and tree disease: future harm builds 20% slower (it cannot undo harm already done)', care: 0.04, cost: 0.015, hours: 20, saved: 1500, shield: 0.2,
     run() { return { msg: 'Early detection is in place. The park will take harm more slowly.' }; } },
-  { id: 'paperwork', kind: 'AI', title: 'Draft the grant and permit paperwork', gain: 'Applications done in an afternoon, not weeks. Budget for upkeep and repairs', care: 0.05, cost: 0.012, hours: 40, saved: 12000,
+  { id: 'paperwork', kind: 'AI', title: 'Draft the grant and permit paperwork', gain: 'Applications done in an afternoon, not weeks. Budget for upkeep and repairs', care: 0.05, cost: 0.012, recover: 0.5, heal: 0.05, hours: 40, saved: 12000,
     run() { return { msg: 'The applications are filed. That is staff time and money the park keeps.' }; } },
-  { id: 'forecast', kind: 'AI', title: 'Forecast the crowds', gain: 'Predicts busy weekends so a short crew and parking match the visitors', care: 0.03, cost: 0.010, hours: 12, saved: 700,
+  { id: 'forecast', kind: 'AI', title: 'Forecast the crowds', gain: 'Predicts busy weekends so a short crew and parking match the visitors', care: 0.03, cost: 0.010, recover: 0.25, hours: 12, saved: 700,
     run() { return { msg: 'Staffing now follows the forecast. Fewer overloaded weekends.' }; } },
+  { id: 'replant', kind: 'AI', title: 'Plan a replanting', gain: 'AI picks species and spots for what has been lost and schedules the crews, so the park recovers lost ground', care: 0.05, cost: 0.012, hours: 20, saved: 1500, heal: 0.08, recover: 0.25,
+    run() { return { msg: 'Seedlings go in where the dieback is worst. The park starts to recover some of what it lost.' }; } },
   { id: 'survey', kind: 'AI', title: 'Ask for a park condition report', gain: 'A summary of the trees, the lake and the damage around you', care: 0.02, cost: 0.010, hours: 4, saved: 200,
     run({ player, chunks, lake }) {
       const trees = chunks.treesNear(player.pos.x, player.pos.z, 250), h = PRESSURE.harm;
@@ -72,10 +74,11 @@ export function pickChoices(seed, n = 6) {
   return [...pool.slice(0, n - 1), CHOICES.find((c) => c.id === 'hold')];
 }
 
+const effects = (c) => [c.shield && `new harm ${pct(c.shield)} slower`, c.recover && `healing +${pct(c.recover)} faster`, c.heal && `heals ${pct(c.heal)} now`, c.buffer && `the land looks ${pct(c.buffer)} less harmed`].filter(Boolean).map((t) => ` · ${t}`).join('');
 const pct = (x) => `${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%`;
 export function renderChoices(el, ctx, onDone, list = CHOICES) {
   el.innerHTML = `<div class="uh">Make a choice</div><small>Each shows what it gives and what it costs before you commit. AI choices cost a little lasting harm and give real benefits; the one park choice is to hold off.</small>
-  ${list.map((c) => `<button class="choice" data-choice="${c.id}"><b>${c.kind === 'AI' ? '◈' : '❖'} ${c.title}</b><span>Gives: ${c.gain}</span><span class="cost">${c.care ? `Care +${pct(c.care)}` : ''}${c.care && c.cost ? ' · ' : ''}${c.cost ? `harm +${pct(c.cost)}` : ''}${c.note ? `${c.care || c.cost ? ' · ' : ''}${c.note}` : ''}</span></button>`).join('')}
+  ${list.map((c) => `<button class="choice" data-choice="${c.id}"><b>${c.kind === 'AI' ? '◈' : '❖'} ${c.title}</b><span>Gives: ${c.gain}</span><span class="cost">${c.care ? `Care +${pct(c.care)}` : ''}${c.cost ? `${c.care ? ' · ' : ''}harm +${pct(c.cost)}` : ''}${effects(c)}${c.note ? `${c.care || c.cost ? ' · ' : ''}${c.note}` : ''}</span></button>`).join('')}
   <small data-choice-note></small>`;
   el.querySelectorAll('[data-choice]').forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -84,7 +87,7 @@ export function renderChoices(el, ctx, onDone, list = CHOICES) {
     const r = c.run(ctx) || {};
     el.querySelector('[data-choice-note]').textContent = r.msg || '';
     if (r.ok === false) return;                      // nothing happened (e.g. no room to build): try another
-    CARE.gain(c); if (c.cost) PRESSURE.bump(c.cost);
+    CARE.gain(c); if (c.cost) PRESSURE.bump(c.cost); if (c.heal) PRESSURE.heal(c.heal);
     if (c.shield) PRESSURE.shield = CARE.shield;
     if (r.rec) CARE.built.push(r.rec);
     el.querySelectorAll('[data-choice]').forEach((o) => { o.disabled = true; o.style.opacity = o === b ? '1' : '.35'; });
