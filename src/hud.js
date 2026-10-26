@@ -1,6 +1,7 @@
 // Dashboard HUD: the harm/care gauge, plus show/hide for every dashboard item (H toggles them all).
 import { PRESSURE } from './pressure.js';
 import { CARE } from './care.js';
+import { RUN } from './run.js';
 
 export const ITEMS = [
   { id: 'card', label: 'Status card', sel: '#hud .card' },
@@ -11,6 +12,8 @@ export const ITEMS = [
 ];
 const KEY = 'ashland.hud';
 let hidden = {}; try { hidden = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
+// the game starts with a clean screen (the phone is the dashboard); H or the pause menu brings the HUD back, and that choice is then remembered
+try { if (!RUN.dev && !localStorage.getItem(KEY + '2')) { hidden = { all: true }; localStorage.setItem(KEY + '2', '1'); } } catch {}
 const style = document.createElement('style'); document.head.appendChild(style);
 function apply() {
   style.textContent = ITEMS.filter((i) => hidden[i.id] || hidden.all).map((i) => `${i.sel.split(',').map((s) => s.trim()).join(', ')} { display:none !important; }`).join('\n');

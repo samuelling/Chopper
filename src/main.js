@@ -242,7 +242,7 @@ async function boot() {
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
-      { text: '<kbd>E</kbd> works things like the gate wheel &nbsp; <kbd>M</kbd> map &nbsp; <kbd>Esc</kbd> opens the menu with every control', ok: () => false, max: 14 },
+      { text: '<kbd>E</kbd> works things like the gate wheel &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
     moved: 0, turned: 0, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
