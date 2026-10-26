@@ -48,7 +48,7 @@ Turtles bask on logs and rocks and slip into the water when you run past.
 
 ## Pressure (art experiment)
 
-A single dial, **Pressure** (0-100%, pause menu or `?pressure=0.5`), stands in for how heavily AI and data-center use leans on a place. As it rises the reservoir is held lower, colours fade, and fish, turtles, songbirds, squirrels and geese show up less. It is **not a measurement**: the mapping is invented and exaggerated on purpose so the cost is visible. The idea for later phases is a coarse, consented, locally-computed usage number feeding the same dial; nothing is sent anywhere.
+A single dial, **Pressure** (0-100%, pause menu or `?pressure=0.5`), stands in for how heavily AI and data-center use leans on a place. As it rises the reservoir is held lower, colours fade, and fish, turtles, songbirds, squirrels and geese show up less. It is **not a measurement**: the mapping is invented and exaggerated on purpose so the cost is visible. The harm is **lasting**: pressure builds damage over minutes, and turning the dial down only lets the park heal over about an hour. The unluckiest trees brown first and, at full harm, roughly 30% are gone (they stop blocking and can't be chopped), and they return slowly as the park recovers. `?damage=0.5` starts with existing harm. The idea for later phases is a coarse, consented, locally-computed usage number feeding the same dial; nothing is sent anywhere.
 
 ## Sound
 

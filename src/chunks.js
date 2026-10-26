@@ -9,6 +9,7 @@ import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { IS_WINTER, SEASON_DEF } from './season.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
+import { treeLuck, treeGone } from './pressure.js';
 import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
 
 export const CHUNK = 64;
@@ -216,7 +217,7 @@ export class ChunkManager {
     const out = [], [cx, cz] = this.chunkAt(x, z), n = Math.ceil(r / CHUNK);
     for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
       const ch = this.chunks.get(this.keyOf(cx + dx, cz + dz));
-      if (ch) for (const t of ch.trees) if (t.alive && Math.hypot(t.x - x, t.z - z) <= r) out.push(t);
+      if (ch) for (const t of ch.trees) if (t.alive && !t.gone && Math.hypot(t.x - x, t.z - z) <= r) out.push(t);
     }
     return out;
   }
@@ -238,7 +239,7 @@ export class ChunkManager {
       const ch = this.chunks.get(this.keyOf(cx + dx, cz + dz));
       if (!ch) continue;
       for (const t of ch.trees) {
-        if (!t.alive) continue;
+        if (!t.alive || t.gone) continue;
         const d = Math.hypot(t.x - x, t.z - z) - t.radius;
         if (d < bd) { bd = d; best = t; }
       }
@@ -607,7 +608,7 @@ export class ChunkManager {
         const ch = this.chunks.get(this.keyOf(cx, cz));
         if (!ch) continue;
         for (const t of ch.trees) {
-          if (!t.alive) continue;
+          if (!t.alive || t.gone) continue;
           const dx = t.x - px, dz = t.z - pz;
           const d = Math.hypot(dx, dz);
           if (d > reach + t.radius) continue;
@@ -641,6 +642,26 @@ export class ChunkManager {
       new THREE.Vector3(r, 0.8 + (rec.sx - 0.78) * 0.5, r));
     ch.stumps.setMatrixAt(i, m);
     ch.stumps.instanceMatrix.needsUpdate = true;
+  }
+
+  // Pressure's lasting harm: the unluckiest trees disappear (and stop blocking or being choppable); as the park heals,
+  // they grow back, slowly.  Same per-tree luck as the shader's browning.
+  applyHarm(harm) {
+    for (const ch of this.chunks.values()) {
+      for (const t of ch.trees) {
+        if (!t.alive) continue;
+        if (t.luck === undefined) t.luck = treeLuck(t.x, t.z);
+        const gone = treeGone(t.luck, harm);
+        if (gone && !t.gone) {
+          t.gone = true; t.item.batch.remove(t.item);
+          if (t.collider) { this.colliders.remove(t.collider); const i = ch.colliders.indexOf(t.collider); if (i >= 0) ch.colliders.splice(i, 1); t.collider = null; }
+        } else if (!gone && t.gone) {
+          t.gone = false; t.item.batch.setMatrix(t.item, this.treeMatrix(t));
+          t.collider = this.colliders.add(t.x, t.z, Math.max(0.28, t.radius * 0.95), { tag: t });
+          ch.colliders.push(t.collider);
+        }
+      }
+    }
   }
 
   fell(tree, fromX, fromZ) {

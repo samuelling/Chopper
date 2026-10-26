@@ -8,6 +8,7 @@ export const shared = {
   wind: { value: 1 },
   resY: { value: 720 },
   outlinePx: { value: 1.5 },
+  harm: { value: 0 },
 };
 
 // ---------------------------------------------------------------------------
@@ -38,6 +39,8 @@ attribute float aTint;
 uniform float uTime;
 uniform float uWind;
 uniform vec3 uTreeColor;
+uniform float uHarm;
+float treeLuck(vec2 p) { vec3 p3 = fract(vec3(p.x, p.y, p.x) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 `;
 
 // Per-vertex colour = vertex-colour * (instance/uniform tint blended by aTint).
@@ -50,6 +53,14 @@ vColor = vec4(1.0);
   vColor.rgb *= mix(vec3(1.0), instanceColor.rgb, aTint);
 #else
   vColor.rgb *= mix(vec3(1.0), uTreeColor, aTint);
+#endif
+#ifdef USE_INSTANCING
+  if (uHarm > 0.001) {
+    float luck = treeLuck(instanceMatrix[3].xz);
+    float die = smoothstep(luck * 0.9, luck * 0.9 + 0.3, uHarm) * smoothstep(0.1, 0.5, aTint);
+    float lum = dot(vColor.rgb, vec3(0.333));
+    vColor.rgb = mix(vColor.rgb, vec3(0.62, 0.45, 0.24) * (0.45 + lum), die * 0.85);
+  }
 #endif
 `;
 
@@ -109,6 +120,7 @@ export function fillMaterial(opts = {}) {
     shader.uniforms.uTime = shared.time;
     shader.uniforms.uWind = shared.wind;
     shader.uniforms.uTreeColor = mat.userData.uTreeColor;
+    shader.uniforms.uHarm = shared.harm;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\n' + COMMON_DECL)
       .replace('#include <color_vertex>', COLOR_TINT)
@@ -136,6 +148,7 @@ export function outlineMaterial(opts = {}) {
     shader.uniforms.uOutlinePx = shared.outlinePx;
     shader.uniforms.uResY = shared.resY;
     shader.uniforms.uTreeColor = mat.userData.uTreeColor;
+    shader.uniforms.uHarm = shared.harm;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec3 aSmooth;\nuniform float uOutlinePx;\nuniform float uResY;\n' + COMMON_DECL)
       .replace('#include <color_vertex>', COLOR_TINT)
