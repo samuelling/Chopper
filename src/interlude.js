@@ -1,6 +1,6 @@
 // The end-of-season interlude: what has changed, a footprint check-in (first time), and a choice.  Then the next season.
 // All wording lives here so it is easy to rewrite once the premise is set.
-import { RUN } from './run.js';
+import { RUN, INTRO } from './run.js';
 import { PRESSURE } from './pressure.js';
 import { Usage, LEVELS } from './usage.js';
 import { renderChoices, pickChoices } from './choices.js';
@@ -11,7 +11,7 @@ const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const PULSE = 0.12;                    // lasting harm added at each interlude, scaled by your footprint level
 
 export function showInterlude(el, ctx, onContinue) {
-  const first = RUN.n === 0;
+  const first = RUN.n === INTRO - 1;   // the end of the first year
   const need = first;                  // the first interlude asks how much you lean on AI
   el.classList.remove('hidden');
   el.innerHTML = `
@@ -27,7 +27,7 @@ export function showInterlude(el, ctx, onContinue) {
     </div>`;
   const text = el.querySelector('[data-i-text]');
   text.textContent = first
-    ? "Hi, I'm Clyde. Until now the park was only a park. I can take on the paperwork, the plans and the upkeep it never had staff for, and every request I answer uses real energy and water somewhere else. Tell me how much you lean on AI, then pick one thing."
+    ? "Hi, I'm Clyde. You have now seen the park through a whole year, and until now it was only a park. I can take on the paperwork, the plans and the upkeep it never had staff for, and every request I answer uses real energy and water somewhere else. Tell me how much you lean on AI, then pick one thing."
     : 'The season turned. Here is what the park carries from what you did and what you asked of me. Pick one thing.';
   const go = el.querySelector('[data-i-go]');
   let chose = false, said = !need || Usage.level() !== null;

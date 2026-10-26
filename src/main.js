@@ -323,6 +323,7 @@ async function boot() {
   // a returning player lands on the opening menu (continue or start over); season changes within a visit reload straight into play
   const inPlay = () => { try { return !!sessionStorage.getItem('ashland.inplay'); } catch { return false; } };
   if (!RUN.fresh && !RUN.dev) document.querySelectorAll('#title .go span:not(.only-mobile)').forEach((s) => { s.textContent = 'Click to continue'; });
+  document.querySelectorAll('.logtut').forEach((d) => d.addEventListener('click', (e) => e.stopPropagation()));
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.fresh; b.addEventListener('click', restart); });
@@ -420,11 +421,21 @@ async function boot() {
       const felled = [];
       for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });
       RUN.advance({ felled, lake: lake.level, wp: waypoint });
-      PRESSURE.bump(pulse || 0);           // consequences begin now (the run is live from the second season)
-      const p = new URLSearchParams(location.search); p.delete('season');
-      p.set('x', player.pos.x.toFixed(1)); p.set('z', player.pos.z.toFixed(1)); p.set('yaw', (player.yaw ?? 0).toFixed(2));
-      location.search = p.toString();
+      PRESSURE.bump(pulse || 0);           // consequences begin now (the run is live from the second year)
+      reloadIntoNext();
     });
+  }
+  function reloadIntoNext() {
+    const p = new URLSearchParams(location.search); p.delete('season');
+    p.set('x', player.pos.x.toFixed(1)); p.set('z', player.pos.z.toFixed(1)); p.set('yaw', (player.yaw ?? 0).toFixed(2));
+    location.search = p.toString();
+  }
+  // part one: the season simply turns (the drone carries you on); no interlude until the year is done
+  function quietTurn() {
+    interludeOn = true; document.exitPointerLock?.();
+    const felled = []; for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });
+    RUN.advance({ felled, lake: lake.level, wp: waypoint });
+    reloadIntoNext();
   }
   window.__endSeason = () => { RUN.s.played = RUN.len; };
   minimap.hold = true; let pinT = 9;
@@ -474,7 +485,7 @@ async function boot() {
     if (!RUN.dev && started && player.locked && !interludeOn) {
       RUN.s.played += dt;
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
-      if (RUN.s.played >= RUN.len) beginInterlude();
+      if (RUN.s.played >= RUN.len) (RUN.quiet ? quietTurn() : beginInterlude());
     }
     minimap.update(dt); phone.update(); discoveries.update(player.pos);
     if ((pinT += dt) > 1) { pinT = 0; minimap.pins = [...PLACES.list.map((p) => ({ x: p.x, z: p.z, name: p.name })), ...discoveries.foundList().map((f) => ({ x: f.x, z: f.z, found: true }))]; }
