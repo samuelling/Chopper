@@ -186,4 +186,6 @@ export const WRECK = (() => {
 })();
 
 // where the player starts: on the dam crest, looking south down the reservoir
-export const SPAWN = { x: Math.round(DAM_HALF * 0.2), z: DAM_Z - 1, yaw: Math.PI };
+// start at 42.24246 N, 71.46356 W (on the shore, facing the water)
+const _s = project([42.24246, -71.46356]);
+export const SPAWN = { x: Math.round(_s[0]), z: Math.round(_s[1]), yaw: -2.9 };
