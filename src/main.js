@@ -418,6 +418,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
+    if (!RUN.phaseTwo) document.querySelectorAll('[data-knob-panel]').forEach((e) => e.remove());   // the check-in knob waits for the AI phase
     const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q phone/axe/away · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
