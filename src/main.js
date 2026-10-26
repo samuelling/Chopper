@@ -240,9 +240,9 @@ async function boot() {
       { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
       { text: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
-      { text: '<kbd>P</kbd> raises your phone: map, jobs, field guide', ok: () => tut.phoned, max: 30 },
+      { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
-      { text: '<kbd>Q</kbd> changes what is in your hands &nbsp; <kbd>E</kbd> works things &nbsp; <kbd>Esc</kbd> opens the menu with every control', ok: () => false, max: 14 },
+      { text: '<kbd>E</kbd> works things like the gate wheel &nbsp; <kbd>M</kbd> map &nbsp; <kbd>Esc</kbd> opens the menu with every control', ok: () => false, max: 14 },
     ],
     moved: 0, turned: 0, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
@@ -262,7 +262,7 @@ async function boot() {
       if (s.ok() || (!s.always && this.t > s.max)) this.go(this.i + 1);
     },
   };
-  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; });
+  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP' || e.code === 'KeyQ') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; });
   document.addEventListener('click', () => { if (started && !player.locked && !MOBILE && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden') && tut.active) begin(); });
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');

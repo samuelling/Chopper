@@ -25,7 +25,7 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.carry = 'phone'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
+    this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
