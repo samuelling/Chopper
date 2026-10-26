@@ -17,6 +17,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
+| M | optional minimap: off, nearby, or whole park (also a Map button on the title and pause screens; north is up, the dam is at the bottom) |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 
 ## On a phone

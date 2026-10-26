@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
 import { initUsageUI } from './usageui.js';
+import { Minimap } from './minimap.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -201,6 +202,10 @@ async function boot() {
     b.classList.toggle('on', b.dataset.season === SEASON);
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
+  const minimap = new Minimap(lake, player);
+  document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
+  addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) minimap.cycle(); });
+  minimap.set(minimap.mode);
   initUsageUI();
   const pr = document.querySelectorAll('[data-pressure]'), prv = document.querySelectorAll('[data-pressure-val]');
   const showP = () => prv.forEach((e) => { e.textContent = PRESSURE.target < 0.01 ? 'none (park as it is)' : `${Math.round(PRESSURE.target * 100)}%`; });
@@ -246,6 +251,7 @@ async function boot() {
       else if (lake.level > tgt + 0.01) lake.level = Math.max(tgt, lake.level - 0.03 * dt);
     }
     PRESSURE.update(dt);
+    minimap.update();
     shared.harm.value = PRESSURE.harm;
     if (Math.abs(PRESSURE.harm - (PRESSURE._applied ?? -1)) > 0.004 || (PRESSURE._tick = (PRESSURE._tick || 0) + dt) > 1.5) {
       PRESSURE._applied = PRESSURE.harm; PRESSURE._tick = 0; chunks.applyHarm(PRESSURE.harm);
