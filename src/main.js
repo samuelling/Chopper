@@ -36,6 +36,7 @@ import { Deer } from './deer.js';
 import { Flyers } from './flyers.js';
 import { Critters } from './critters.js';
 import { Weather } from './weather.js';
+import { CareActs } from './careacts.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
@@ -115,6 +116,9 @@ async function boot() {
     if (RUN.s.lake != null) lake.level = Math.min(lake.originalLevel, Math.max(lake.floor + 0.02, RUN.s.lake));
   }
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
+  const careActs = new CareActs(scene);
+  careActs.onToast = (t) => ui.toast(t, 3);
+  addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (e.code === 'KeyE') careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
   const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
   const flyers = new Flyers(scene, { mobile: MOBILE });
@@ -253,7 +257,7 @@ async function boot() {
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
       { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer', ok: () => tut.sat, max: 20 },
-      { text: '<kbd>E</kbd> works things like the gate wheel &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
+      { text: '<kbd>E</kbd> picks up litter and works the gate wheel &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
     moved: 0, turned: 0, sat: false, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
@@ -508,6 +512,12 @@ async function boot() {
     squirrels.update(dt, player.pos);
     deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); stepSit(dt);
     birds.update(dt, player.pos);
+    // a regular: the same heron, season after season
+    if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {
+      RUN.s.herons.push(RUN.n); RUN.save?.(); const k = RUN.s.herons.length;
+      const msg = k === 1 ? 'A great blue heron stands in the shallows, very still.' : `The heron is here again. You have seen it in ${k} seasons now.`;
+      setTimeout(() => ui.toast(msg, 4.5), 1500); JOURNAL.add(k === 1 ? 'Saw a great blue heron fishing the shallows.' : `The heron again, for the ${k}${['th', 'st', 'nd', 'rd'][k % 10 < 4 && (k % 100 - k % 10) !== 10 ? k % 10 : 0]} season.`, player.pos.x, player.pos.z);
+    }
     if (snowTrail) snowTrail.update(dt, player.pos, sdfAt(player.pos.x, player.pos.z) > 1.5);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
@@ -516,14 +526,14 @@ async function boot() {
     const wx = weather.update(dt, atmosphere, () => audio.thunder?.());
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
-    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : '');
+    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : careActs.update(dt, player));
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

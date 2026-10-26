@@ -52,6 +52,14 @@ You are a naturalist as much as anything. **V** raises a camera (narrow view, vi
 
 A gentle on-screen tutorial introduces the controls one at a time after the first landing (walk and look, hop, phone, camera, the rest), and clears itself as you do each thing. Esc opens the full list at any time.
 
+## Being part of the place
+
+- **Sit and wait (B):** crouch and stay still; the light moves on (mist, gold, dusk, night) and animals relax and come closer. Any step stands you up.
+- **Deer** graze, freeze and watch you, and bolt with the white tail up; very still, they drift near. **Fox** (dawn, dusk, night), **chipmunks** (day), **frogs** on the shore (warm months), a **beaver** at dusk, **wood ducks** by day, **fireflies** at dusk in summer, **butterflies** and **dragonflies**, and **owls** and **coyotes** you mostly hear. All are invented behaviours of habitat-typical species, not survey data.
+- **Weather:** spells of rain (and distant thunder in summer) and, in winter, snowfall. `?weather=rain` or `?weather=snow` forces it for testing.
+- **Places (phone):** name any spot you stand on, just for you; they appear on your map. **Fog of war:** the map is dark until you have walked there. **Ruins** (cellar holes, a stone well, boundary stones; invented positions) are found by wandering near them. A **journal** logs it all.
+- **Acts of care:** E picks up litter near the trails; every few pieces turns up a seed; G plants it as a sapling that takes many seasons to grow. The heron you keep seeing is noted.
+
 ## Fly-over
 
 The title screen and season cards sit over a slow drone flight along the real reservoir's centre line, up one shore and back the other (`?noflyover=1` to turn it off). It stops when you click to begin.
