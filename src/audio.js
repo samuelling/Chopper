@@ -113,6 +113,7 @@ export class Audio {
   peep() { this._tone(2800 + Math.random() * 300, 0.09, 0.022, 'sine', 3300); }
   cricket() { for (let i = 0; i < 4; i++) setTimeout(() => this._tone(4300 + Math.random() * 200, 0.022, 0.014, 'sine'), i * 38); }
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
+  snort() { if (!this.ready) return; this._burst(900, 1.2, 0.18, 0.16, 'bandpass', 0.6); setTimeout(() => this._burst(700, 1.2, 0.22, 0.14, 'bandpass', 0.5), 260); }
   creak() { this._tone(110 + Math.random() * 60, 0.9, 0.025, 'sawtooth', 70 + Math.random() * 30); }
   bird() { this._song(SEASON); }
   _song(season) {

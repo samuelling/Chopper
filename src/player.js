@@ -25,13 +25,15 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
+    this.sitting = false; this.sit = 0; this.stillT = 0;
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys[e.code] = true;
-      if (e.code === 'Space' && this.locked) this._jump();
+      if (e.code === 'Space' && this.locked) { this.sitting = false; this._jump(); }
       if (e.code === 'KeyE' && this.locked) this.events.interact?.();
+      if (e.code === 'KeyB' && this.locked && !this.cameraMode) this.sitting = !this.sitting && waterDepthAt(this.pos.x, this.pos.z) < 0.2;
     });
     addEventListener('keyup', (e) => { this.keys[e.code] = false; });
     addEventListener('mousemove', (e) => {
@@ -137,6 +139,9 @@ export class Player {
       fx = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
     }
     if (this.locked && (this.touch.x || this.touch.y)) { fx += this.touch.x; fz -= this.touch.y; }
+    if (this.sitting && (fx || fz)) this.sitting = false;          // any step stands you up
+    this.sit += ((this.sitting ? 1 : 0) - this.sit) * Math.min(1, dt * 3.2);
+    if (this.sit > 0.05) { fx = 0; fz = 0; }
     const sprint = k.ShiftLeft || k.ShiftRight || Math.hypot(this.touch.x, this.touch.y) > 0.92;
     const depth = waterDepthAt(this.pos.x, this.pos.z);
     let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
@@ -199,6 +204,7 @@ export class Player {
       }
     } else this.bob *= 0.9;
 
+    this.stillT = this.speed < 0.4 ? this.stillT + dt : 0;
     this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
     // axe swing
     if (this.swing > 0) {
@@ -213,7 +219,7 @@ export class Player {
     const c = this.camera;
     const bobY = Math.sin(this.bob) * 0.035 * Math.min(1, this.speed / 3.6);
     const bobX = Math.cos(this.bob * 0.5) * 0.02 * Math.min(1, this.speed / 3.6);
-    c.position.set(this.pos.x, this.pos.y + EYE + bobY, this.pos.z);
+    c.position.set(this.pos.x, this.pos.y + EYE - this.sit * 0.95 + bobY, this.pos.z);
     c.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
     // axe pose: rest -> windup -> strike
     const s = this.swing;

@@ -32,6 +32,7 @@ import { IS_WINTER, SEASON, SEASONS, SEASON_DEF, goToSeason, WILDLIFE } from './
 import { Birds } from './birds.js';
 import { Wildlife } from './wildlife.js';
 import { Squirrels } from './squirrels.js';
+import { Deer } from './deer.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
@@ -111,6 +112,7 @@ async function boot() {
     if (RUN.s.lake != null) lake.level = Math.min(lake.originalLevel, Math.max(lake.floor + 0.02, RUN.s.lake));
   }
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
+  const deer = new Deer(scene, chunks, { mobile: MOBILE });
 
   if (MOBILE) {
     chunks.loadR = 190; chunks.unloadR = 240;
@@ -217,7 +219,7 @@ async function boot() {
   audio.onHeard = (v) => GUIDE.addHeard(v);
   GUIDE.onNew = (kind, en) => { JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -244,9 +246,10 @@ async function boot() {
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
+      { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer', ok: () => tut.sat, max: 20 },
       { text: '<kbd>E</kbd> works things like the gate wheel &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
-    moved: 0, turned: 0, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
+    moved: 0, turned: 0, sat: false, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
     go(i) {
       if (this.done && i >= 1) i = this.steps.length;
@@ -264,8 +267,18 @@ async function boot() {
       if (s.ok() || (!s.always && this.t > s.max)) this.go(this.i + 1);
     },
   };
-  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP' || e.code === 'KeyQ') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; });
+  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP' || e.code === 'KeyQ') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; if (e.code === 'KeyB') tut.sat = true; });
   document.addEventListener('click', () => { if (started && !player.locked && !MOBILE && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden') && tut.active) begin(); });
+  // ---- sit and wait: time passes while you are still (misty morning, golden hour, dusk, night)
+  let sitClock = 0; const ORDER = [1, 0, 2, 3];
+  deer.onSnort = () => audio.snort?.();
+  deer.onMoment = () => { ui.toast('A deer grazes close by. You are very still.', 4); JOURNAL.add('A deer grazed close by while I sat still.', player.pos.x, player.pos.z); };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(() => ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2), 0); });
+  const stepSit = (dt) => {
+    if (!player.sitting) { sitClock = 0; return; }
+    sitClock += dt;
+    if (sitClock > 22) { sitClock = 0; const i = ORDER.indexOf(mood); if (i < ORDER.length - 1 && PRESETS.length > 3) { setMood(ORDER[i + 1]); ui.toast(['The mist lifts.', 'The light turns gold.', 'Dusk comes on.', 'Night.'][i] ?? '', 2.6); } }
+  };
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
   const showCard = () => {
@@ -295,6 +308,7 @@ async function boot() {
     if (e.code === 'Digit1') setMood(0);
     if (e.code === 'Digit2') setMood(1);
     if (e.code === 'Digit3') setMood(2);
+    if (e.code === 'Digit4' && PRESETS.length > 3) setMood(3);
   });
   let mood = startPreset;
   function setMood(i) { mood = i; atmosphere.setPreset(i); }
@@ -477,6 +491,7 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
+    deer.update(dt, player.pos, player.stillT, player.sitting); stepSit(dt);
     birds.update(dt, player.pos);
     if (snowTrail) snowTrail.update(dt, player.pos, sdfAt(player.pos.x, player.pos.z) > 1.5);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
@@ -492,7 +507,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

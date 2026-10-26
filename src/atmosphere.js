@@ -122,6 +122,12 @@ const SUMMER_PRESETS = [
     shafts: 0.9, grade: 1.0,
   },
 ];
+const NIGHT = {
+  name: 'Night', skyTop: '#060a1c', skyMid: '#16204a', horizon: '#2c3866', fog: '#141c38', fogDensity: 0.0052,
+  sunColor: '#9ab0ff', sunInt: 0.55, sunElev: 28, hemiSky: '#2c3c74', hemiGround: '#1c2238', hemiInt: 0.8,
+  cloudLit: '#4a5a92', cloudShade: '#10162c', cloudAmt: 0.5, shafts: 0.12, grade: 1.0,
+};
+for (const arr of [WINTER_PRESETS, SPRING_PRESETS, SUMMER_PRESETS, AUTUMN_PRESETS]) arr.push(NIGHT);
 export const PRESETS = { spring: SPRING_PRESETS, summer: SUMMER_PRESETS, autumn: AUTUMN_PRESETS, winter: WINTER_PRESETS }[SEASON];
 
 function colorOf(h) { return new THREE.Color(h); }
