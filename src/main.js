@@ -118,7 +118,7 @@ async function boot() {
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
   const careActs = new CareActs(scene);
   careActs.onToast = (t) => ui.toast(t, 3);
-  addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (e.code === 'KeyE') careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
+  addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (e.code === 'KeyE' && !landmarks.nearGate(player.pos)) careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
   const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
   const flyers = new Flyers(scene, { mobile: MOBILE });
@@ -257,7 +257,7 @@ async function boot() {
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
       { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer', ok: () => tut.sat, max: 20 },
-      { text: '<kbd>E</kbd> picks up litter and works the gate wheel &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
+      { text: '<kbd>E</kbd> picks up litter &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
     moved: 0, turned: 0, sat: false, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
@@ -392,7 +392,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q phone/axe/away · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q phone/axe/away · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
