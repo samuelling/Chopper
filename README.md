@@ -40,6 +40,10 @@ Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like every
 
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 
+## The shape of a playthrough
+
+Part one is pure scenery: the first season is autumn, with no consequences and no AI question anywhere. Each season opens on a card showing only its name in the title font; click to go on. After a full season of play (6 minutes by default, `?season_len=` seconds to change it) an interlude appears: what has changed, a footprint check-in the first time, and a choice (including making none). Consequences go live from the second season (winter), then spring, summer and around again. Felled trees, lake level and your choices carry across seasons (each season is a page reload). "New game" on the season card resets everything. URLs with `?season=`, `?auto=` or `?dev=1` skip all of this and keep the old direct controls (season picker, T key, C choices with `?phase=2`).
+
 ## Seasons
 
 Four seasons share one world: spring leaf-out and blossom shrubs, deep-green summer, the original autumn, and a snowy winter (bare cel-shaded branches, snow caps on pines, snow on the ground with a trail that stays trampled where you walk). Ground litter only shows in autumn. Switching season reloads the page at your current spot, so felled trees and lake level reset (a live blend is a possible later step).

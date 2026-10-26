@@ -4,6 +4,8 @@ import { PRESSURE } from './pressure.js';
 import { initUsageUI } from './usageui.js';
 import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
+import { RUN } from './run.js';
+import { showInterlude } from './interlude.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -92,6 +94,11 @@ async function boot() {
   const propModels = buildPropModels();
   const walls = buildWalls();
   const chunks = new ChunkManager({ scene, colliders, layout, treeModels, propModels, walls, spawnClear: { x: SPAWN.x, z: SPAWN.z, r: 5 } });
+  // a playthrough carries its felled trees and lake level across seasons (each season is a page reload)
+  if (!RUN.dev) {
+    for (const { key, rec } of RUN.s.felled) { chunks.felled.set(rec.id, rec); if (!chunks.felledByChunk.has(key)) chunks.felledByChunk.set(key, []); chunks.felledByChunk.get(key).push(rec); chunks.felledCount++; }
+    if (RUN.s.lake != null) lake.level = Math.min(lake.originalLevel, Math.max(lake.floor + 0.02, RUN.s.lake));
+  }
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
 
   if (MOBILE) {
@@ -173,10 +180,10 @@ async function boot() {
   };
   player.onLockChange = (locked) => {
     ui.els.title.classList.add('hidden');
-    ui.els.paused.classList.toggle('hidden', locked || !started);
+    ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn);
     ui.els.hud.classList.toggle('on', locked || started);
   };
-  let started = false;
+  let started = false, interludeOn = false;
   const begin = () => {
     audio.init();
     started = true;
@@ -188,7 +195,15 @@ async function boot() {
     } else renderer.domElement.requestPointerLock?.();
   };
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
-  ui.els.title.addEventListener('click', begin);
+  const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
+  const showCard = () => {
+    document.getElementById('scname').textContent = SEASON_DEF.label;
+    newgame.hidden = RUN.n === 0 && RUN.fresh;
+    ui.els.title.classList.add('hidden'); card.classList.remove('hidden');
+  };
+  card.addEventListener('click', () => { card.classList.add('hidden'); begin(); });
+  newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
+  ui.els.title.addEventListener('click', () => (RUN.dev ? begin() : showCard()));
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
     if (e.code === 'Digit1') setMood(0);
@@ -199,7 +214,7 @@ async function boot() {
   function setMood(i) { mood = i; atmosphere.setPreset(i); }
 
   // season picker (reloads at the current spot for now) + the T key
-  document.querySelectorAll('[data-seasons] button').forEach((b) => {
+  if (RUN.dev) document.querySelectorAll('[data-seasons] button').forEach((b) => {
     b.classList.toggle('on', b.dataset.season === SEASON);
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
@@ -208,7 +223,7 @@ async function boot() {
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) minimap.cycle(); });
   minimap.set(minimap.mode);
   // phase two: choices (C opens the pause menu with the choices panel)
-  let waypoint = null;
+  let waypoint = RUN.dev ? null : RUN.s.wp;
   const wpEl = document.getElementById('waypoint');
   const setWaypoint = (x, z, label) => { waypoint = x == null ? null : { x, z, label }; minimap.setMarker(x, z, label); if (x == null) wpEl.textContent = ''; };
   const showChoices = () => {
@@ -219,6 +234,7 @@ async function boot() {
   addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat && started && phaseTwo()) { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } });
   new MutationObserver(showChoices).observe(ui.els.paused, { attributes: true, attributeFilter: ['class'] });
   showChoices();
+  if (waypoint) setWaypoint(waypoint.x, waypoint.z, waypoint.label);
   initUsageUI();
   const pr = document.querySelectorAll('[data-pressure]'), prv = document.querySelectorAll('[data-pressure-val]');
   const showP = () => prv.forEach((e) => { e.textContent = PRESSURE.target < 0.01 ? 'none (park as it is)' : `${Math.round(PRESSURE.target * 100)}%`; });
@@ -226,7 +242,7 @@ async function boot() {
   showP();
   const place = document.getElementById('placeline');
   if (place) place.textContent = `Ashland State Park, Massachusetts — ${SEASON_DEF.place}`;
-  addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
+  addEventListener('keydown', (e) => { if (RUN.dev && e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
 
   initFullscreen({ mobile: MOBILE });
   ui.els.loading.classList.add('hidden');
@@ -235,7 +251,16 @@ async function boot() {
     if (MOBILE) touch.show();
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
-  } else ui.els.title.classList.remove('hidden');
+  } else if (!RUN.dev && !RUN.fresh) showCard();
+  else ui.els.title.classList.remove('hidden');
+  if (!RUN.dev) {
+    document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
+    document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
+    if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · M map';
+    document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
+    const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
+  }
 
   // ------------------------------------------------------------------ loop
   let last = performance.now();
@@ -248,6 +273,20 @@ async function boot() {
     requestAnimationFrame(frame);
   }
 
+  function beginInterlude() {
+    interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
+    const ctx = { player, chunks, lake, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
+    showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
+      const felled = [];
+      for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });
+      RUN.advance({ felled, lake: lake.level, wp: waypoint });
+      PRESSURE.bump(pulse || 0);           // consequences begin now (the run is live from the second season)
+      const p = new URLSearchParams(location.search); p.delete('season');
+      p.set('x', player.pos.x.toFixed(1)); p.set('z', player.pos.z.toFixed(1)); p.set('yaw', (player.yaw ?? 0).toFixed(2));
+      location.search = p.toString();
+    });
+  }
+  window.__endSeason = () => { RUN.s.played = RUN.len; };
   function step(dt) {
     shared.time.value += dt;
     // drawdown
@@ -264,6 +303,11 @@ async function boot() {
       else if (lake.level > tgt + 0.01) lake.level = Math.max(tgt, lake.level - 0.03 * dt);
     }
     PRESSURE.update(dt);
+    if (!RUN.dev && started && player.locked && !interludeOn) {
+      RUN.s.played += dt;
+      document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
+      if (RUN.s.played >= RUN.len) beginInterlude();
+    }
     minimap.update();
     if (waypoint) {
       const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);

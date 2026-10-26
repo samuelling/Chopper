@@ -2,7 +2,10 @@
 // reads from here, so a season is one table entry; the in-game picker simply reloads the page with another value.
 const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('season') : null;
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
-export const SEASON = SEASONS.includes(q) ? q : 'autumn';
+let _runSeason = 'autumn';
+try { const r = JSON.parse(localStorage.getItem('ashland.run') || '{}'); _runSeason = ['autumn', 'winter', 'spring', 'summer'][(r.n | 0) % 4]; } catch {}
+const _dev = typeof location !== 'undefined' && /[?&](season|auto|dev)\b/.test(location.search);
+export const SEASON = SEASONS.includes(q) ? q : (_dev ? 'autumn' : _runSeason);
 export const IS_WINTER = SEASON === 'winter';
 export const IS_AUTUMN = SEASON === 'autumn';
 export const IS_SPRING = SEASON === 'spring';

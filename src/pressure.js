@@ -11,16 +11,19 @@ const stored = (k) => { try { return parseFloat(localStorage.getItem(k)); } catc
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const pick = (...a) => a.find(Number.isFinite) ?? 0;
 
-const UP = 1 / 240;     // seconds of full pressure to wreck the park (4 min)
+import { RUN } from './run.js';
+const UP = RUN.dev ? 1 / 240 : 1 / 800;   // full pressure: wrecks the park in 4 min (dev) / about two seasons of play (run)
 const DOWN = 1 / 3600;  // seconds of zero pressure to heal it (1 h)
 
 export const PRESSURE = {
   target: clamp01(pick(num(P.get('pressure')), stored('ashland.pressure'))),
-  damage: clamp01(pick(num(P.get('damage')), stored('ashland.damage'))),
+  damage: (RUN.dev || RUN.phaseTwo) ? clamp01(pick(num(P.get('damage')), stored('ashland.damage'))) : 0,
+  get live() { return RUN.dev || RUN.phaseTwo; },
   _save: 0,
   set(v) { this.target = clamp01(v); try { localStorage.setItem('ashland.pressure', String(this.target)); } catch {} },
-  bump(x) { this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
+  bump(x) { if (!this.live) return; this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
   update(dt) {
+    if (!this.live) return;
     this.damage = clamp01(this.damage + (this.target * UP - (1 - this.target) * DOWN) * dt);
     if ((this._save += dt) > 3) { this._save = 0; try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} }
   },

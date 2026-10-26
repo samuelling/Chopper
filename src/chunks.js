@@ -672,7 +672,7 @@ export class ChunkManager {
     this.shaking = this.shaking.filter((t) => t !== tree);
     tree.item.batch.remove(tree.item);
 
-    const rec = { x: tree.x, z: tree.z, radius: tree.radius, yaw: tree.yaw, sx: tree.sx };
+    const rec = { id: tree.id, x: tree.x, z: tree.z, radius: tree.radius, yaw: tree.yaw, sx: tree.sx };
     this.felled.set(tree.id, rec);
     const key = ch.key;
     if (!this.felledByChunk.has(key)) this.felledByChunk.set(key, []);

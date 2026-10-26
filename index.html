@@ -81,6 +81,12 @@
   .choice b { display:block; font-size:13px; } .choice span { display:block; font-size:11px; opacity:.85; line-height:1.35; } .choice .cost { color:#ffd9a0; }
   #waypoint { position:absolute; left:50%; top:18px; transform:translateX(-50%); font-size:14px; letter-spacing:.08em; color:#ffe29a; text-shadow:0 1px 6px rgba(0,0,0,.7); }
   #chint { margin-top:8px; font-size:11px; letter-spacing:.1em; opacity:.8; }
+  #seasoncard { z-index:8; } #interlude { z-index:9; overflow-y:auto; justify-content:flex-start; cursor:default; padding:28px 16px 48px; }
+  .newgame { position:absolute; bottom:22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; padding:6px 12px; }
+  .newgame:hover { opacity:1; }
+  h1.small { font-size:clamp(34px,6vw,64px); } .ibody { max-width:640px; text-align:left; margin-top:14px; } .ibody p { font-size:15px; line-height:1.55; }
+  .go.inactive { opacity:.35; pointer-events:none; filter:grayscale(.6); }
+  #seasonbar { position:absolute; left:0; right:0; top:0; height:3px; background:rgba(244,230,200,.12); } #seasonbar i { display:block; height:100%; width:0; background:rgba(244,230,200,.55); }
   .fsbtn { margin-top:14px; padding:6px 16px; border:2px solid rgba(244,230,200,.6); border-radius:6px; font-size:14px; letter-spacing:.1em; cursor:pointer; pointer-events:auto; }
   .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
@@ -112,6 +118,8 @@
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
 
+<div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div class="newgame" id="newgame" hidden>New game</div></div>
+<div id="interlude" class="overlay hidden"></div>
 <div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div></div>
 
 <div id="hud">
@@ -120,6 +128,7 @@
     <div class="meter"><i id="lakebar"></i></div><div id="chint" hidden>C &nbsp;make choices</div></div>
   <div id="mood"></div>
   <div id="waypoint"></div>
+  <div id="seasonbar"><i></i></div>
   <div id="cross"></div>
   <div id="prompt"></div>
   <div id="toast"></div>

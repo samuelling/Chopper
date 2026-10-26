@@ -4,8 +4,9 @@
 import { PRESSURE, treeLuck } from './pressure.js';
 import { Usage } from './usage.js';
 import { groundY, sdfAt } from './world.js';
+import { RUN } from './run.js';
 
-export const phaseTwo = () => new URLSearchParams(location.search).get('phase') === '2' || Usage.tier !== null || Object.keys(Usage.days).length > 0 || PRESSURE.target > 0;
+export const phaseTwo = () => RUN.dev && new URLSearchParams(location.search).get('phase') === '2' || Usage.tier !== null || Object.keys(Usage.days).length > 0 || PRESSURE.target > 0;
 
 const dirName = (dx, dz) => ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][Math.round(Math.atan2(dz, dx) / (Math.PI / 4) + 8) % 8];
 
