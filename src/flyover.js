@@ -21,8 +21,8 @@ export class Flyover {
     this.len = this.curve.getLength();
     this._p = new THREE.Vector3(); this._q = new THREE.Vector3(); this._look = new THREE.Vector3();
   }
-  start() { this.active = true; if (this.player.axe) this.player.axe.visible = false; }
-  stop() { this.active = false; if (this.player.axe) this.player.axe.visible = true; }
+  start() { this.active = true; this.player.carryHidden = true; this.player.refreshCarry(); }
+  stop() { this.active = false; this.player.carryHidden = false; this.player.refreshCarry(); }
   /** leave the drone path and settle onto the player's eyes (position and view), then call done */
   glideTo(done, secs = 6) {
     this.glide = { t: 0, secs, done, from: this.camera.position.clone(), fq: this.camera.quaternion.clone() };

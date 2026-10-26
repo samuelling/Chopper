@@ -73,7 +73,7 @@ export class Minimap {
     ctx.putImageData(img, 0, 0);
   }
   update() {
-    if (this.mode === 'off') return;
+    if (this.mode === 'off' && !this.hold) return;
     this._lt = (this._lt || 0) + 1; if (this._lt % 30 === 0) this._paintWater(false);
     const c = this.ctx, W = this.cv.width, H = this.cv.height, p = this.player;
     c.clearRect(0, 0, W, H);

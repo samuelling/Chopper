@@ -209,7 +209,7 @@ async function boot() {
   document.body.appendChild(vf);
   const setCameraMode = (on) => {
     player.cameraMode = on; camera.fov = on ? 26 : 68; camera.updateProjectionMatrix();
-    vf.classList.toggle('hidden', !on); if (player.axe) player.axe.visible = !on;
+    vf.classList.toggle('hidden', !on); player.refreshCarry();
   };
   addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && started && player.locked && !interludeOn) setCameraMode(!player.cameraMode); });
   audio.onHeard = (v) => GUIDE.addHeard(v);
@@ -274,8 +274,12 @@ async function boot() {
   const jobQueue = [];
   const phone = new Phone({ audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     onOpen: () => { phoneOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
-    onClose: () => { phoneOn = false; if (started && !interludeOn) begin(); } });
-  addEventListener('keydown', (e) => { if (e.code === 'KeyP' && !e.repeat && started && !interludeOn) (phone.isOpen ? phone.close() : phone.open()); if (e.code === 'Escape' && phone.isOpen) phone.close(); });
+    onClose: () => { phoneOn = false; player.raiseTo = 0; if (started && !interludeOn) begin(); } });
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry(player.carry === 'axe' ? 'phone' : 'axe'); ui.toast(player.carry === 'axe' ? 'Axe in hand. Q for your phone.' : 'Phone in hand.', 1.4); }
+    if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) {
+      if (phone.isOpen) phone.close();
+      else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 380); }
+    } if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
   minimap.set(minimap.mode);
@@ -316,7 +320,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Q axe · E gate · 1 2 3 light · P phone · V camera · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -346,6 +350,32 @@ async function boot() {
     });
   }
   window.__endSeason = () => { RUN.s.played = RUN.len; };
+  minimap.hold = true;
+  let screenT = 0;
+  const dirsN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  function drawPhoneScreen() {
+    const cv = player.screenCv, c = cv.getContext('2d'), W = cv.width, H = cv.height;
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a2733'); g.addColorStop(1, '#17151c');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    const hd = ((Math.atan2(-Math.sin(player.yaw), -Math.cos(player.yaw)) * 180 / Math.PI) + 360) % 360;
+    c.fillStyle = '#f4e6c8'; c.textAlign = 'center';
+    c.font = '700 40px Georgia, serif'; c.fillText(`${Math.round(hd)}\u00b0 ${dirsN[Math.round(hd / 45) % 8]}`, W / 2, 62);
+    c.font = '20px Georgia, serif'; c.globalAlpha = 0.7; c.fillText(SEASON_DEF.label.toUpperCase(), W / 2, 92); c.globalAlpha = 1;
+    const r = 100, cx = W / 2, cy = 232;
+    c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 6.2832); c.clip();
+    c.fillStyle = '#0e0d12'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    try { if (minimap.cv.width > 4) c.drawImage(minimap.cv, cx - r, cy - r, r * 2, r * 2); } catch {}
+    c.restore(); c.lineWidth = 4; c.strokeStyle = 'rgba(244,230,200,.6)'; c.beginPath(); c.arc(cx, cy, r, 0, 6.2832); c.stroke();
+    c.fillStyle = '#ffd9a0'; c.beginPath(); c.arc(cx, cy, 6, 0, 6.2832); c.fill();
+    if (RUN.phaseTwo || RUN.dev) {
+      const need = Math.max(-1, Math.min(1, (CARE.value - PRESSURE.harm) * 2.2));
+      c.fillStyle = '#3a3646'; c.fillRect(30, 372, W - 60, 12);
+      c.fillStyle = need >= 0 ? '#8fcf8a' : '#d9694a'; c.fillRect(W / 2, 372, (W - 60) / 2 * need, 12);
+      c.fillStyle = '#f4e6c8'; c.font = '18px Georgia, serif'; c.fillText('harm \u2190   \u2192 care', W / 2, 410);
+    }
+    c.globalAlpha = 0.55; c.font = '18px Georgia, serif'; c.fillText('P raise \u00b7 Q axe', W / 2, 462); c.globalAlpha = 1;
+    player.screenTex.needsUpdate = true;
+  }
   function step(dt) {
     shared.time.value += dt;
     // drawdown
@@ -368,6 +398,7 @@ async function boot() {
       if (RUN.s.played >= RUN.len) beginInterlude();
     }
     minimap.update(); phone.update();
+    if (player.phone.visible && (screenT += dt) > 0.2) { screenT = 0; drawPhoneScreen(); }
     if (jobQueue.length && !phone.isOpen && !interludeOn) {                       // the crew works while you walk
       for (const j of jobQueue) j.at -= dt;
       while (jobQueue.length && jobQueue[0].at <= 0) { const j = jobQueue.shift(); if (j.tree.alive && !j.tree.gone) chunks.fell(j.tree, j.from[0], j.from[1]); }

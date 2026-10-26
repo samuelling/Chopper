@@ -24,6 +24,8 @@ export class Player {
     this.speed = 0;
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
+    this._buildPhone();
+    this.carry = 'phone'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -38,7 +40,7 @@ export class Player {
       this.pitch = clamp(this.pitch - e.movementY * 0.0022, -1.45, 1.45);
     });
     addEventListener('mousedown', (e) => {
-      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else this.startSwing(); }
+      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'axe') this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === dom;
@@ -69,6 +71,24 @@ export class Player {
     this.camera.add(g);
   }
 
+  _buildPhone() {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.158, 0.011), simpleToon('#1b1a20'));
+    const ol = new THREE.Mesh(body.geometry, simpleToon('#0b0a0d', { side: THREE.BackSide })); ol.scale.setScalar(1.08);
+    this.screenCv = document.createElement('canvas'); this.screenCv.width = 240; this.screenCv.height = 490;
+    this.screenTex = new THREE.CanvasTexture(this.screenCv); this.screenTex.colorSpace = THREE.SRGBColorSpace;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.146), new THREE.MeshBasicMaterial({ map: this.screenTex, toneMapped: false }));
+    scr.position.z = 0.0062;
+    g.add(ol, body, scr);
+    g.traverse((o) => { o.frustumCulled = false; });
+    this.phone = g; this.camera.add(g);
+  }
+  refreshCarry() {
+    const hide = this.cameraMode || this.carryHidden;
+    this.axe.visible = this.carry === 'axe' && !hide;
+    this.phone.visible = this.carry === 'phone' && !hide;
+  }
+  setCarry(c) { this.carry = c; this.raiseTo = 0; this.refreshCarry(); }
   look(dx, dy) { this.yaw -= dx; this.pitch = clamp(this.pitch - dy, -1.45, 1.45); }
 
   teleport(x, z, yaw = this.yaw, pitch = 0) {
@@ -84,6 +104,7 @@ export class Player {
 
   startSwing() {
     if (this.swing > 0) return;
+    if (this.carry !== 'axe') this.setCarry('axe');
     this.swing = 0.0001; this.swingStruck = false;
     this.events.swing?.();
   }
@@ -167,6 +188,7 @@ export class Player {
       }
     } else this.bob *= 0.9;
 
+    this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
     // axe swing
     if (this.swing > 0) {
       this.swing += dt / 0.52;
@@ -196,5 +218,9 @@ export class Player {
     }
     this.axe.position.set(px, py, pz);
     this.axe.rotation.set(rx, ry, rz);
+    // phone: low in the right corner, screen tipped toward you; raised, it fills the middle of the view
+    const k = this.raise, e = k * k * (3 - 2 * k), sway = Math.sin(this.bob) * 0.012 * Math.min(1, this.speed / 3.6);
+    this.phone.position.set(0.25 * (1 - e) + sway, -0.23 * (1 - e) - 0.01 * e + bobY * 0.6, -0.46 + 0.2 * e);
+    this.phone.rotation.set(-0.55 * (1 - e) + 0.0 * e, -0.38 * (1 - e), 0.18 * (1 - e));
   }
 }
