@@ -113,6 +113,8 @@ export class Audio {
   peep() { this._tone(2800 + Math.random() * 300, 0.09, 0.022, 'sine', 3300); }
   cricket() { for (let i = 0; i < 4; i++) setTimeout(() => this._tone(4300 + Math.random() * 200, 0.022, 0.014, 'sine'), i * 38); }
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
+  owl() { if (!this.ready) return; [[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].forEach(([d, l]) => setTimeout(() => this._tone(l > 0.4 ? 330 : 400, l, 0.06, 'sine', l > 0.4 ? 260 : 390), d * 1000)); }
+  coyote() { if (!this.ready) return; const n = 5 + ((Math.random() * 5) | 0); for (let i = 0; i < n; i++) setTimeout(() => this._tone(700 + Math.random() * 500, 0.22, 0.03, 'sawtooth', 900 + Math.random() * 400), i * 190 + Math.random() * 80); setTimeout(() => this._tone(620, 1.4, 0.04, 'sine', 980), n * 190); }
   snort() { if (!this.ready) return; this._burst(900, 1.2, 0.18, 0.16, 'bandpass', 0.6); setTimeout(() => this._burst(700, 1.2, 0.22, 0.14, 'bandpass', 0.5), 260); }
   creak() { this._tone(110 + Math.random() * 60, 0.9, 0.025, 'sawtooth', 70 + Math.random() * 30); }
   bird() { this._song(SEASON); }
@@ -124,7 +126,7 @@ export class Audio {
   }
   update(dt, s) {
     if (!this.ready) return;
-    const t = this.ctx.currentTime, evening = s.mood === 2 ? 1 : s.mood === 1 ? 0.3 : 0;
+    const t = this.ctx.currentTime, evening = s.mood >= 2 ? 1 : s.mood === 1 ? 0.3 : 0;
     const gust = 0.5 + 0.5 * Math.sin(t * 0.23) * Math.sin(t * 0.11 + 1);
     // the wind bed and the leaves it moves through, by season
     const w = { spring: [0.045, 0.012], summer: [0.03, 0.015], autumn: [0.06, 0.035], winter: [0.07, 0.0] }[SEASON];
@@ -157,6 +159,9 @@ export class Audio {
     }
     this.frogT -= dt;
     if (this.frogT < 0) { this.frogT = 4 + Math.random() * 9; if (SEASON === 'summer' && s.sdf < 30 && s.lakeFrac > 0.5) this.bullfrog(); }
+    // night: owls from the dusk on, coyotes only in the dark
+    this.nightT = (this.nightT ?? 12) - dt;
+    if (this.nightT < 0) { this.nightT = 10 + Math.random() * 22; if (s.mood >= 2 && Math.random() < 0.7) this.owl(); else if (s.mood === 3 && Math.random() < 0.8) this.coyote(); }
     this.creakT -= dt;
     if (this.creakT < 0) { this.creakT = 14 + Math.random() * 25; if (SEASON === 'winter') this.creak(); }
     // a hawk's cry now and then (the hawk itself is drawn by Birds)
@@ -167,7 +172,7 @@ export class Audio {
 
 // Every voice reports itself so the Field Guide can log songs you actually hear.  Replays from the guide use the raw originals.
 export const RAW_VOICES = {};
-for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog']) {
+for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog', 'owl', 'coyote']) {
   const f = RAW_VOICES[v] = Audio.prototype[v];
   Audio.prototype[v] = function (...a) { if (this.ready) this.onHeard?.(v); return f.apply(this, a); };
 }
