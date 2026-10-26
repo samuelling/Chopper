@@ -5,10 +5,13 @@ import { RUN } from './run.js';
 import { JOBS, delegate } from './jobs.js';
 import { GUIDE, ENTRIES, BY_ID } from './guide.js';
 import { mountHudPanel } from './hud.js';
+import { PLACES, JOURNAL } from './places.js';
 
 const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
 const APPS = [
   { id: 'compass', name: 'Compass', bg: 'linear-gradient(#5b6573,#2c313b)', svg: ic('<circle cx="24" cy="24" r="16"/><path d="M30 18l-4 9-8 3 4-9z" fill="#fff" stroke-width="2"/>') },
+  { id: 'places', name: 'Places', bg: 'linear-gradient(#e56b6f,#a8374c)', svg: ic('<path d="M10 40V10l10 4 10-4 8 4v28l-8-4-10 4-10-4z"/><path d="M20 14v26M30 10v26"/>') },
+  { id: 'journal', name: 'Journal', bg: 'linear-gradient(#b08968,#7f5539)', svg: ic('<rect x="11" y="7" width="26" height="34" rx="3"/><path d="M17 16h14M17 23h14M17 30h9"/>') },
   { id: 'status', name: 'Park', bg: 'linear-gradient(#e0884a,#b24a34)', svg: ic('<path d="M8 33a16 16 0 0132 0"/><path d="M24 33l8-11"/>', '<circle cx="24" cy="33" r="2.5" fill="#fff"/>') },
   { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>') },
   { id: 'jobs', name: 'Park Jobs', bg: 'linear-gradient(#7a8ea8,#455a78)', svg: ic('<rect x="8" y="16" width="32" height="22" rx="4"/><path d="M18 16v-4a3 3 0 013-3h6a3 3 0 013 3v4M8 26h32"/>') },
@@ -23,8 +26,8 @@ const DOCK = [
 const ALL = [...APPS, ...DOCK];
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
-  constructor({ onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
-    Object.assign(this, { onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
+  constructor({ discoveries, setWaypoint, onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
+    Object.assign(this, { discoveries, setWaypoint, onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
   }
@@ -66,6 +69,14 @@ export class Phone {
       body.appendChild(grid);
       const dots = document.createElement('div'); dots.className = 'pdots'; dots.innerHTML = '<i class="on"></i>'; body.appendChild(dots);
       const dock = document.createElement('div'); dock.className = 'dock'; for (const ap of DOCK) dock.appendChild(mkApp(ap, false)); body.appendChild(dock);
+    } else if (tab === 'places') {
+      this._places(body);
+    } else if (tab === 'journal') {
+      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = JOURNAL.list.length ? 'Your notes, newest first.' : 'Nothing yet. Walk, look, listen. What you find and name goes here.'; body.appendChild(n);
+      for (const j of [...JOURNAL.list].reverse()) {
+        const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:7px;font-size:13px;line-height:1.45';
+        r.innerHTML = `<small style="opacity:.6;letter-spacing:.06em;text-transform:uppercase">${j.season} \u00b7 ${new Date(j.at).toLocaleDateString()}</small><br>${j.text.replace(/</g, '&lt;')}`; body.appendChild(r);
+      }
     } else if (tab === 'compass') {
       const w = document.createElement('div'); w.style.cssText = 'text-align:center;padding-top:10px';
       w.innerHTML = `<div data-compass style="font-size:30px;font-weight:700;margin-bottom:14px"></div><div style="position:relative;width:240px;height:240px;margin:0 auto"><div data-dial style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(244,230,200,.6);background:#25222c"><b style="position:absolute;left:50%;top:6px;transform:translateX(-50%);color:#e0412e">N</b><b style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%)">S</b><b style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">W</b><b style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">E</b></div><div style="position:absolute;left:50%;top:-12px;width:0;height:0;border:9px solid transparent;border-bottom:16px solid #ffd9a0;transform:translateX(-50%)"></div></div><div class="bubble" style="margin-top:22px">North is on the dial. The dam is south of the lake, the beach is on the east shore.</div>`;
@@ -120,6 +131,36 @@ export class Phone {
       body.appendChild(n);
     }
     this.update();
+  }
+  /** Places: names you give to spots, for you only (not official), plus the ruins you have found */
+  _places(body) {
+    body.innerHTML = '';
+    const p = this.player, n = document.createElement('div'); n.className = 'bubble';
+    n.textContent = 'Places are yours alone: name a spot where you are standing, and it shows on your map.'; body.appendChild(n);
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;margin-bottom:12px';
+    const inp = document.createElement('input'); inp.placeholder = 'Name this spot'; inp.maxLength = 28;
+    inp.style.cssText = 'flex:1;font:inherit;font-size:14px;padding:9px 10px;border-radius:10px;border:2px solid rgba(244,230,200,.35);background:#25222c;color:#f4e6c8;min-width:0';
+    inp.addEventListener('keydown', (e) => { if (e.code === 'Escape') { inp.blur(); return; } e.stopPropagation(); if (e.code === 'Enter') add.click(); });
+    const add = document.createElement('button'); add.className = 'choice sm'; add.textContent = 'Name it'; add.style.cssText = 'padding:0 14px;font-size:14px';
+    add.addEventListener('click', (e) => { e.stopPropagation(); if (PLACES.add(inp.value, p.pos.x, p.pos.z)) this._places(body); });
+    row.append(inp, add); body.appendChild(row);
+    for (const pl of [...PLACES.list].reverse()) {
+      const d = Math.round(Math.hypot(pl.x - p.pos.x, pl.z - p.pos.z));
+      const r = document.createElement('div'); r.style.cssText = 'display:flex;align-items:center;gap:8px;background:#2d2a36;border-radius:10px;padding:9px 10px;margin-bottom:6px;font-size:14px';
+      r.innerHTML = `<div style="flex:1;min-width:0"><b>${pl.name.replace(/</g, '&lt;')}</b><br><small style="opacity:.7">${d} m away \u00b7 ${pl.season}</small></div>`;
+      const mk = (t, f) => { const b = document.createElement('button'); b.className = 'choice sm'; b.textContent = t; b.style.cssText = 'padding:6px 9px;font-size:13px'; b.addEventListener('click', (e) => { e.stopPropagation(); f(); }); return b; };
+      r.append(mk('Mark', () => { this.setWaypoint?.(pl.x, pl.z, pl.name); }), mk('\u2715', () => { PLACES.remove(pl); this._places(body); }));
+      body.appendChild(r);
+    }
+    const found = this.discoveries?.foundList() ?? [], total = this.discoveries?.items.length ?? 0;
+    const h = document.createElement('h4'); h.textContent = `Found in the woods (${found.length} of ${total})`; h.style.cssText = 'margin:16px 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.7'; body.appendChild(h);
+    for (const f of found) {
+      const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;line-height:1.45';
+      r.innerHTML = `<b>${f.kind === 'cellar' ? 'A cellar hole' : f.kind === 'well' ? 'A stone well' : 'A boundary stone'}</b>`;
+      const mk = document.createElement('button'); mk.className = 'choice sm'; mk.textContent = 'Mark'; mk.style.cssText = 'float:right;padding:3px 9px;font-size:12px'; mk.addEventListener('click', (e) => { e.stopPropagation(); this.setWaypoint?.(f.x, f.z, 'Found'); }); r.prepend(mk);
+      body.appendChild(r);
+    }
+    if (found.length < total) { const m = document.createElement('div'); m.style.cssText = 'font-size:12px;opacity:.55;margin:4px 2px'; m.textContent = 'Old things are scattered off the trails. Wander.'; body.appendChild(m); }
   }
   /** the album: a grid, and a full viewer you can thumb through (arrows, or the screen's left/right) */
   _photos(body, startIdx = null, only = null) {

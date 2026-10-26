@@ -22,6 +22,11 @@ export class Minimap {
     this.base = document.createElement('canvas'); this.base.width = this.bw; this.base.height = this.bh;
     this.water = document.createElement('canvas'); this.water.width = this.bw; this.water.height = this.bh;
     this._buildHeights(); this._paintLand(); this._paintWater(true);
+    // fog of war: the park is dark paper until you have walked there (remembered between visits)
+    this.fog = document.createElement('canvas'); this.fog.width = this.bw; this.fog.height = this.bh; this.pins = [];
+    { const f = this.fog.getContext('2d'); f.fillStyle = 'rgba(20,24,27,.95)'; f.fillRect(0, 0, this.bw, this.bh);
+      try { const u = localStorage.getItem('ashland.fog'); if (u) { const im = new Image(); im.onload = () => { if (im.width === this.bw && im.height === this.bh) { f.globalCompositeOperation = 'copy'; f.drawImage(im, 0, 0); f.globalCompositeOperation = 'source-over'; } }; im.src = u; } } catch {} }
+    this._fogT = 0; this._fogP = null;
     const c = document.createElement('canvas'); c.id = 'minimap'; c.width = c.height = 220;
     c.style.cssText = 'position:absolute;left:18px;bottom:18px;top:auto;right:auto;width:220px;height:220px;border-radius:50%;border:3px solid rgba(244,230,200,.75);box-shadow:0 2px 14px rgba(0,0,0,.45);display:none;background:#222';
     document.getElementById('hud').appendChild(c);
@@ -72,7 +77,16 @@ export class Minimap {
     }
     ctx.putImageData(img, 0, 0);
   }
-  update() {
+  _reveal(x, z) {
+    if (this._fogP && Math.hypot(x - this._fogP.x, z - this._fogP.z) < 6) return;
+    this._fogP = { x, z }; this._fogDirty = true;
+    const f = this.fog.getContext('2d'), r = 60 * this.res, cx = this.px(x), cy = this.py(z), g = f.createRadialGradient(cx, cy, r * 0.55, cx, cy, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    f.globalCompositeOperation = 'destination-out'; f.fillStyle = g; f.beginPath(); f.arc(cx, cy, r, 0, 6.3); f.fill(); f.globalCompositeOperation = 'source-over';
+  }
+  update(dt = 0.016) {
+    this._reveal(this.player.pos.x, this.player.pos.z);
+    this._fogT += dt; if (this._fogT > 20 && this._fogDirty) { this._fogT = 0; this._fogDirty = false; try { localStorage.setItem('ashland.fog', this.fog.toDataURL('image/png')); } catch {} }
     if (this.mode === 'off' && !this.hold) return;
     this._lt = (this._lt || 0) + 1; if (this._lt % 30 === 0) this._paintWater(false);
     const c = this.ctx, W = this.cv.width, H = this.cv.height, p = this.player;
@@ -87,12 +101,21 @@ export class Minimap {
     c.fillStyle = '#1d2326'; c.fillRect(0, 0, W, H);
     c.drawImage(this.base, sx, sy, sw, sh, 0, 0, W, H);
     c.drawImage(this.water, sx, sy, sw, sh, 0, 0, W, H);
+    c.drawImage(this.fog, sx, sy, sw, sh, 0, 0, W, H);
     const mx = (this.px(p.pos.x) - sx) * k, my = (this.py(p.pos.z) - sy) * k;
     if (this.marker) {
       let ox = (this.px(this.marker.x) - sx) * k, oy = (this.py(this.marker.z) - sy) * k;
       const cx = W / 2, cy = H / 2, inside = ox > 8 && oy > 8 && ox < W - 8 && oy < H - 8;
       if (!inside) { const dx = ox - cx, dy = oy - cy, t = this.mode === 'local' ? (W / 2 - 12) / (Math.hypot(dx, dy) || 1) : Math.min((W / 2 - 12) / Math.abs(dx || 1e-6), (H / 2 - 12) / Math.abs(dy || 1e-6)); ox = cx + dx * t; oy = cy + dy * t; }
       c.lineWidth = 3; c.strokeStyle = '#ffd24a'; c.fillStyle = 'rgba(255,210,74,.35)'; c.beginPath(); c.arc(ox, oy, inside ? 8 : 5, 0, 6.3); c.fill(); c.stroke();
+    }
+    // your named places and what you have found
+    for (const pin of this.pins) {
+      const ox = (this.px(pin.x) - sx) * k, oy = (this.py(pin.z) - sy) * k;
+      if (ox < 4 || oy < 4 || ox > W - 4 || oy > H - 4) continue;
+      c.fillStyle = pin.found ? '#9ad08a' : '#ffd9a0'; c.strokeStyle = '#2a1f24'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(ox, oy - 7); c.lineTo(ox + 5, oy); c.lineTo(ox, oy + 7); c.lineTo(ox - 5, oy); c.closePath(); c.fill(); c.stroke();
+      if (this.mode === 'full' && pin.name) { c.font = '600 11px serif'; c.textAlign = 'left'; c.lineWidth = 3; c.strokeStyle = 'rgba(20,16,14,.85)'; c.strokeText(pin.name, ox + 8, oy + 4); c.fillStyle = '#f4e6c8'; c.fillText(pin.name, ox + 8, oy + 4); }
     }
     // view cone + arrow (forward in world is (-sin yaw, -cos yaw); screen y is flipped)
     const a = Math.atan2(Math.cos(p.yaw), -Math.sin(p.yaw));

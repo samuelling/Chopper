@@ -20,5 +20,5 @@ export const RUN = {
   save,
   /** end of a season: store what must survive the reload, then step to the next season */
   advance(extra) { Object.assign(S, extra); S.n += 1; S.played = 0; save(); },
-  reset() { S = { n: 0, played: 0, felled: [], lake: null, wp: null, log: [] }; RUN.s = S; save(); try { localStorage.removeItem('ashland.damage'); localStorage.removeItem('ashland.pressure'); localStorage.removeItem('ashland.usage'); localStorage.removeItem('ashland.guide'); } catch {} },
+  reset() { S = { n: 0, played: 0, felled: [], lake: null, wp: null, log: [] }; RUN.s = S; save(); try { localStorage.removeItem('ashland.damage'); localStorage.removeItem('ashland.pressure'); localStorage.removeItem('ashland.usage'); localStorage.removeItem('ashland.guide'); for (const k of ['ashland.photos', 'ashland.places', 'ashland.journal', 'ashland.found', 'ashland.fog']) localStorage.removeItem(k); } catch {} },
 };
