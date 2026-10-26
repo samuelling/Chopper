@@ -4,7 +4,7 @@ import { treeColor, SPECIES, buildStump } from './trees.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
-import { DAM_Z, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
+import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
 
 export const CHUNK = 64;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -14,7 +14,7 @@ const SHRUB_COLORS = ['#b3252a', '#e0701f', '#e8b92c', '#6a8a35', '#8a2535'].map
 const REED_COLORS = ['#c9b36a', '#a98a4a', '#d8c887'].map((c) => new THREE.Color(c));
 const STONE_COLORS = ['#8a8479', '#776f66', '#9a9284', '#6d6a5c'].map((c) => new THREE.Color(c));
 
-function onDam(x, z) { return x > -190 && x < 180 && z > DAM_Z - 50 && z < DAM_Z + 11; }
+function onDam(x, z) { return x > -DAM_HALF - 55 && x < DAM_HALF + 55 && z > DAM_Z - 50 && z < DAM_Z + 11; }
 function inLot(x, z, pad = 0) {
   const e = Math.hypot((x - LOT.x) / (LOT.rx + pad), (z - LOT.z) / (LOT.rz + pad));
   return e < 1;

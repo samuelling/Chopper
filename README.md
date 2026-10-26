@@ -1,4 +1,4 @@
-# Chopper
+# Ashland
 
 A cel-shaded, first-person wander through a recreation of **Ashland State Park, Massachusetts** in late October. Fell trees. Drain the reservoir. Look at the leaves.
 
@@ -17,11 +17,12 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 
-## About the place (and what is approximate)
+## About the place (what is real, what is not)
 
-The layout follows documented facts: a roughly north–south reservoir with a dam and granite-stepped spillway at the north end feeding Cold Spring Brook, a swimming beach and entrance on the west shore, a gravel boat ramp at the south tip, a few small islands, and a flat loop trail around the shore. Horizontal scale is compressed to about half so the loop is a ten-minute walk.
+The map is built from **real OpenStreetMap data** (© OpenStreetMap contributors, ODbL), exported with Overpass Turbo and stored in `data/ashland_osm.json` / `src/ashland_data.js`:
+the reservoir shoreline and both islands, the dam, the beach, the boat launch, both parking lots, the loop trail and spur paths, service roads, and Cold Spring Brook below the dam.
 
-**It is not survey data.** The OpenStreetMap/Overpass APIs were not reachable from the build environment, so the shoreline is a centre-line plus width profile with noise coves. Everything about the park lives in `src/ashland.js` (`CENTERLINE`, `HALF_WIDTH`, `ISLANDS`, anchors); replace `lakeSdf` or those tables with MassGIS / OSM-derived data to make it accurate.
+What is **not** real: ground elevation (OSM has none, so hills and lake depth are invented), the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 
 ## How it is built
 

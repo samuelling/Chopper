@@ -9,7 +9,7 @@ export const PRESETS = [
   {
     name: 'Golden hour',
     skyTop: '#3b79b0', skyMid: '#86b4c8', horizon: '#f6bd78',
-    fog: '#eebb84', fogDensity: 0.0056,
+    fog: '#eebb84', fogDensity: 0.0030,
     sunColor: '#ffc88a', sunInt: 3.5, sunElev: 21,
     hemiSky: '#a6c6e8', hemiGround: '#bf6e2c', hemiInt: 1.45,
     cloudLit: '#ffe0b0', cloudShade: '#d49aa6', cloudAmt: 0.55,
@@ -18,7 +18,7 @@ export const PRESETS = [
   {
     name: 'Morning mist',
     skyTop: '#8fb0c6', skyMid: '#c3d3d6', horizon: '#ece3d0',
-    fog: '#dfe0d6', fogDensity: 0.0105,
+    fog: '#dfe0d6', fogDensity: 0.0085,
     sunColor: '#fff0d0', sunInt: 2.3, sunElev: 13,
     hemiSky: '#c6d6e2', hemiGround: '#9a8a62', hemiInt: 1.7,
     cloudLit: '#ffffff', cloudShade: '#b9c4cc', cloudAmt: 0.8,
@@ -27,7 +27,7 @@ export const PRESETS = [
   {
     name: 'Dusk',
     skyTop: '#2a3b70', skyMid: '#8a5f86', horizon: '#ff8c5e',
-    fog: '#d98a73', fogDensity: 0.0066,
+    fog: '#d98a73', fogDensity: 0.0040,
     sunColor: '#ff9358', sunInt: 2.5, sunElev: 5,
     hemiSky: '#7d78b8', hemiGround: '#8c4a3a', hemiInt: 1.25,
     cloudLit: '#ffb27a', cloudShade: '#6c4a7e', cloudAmt: 0.6,

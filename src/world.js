@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { fbm, noise2, smoothstep, clamp, lerp, GLSL_NOISE } from './noise.js';
 import { gradientMap } from './toon.js';
 import {
-  LEVEL, MAX_DEPTH, DAM_Z, DAM_CREST, VALLEY_Y, WORLD, NX, NZ, CL_LEN,
-  lakeSdf, ISLANDS, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY,
+  LEVEL, MAX_DEPTH, DAM_Z, DAM_CREST, VALLEY_Y, WORLD, NX, NZ, CL_LEN, DAM_HALF, GATE,
+  lakeSdf, islandSdf, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
 export { NX, NZ, WORLD, LEVEL, lakeSdf };
@@ -41,12 +41,12 @@ function heightCore(x, z) {
   hs += 24 * smoothstep(175, 290, sdf);
 
   // --- north of the dam: the Cold Spring Brook valley ---
-  const valley = VALLEY_Y + hills * 0.5 + 10 * smoothstep(50, 230, Math.abs(x - 112)) + 24 * smoothstep(175, 290, sdf);
+  const valley = VALLEY_Y + hills * 0.5 + 10 * smoothstep(50, 230, Math.abs(x - (GATE.x + 30))) + 24 * smoothstep(175, 290, sdf);
   const nw = smoothstep(DAM_Z - 6, DAM_Z - 42, z);
   let h = lerp(hs, valley, nw);
 
   // --- the dam: a flat crest with a steep downstream face ---
-  const wx = smoothstep(-178, -140, x) * smoothstep(168, 128, x);
+  const wx = smoothstep(-DAM_HALF - 48, -DAM_HALF - 10, x) * smoothstep(DAM_HALF + 42, DAM_HALF + 4, x);
   const wz = smoothstep(DAM_Z - 46, DAM_Z - 32, z) * smoothstep(DAM_Z + 9, DAM_Z + 3, z);
   const wd = wx * wz;
   if (wd > 0) {
@@ -60,14 +60,16 @@ function heightCore(x, z) {
   if (sdf < 0) {
     const t = clamp((z - DAM_Z) / CL_LEN, 0, 1);
     const dn = (0.62 + 0.55 * smoothstep(0.95, 0.2, t)) * (0.85 + 0.3 * noise2(x * 0.03 + 4, z * 0.03, 5));
-    const prof = smoothstep(0, -52, sdf);
+    let prof = smoothstep(0, -52, sdf);
+    // the dam's upstream face is steep riprap, not a beach
+    prof = Math.max(prof, 0.92 * smoothstep(0, 9, z - DAM_Z) * smoothstep(DAM_HALF + 30, DAM_HALF - 5, Math.abs(x)));
     h = (LEVEL + 0.45) - (MAX_DEPTH + 0.45) * prof * dn;
     h += (noise2(x * 0.35, z * 0.35, 8) - 0.5) * 0.3 * prof; // lumpy rubble bed
-    // islands off the west shore
-    for (const [ix, iz, ir] of ISLANDS) {
-      const d = Math.hypot(x - ix, z - iz);
-      if (d < ir * 3) h = Math.max(h, lerp(h, LEVEL + 1.3 + noise2(x * 0.5, z * 0.5, 2) * 0.5, smoothstep(ir * 1.7, ir * 0.5, d)));
-    }
+  }
+  // the two real islands
+  if (sdf > -70) {
+    const isl = islandSdf(x, z);
+    if (isl < 0) h = Math.max(h, LEVEL + 0.5 + 1.7 * smoothstep(0, -9, isl) + (noise2(x * 0.45, z * 0.45, 2) - 0.5) * 0.5);
   }
 
   // --- Cold Spring Brook channel ---
@@ -98,7 +100,33 @@ function gravelDist(x, z) {
   return Math.min(dLot, dRamp);
 }
 
+// distance (m, capped) to the nearest segment of a set of polylines, by splatting each segment
+function rasterDist(lines, cap) {
+  const out = new Float32Array(NX * NZ).fill(cap);
+  for (const pts of lines) {
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+      const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - cap - WORLD.minX) / CELL)), i1 = Math.min(NX - 1, Math.ceil((Math.max(ax, bx) + cap - WORLD.minX) / CELL));
+      const j0 = Math.max(0, Math.floor((Math.min(az, bz) - cap - WORLD.minZ) / CELL)), j1 = Math.min(NZ - 1, Math.ceil((Math.max(az, bz) + cap - WORLD.minZ) / CELL));
+      const abx = bx - ax, abz = bz - az, l2 = abx * abx + abz * abz || 1e-9;
+      for (let j = j0; j <= j1; j++) {
+        const z = WORLD.minZ + j * CELL;
+        for (let ii = i0; ii <= i1; ii++) {
+          const x = WORLD.minX + ii * CELL;
+          const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / l2));
+          const d = Math.hypot(x - (ax + abx * t), z - (az + abz * t));
+          const k = j * NX + ii;
+          if (d < out[k]) out[k] = d;
+        }
+      }
+    }
+  }
+  return out;
+}
+
 export function buildGrid() {
+  const trailR = rasterDist(TRAIL_LINES, 14);
+  const roadR = rasterDist(ROAD_LINES, 14);
   for (let j = 0; j < NZ; j++) {
     const z = WORLD.minZ + j * CELL;
     for (let i = 0; i < NX; i++) {
@@ -109,8 +137,8 @@ export function buildGrid() {
       H[k] = h;
       TEX[k * 4] = h;
       TEX[k * 4 + 1] = sdf;
-      TEX[k * 4 + 2] = (sdf > -10 && sdf < 70) || z < DAM_Z + 12 ? distToPolyline(TRAIL, x, z) : 60;
-      TEX[k * 4 + 3] = gravelDist(x, z);
+      TEX[k * 4 + 2] = trailR[k];
+      TEX[k * 4 + 3] = Math.min(gravelDist(x, z), roadR[k] - 1.6);
     }
   }
   // lowest point + bbox of the reservoir
@@ -267,7 +295,7 @@ export function buildTerrain() {
       tmp.lerp(ROCK, rk);
       litterW *= 1 - rk;
       // mown grass on the dam
-      const gw = smoothstep(-178, -140, x) * smoothstep(168, 128, x) * smoothstep(DAM_Z - 44, DAM_Z - 30, z) * smoothstep(DAM_Z + 12, DAM_Z + 4, z) * (1 - rk * 0.5);
+      const gw = smoothstep(-DAM_HALF - 50, -DAM_HALF - 12, x) * smoothstep(DAM_HALF + 40, DAM_HALF + 2, x) * smoothstep(DAM_Z - 44, DAM_Z - 30, z) * smoothstep(DAM_Z + 12, DAM_Z + 4, z) * (1 - rk * 0.5);
       if (gw > 0) { tmp.lerp(GRASS, gw); litterW *= 1 - gw; }
 
       col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;

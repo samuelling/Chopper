@@ -3,7 +3,7 @@ import { GeoBuilder, matrix, jitterGeometry } from './builder.js';
 import { fillMaterial, outlineMaterial, shared } from './toon.js';
 import { mulberry32, hash2, smoothstep, clamp, lerp } from './noise.js';
 import {
-  LEVEL, DAM_Z, DAM_CREST, GATE, SPILLWAY, BROOK, BEACH, LOT, RAMP, WRECK, SPAWN,
+  LEVEL, DAM_Z, DAM_HALF, DAM_CREST, GATE, SPILLWAY, BROOK, BEACH, LOT, RAMP, WRECK, SPAWN,
 } from './ashland.js';
 import { groundY, lake, sdfAt, TRAIL } from './world.js';
 
@@ -145,13 +145,13 @@ export class Landmarks {
     this._box(b, gx - 1.45, gy + 1.3, gz + 1.82, 0.5, 0.8, 0.1, '#2c3a44');
     this._box(b, gx + 1.45, gy + 1.3, gz + 1.82, 0.5, 0.8, 0.1, '#2c3a44');
     // iron railing along the lake side of the crest
-    for (let x = -150; x <= 150; x += 6) {
+    for (let x = -DAM_HALF - 10; x <= DAM_HALF + 10; x += 6) {
       if (Math.abs(x - gx) < 4) continue;
       const y = groundY(x, DAM_Z + 2.2);
       this._box(b, x, y - 0.1, DAM_Z + 2.2, 0.12, 1.05, 0.12, '#3b3f42');
     }
     // granite gate piers at either end of the crest path
-    for (const sx of [-150, 150]) {
+    for (const sx of [-DAM_HALF - 10, DAM_HALF + 10]) {
       const y = groundY(sx, DAM_Z - 1);
       this._box(b, sx, y - 0.1, DAM_Z - 1, 1.1, 1.5, 1.1, '#9a968c', { noise: true });
     }
@@ -328,19 +328,23 @@ export class Landmarks {
   // ------------------------------------------------------------------------
   _ramp(layout) {
     const b = new GeoBuilder();
-    const rx = RAMP.x, rz = RAMP.z - 9;
-    const y0 = groundY(rx, rz + 9), y1 = groundY(rx, rz - 9);
-    const len = 20;
-    const slope = Math.atan2(y1 - y0, 18);
-    const ymid = (y0 + y1) / 2 + 0.06;
-    b.add(new THREE.BoxGeometry(6.4, 0.22, len), matrix(rx, ymid, rz, -slope * -1, 0, 0), { tint: 0, color: '#9d998f' });
-    // dock posts + signpost
-    for (const s of [-1, 1]) this._box(b, rx + s * 3.6, groundY(rx + s * 3.6, rz) - 0.2, rz + 3, 0.2, 1.2, 0.2, '#4b3a2a');
-    const sy = groundY(rx + 8, rz + 12);
-    this._box(b, rx + 8, sy - 0.1, rz + 12, 0.12, 1.9, 0.12, '#5b4430');
-    this._box(b, rx + 8, sy + 1.2, rz + 12, 1.5, 0.6, 0.07, '#2f5d3a');
+    const dx = RAMP.dx, dz = RAMP.dz;                    // unit vector pointing into the water
+    const yaw = Math.atan2(dx, dz);
+    const len = 18, c = 6;                               // slab centre 6 m out from the node
+    const cx = RAMP.x + dx * c, cz = RAMP.z + dz * c;
+    const y0 = groundY(RAMP.x - dx * 3, RAMP.z - dz * 3), y1 = groundY(RAMP.x + dx * 13, RAMP.z + dz * 13);
+    const pitch = Math.atan2(y1 - y0, 16);               // positive = rising toward the water side
+    b.add(new THREE.BoxGeometry(6.4, 0.22, len), matrix(cx, (y0 + y1) / 2 + 0.06, cz, pitch, yaw, 0), { tint: 0, color: '#9d998f' });
+    const px = -dz, pz = dx;                             // across the ramp
+    for (const s of [-1, 1]) {
+      const x = RAMP.x + px * 3.6 * s - dx * 2, z = RAMP.z + pz * 3.6 * s - dz * 2;
+      this._box(b, x, groundY(x, z) - 0.2, z, 0.2, 1.2, 0.2, '#4b3a2a');
+    }
+    const sx = RAMP.x - dx * 9 + px * 6, sz = RAMP.z - dz * 9 + pz * 6, sy = groundY(sx, sz);
+    this._box(b, sx, sy - 0.1, sz, 0.12, 1.9, 0.12, '#5b4430');
+    this._box(b, sx, sy + 1.2, sz, 1.5, 0.6, 0.07, '#2f5d3a', { ry: yaw });
     this._emit(b, { shadow: false });
-    layout.addCircle(rx, rz + 6, 14);
+    layout.addCircle(RAMP.x - dx * 4, RAMP.z - dz * 4, 14);
   }
 
   // ------------------------------------------------------------------------
