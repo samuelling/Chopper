@@ -249,7 +249,7 @@ async function boot() {
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else { ui.els.hud.classList.add('on'); ui.els.paused.classList.remove('hidden'); }   // the browser needs one click to capture the mouse
       });
-    }, 2600);
+    }, 1400);
   };
   newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
   ui.els.title.addEventListener('click', () => (RUN.dev ? begin() : showCard()));

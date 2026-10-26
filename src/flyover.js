@@ -24,7 +24,7 @@ export class Flyover {
   start() { this.active = true; this.player.carryHidden = true; this.player.refreshCarry(); }
   stop() { this.active = false; this.player.carryHidden = false; this.player.refreshCarry(); }
   /** leave the drone path and settle onto the player's eyes (position and view), then call done */
-  glideTo(done, secs = 6) {
+  glideTo(done, secs = 3) {
     this.glide = { t: 0, secs, done, from: this.camera.position.clone(), fq: this.camera.quaternion.clone() };
   }
   update(dt) {
