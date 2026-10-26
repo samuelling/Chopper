@@ -281,8 +281,11 @@ async function boot() {
   };
   const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
+  // the first season of each year opens with "Year One", which dissolves into the season's name
+  const WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+  const yearTitle = () => { if (RUN.dev || RUN.n % 4 !== 0) return null; const y = RUN.n / 4; return `Year ${WORDS[y] ?? y + 1}`; };
   const showCard = () => {
-    document.getElementById('scname').textContent = SEASON_DEF.label;
+    document.getElementById('scname').textContent = yearTitle() || SEASON_DEF.label;
     newgame.hidden = RUN.n === 0 && RUN.fresh;
     ui.els.title.classList.add('hidden'); card.classList.remove('hidden');
   };
@@ -291,6 +294,11 @@ async function boot() {
   let autoCard = false;
   const autoSeason = (spawnFromDrone = false) => {
     autoCard = true; newgame.hidden = true;
+    const nm = document.getElementById('scname'), yt = yearTitle(), hold = yt ? 1800 + 800 + 1300 : 1300;
+    if (yt) {                               // Year One ... dissolve ... Autumn
+      setTimeout(() => nm.classList.add('dim'), 1800);
+      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); }, 2600);
+    }
     setTimeout(() => {
       card.classList.add('hidden');
       if (spawnFromDrone) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
@@ -299,7 +307,7 @@ async function boot() {
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
       });
-    }, 1200);
+    }, hold);
   };
   newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
   ui.els.title.addEventListener('click', () => { if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
