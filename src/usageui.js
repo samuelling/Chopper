@@ -2,6 +2,10 @@ import { RUN } from './run.js';
 import { Usage, LEVELS, TOKEN_STEPS, importLogFiles, pickLogFolder, recheckLogFolder, canPickFolder, hasSavedFolder } from './usage.js';
 
 const fmt = (t) => (t >= 1e6 ? `${t / 1e6}M` : `${t / 1e3}k`);
+// Chrome/Edge can remember a folder (File System Access API); every other desktop browser gets a plain folder chooser that reads the .jsonl files inside it once
+const folderBtns = () => canPickFolder()
+  ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>'
+  : '<label class="ubtn">Pick log folder<input type="file" webkitdirectory hidden data-logfiles></label>';
 const panelHTML = () => `
 <div class="usage">
   <div class="uh">Your footprint</div>
@@ -10,7 +14,7 @@ const panelHTML = () => `
   <div class="urow ask"><span data-ask>Today</span>${LEVELS.map((l, i) => `<button data-today="${i}">${l.name}</button>`).join('')}</div>
   <div class="urow"><span>Or count it</span>
     <label class="ubtn">Claude Code log files<input type="file" accept=".jsonl" multiple hidden data-logfiles></label>
-    ${canPickFolder() ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>' : ''}
+    ${folderBtns()}
   </div>
   <small data-usage-note></small>
   ${RUN.dev ? '<details><summary>Manual dial (testing)</summary><label>Pressure <input type="range" min="0" max="100" value="0" data-pressure> <b data-pressure-val></b></label></details>' : ''}
@@ -19,7 +23,7 @@ const panelHTML = () => `
 // just the log-linking row, for the opening menu (nothing is judged or applied to the park until the end of the first year)
 const logOnlyHTML = () => `<div class="urow"><span>Link it now</span>
     <label class="ubtn">Claude Code log files<input type="file" accept=".jsonl" multiple hidden data-logfiles></label>
-    ${canPickFolder() ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>' : ''}
+    ${folderBtns()}
   </div><small data-usage-note></small>`;
 
 export function initUsageUI(root = document, onChange) {
@@ -36,7 +40,7 @@ export function initUsageUI(root = document, onChange) {
   root.querySelectorAll('[data-today]').forEach((b) => b.addEventListener('click', () => { Usage.checkin(+b.dataset.today); refresh(); note(`Today: ${LEVELS[+b.dataset.today].name}.`); }));
   const done = (n, what) => { refresh(); note(n > 0 ? `Counted ${n} day${n > 1 ? 's' : ''} from ${what}. Tokens per day: Light under ${fmt(TOKEN_STEPS[1])}, Medium to ${fmt(TOKEN_STEPS[2])}, Heavy to ${fmt(TOKEN_STEPS[3])}, Very heavy above ${fmt(TOKEN_STEPS[3])} (invented thresholds). Only the daily totals are kept.` : n === -1 ? 'Permission not granted.' : `No usage found in ${what}.`); };
   root.querySelectorAll('[data-logfiles]').forEach((inp) => inp.addEventListener('change', async () => { try { done(await importLogFiles([...inp.files]), 'the log files'); } catch (e) { note('Could not read that file: ' + e.message); } inp.value = ''; }));
-  root.querySelectorAll('[data-logfolder]').forEach((b) => b.addEventListener('click', async () => { try { done(await pickLogFolder(), 'that folder'); root.querySelectorAll('[data-logre]').forEach((x) => { x.hidden = false; }); } catch { /* cancelled */ } }));
+  root.querySelectorAll('[data-logfolder]').forEach((b) => b.addEventListener('click', async () => { try { done(await pickLogFolder(), 'that folder'); root.querySelectorAll('[data-logre]').forEach((x) => { x.hidden = false; }); } catch (e) { if (e && e.name !== 'AbortError') note('This page was not allowed to open the folder picker (a blocked or embedded page). Use "Claude Code log files" instead and select the .jsonl files.'); } }));
   root.querySelectorAll('[data-logre]').forEach((b) => b.addEventListener('click', async () => { const n = await recheckLogFolder(true); if (n !== null) done(n, 'the saved folder'); }));
   refresh();
   Usage.apply();
