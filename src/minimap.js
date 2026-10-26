@@ -37,6 +37,7 @@ export class Minimap {
     else { this.cv.width = this.cv.height = 220; this.cv.style.width = this.cv.style.height = '220px'; }
     document.querySelectorAll('[data-minimap]').forEach((b) => { b.textContent = `Map: ${mode === 'off' ? 'off' : mode === 'local' ? 'nearby' : 'whole park'}`; });
   }
+  setMarker(x, z, label) { this.marker = x == null ? null : { x, z, label }; }
   cycle() { this.set(MODES[(MODES.indexOf(this.mode) + 1) % 3]); }
   // world (x,z) -> base pixel; z up on screen
   px(x) { return (x - WORLD.minX) * this.res; }
@@ -87,6 +88,12 @@ export class Minimap {
     c.drawImage(this.base, sx, sy, sw, sh, 0, 0, W, H);
     c.drawImage(this.water, sx, sy, sw, sh, 0, 0, W, H);
     const mx = (this.px(p.pos.x) - sx) * k, my = (this.py(p.pos.z) - sy) * k;
+    if (this.marker) {
+      let ox = (this.px(this.marker.x) - sx) * k, oy = (this.py(this.marker.z) - sy) * k;
+      const cx = W / 2, cy = H / 2, inside = ox > 8 && oy > 8 && ox < W - 8 && oy < H - 8;
+      if (!inside) { const dx = ox - cx, dy = oy - cy, t = this.mode === 'local' ? (W / 2 - 12) / (Math.hypot(dx, dy) || 1) : Math.min((W / 2 - 12) / Math.abs(dx || 1e-6), (H / 2 - 12) / Math.abs(dy || 1e-6)); ox = cx + dx * t; oy = cy + dy * t; }
+      c.lineWidth = 3; c.strokeStyle = '#ffd24a'; c.fillStyle = 'rgba(255,210,74,.35)'; c.beginPath(); c.arc(ox, oy, inside ? 8 : 5, 0, 6.3); c.fill(); c.stroke();
+    }
     // view cone + arrow (forward in world is (-sin yaw, -cos yaw); screen y is flipped)
     const a = Math.atan2(Math.cos(p.yaw), -Math.sin(p.yaw));
     c.save(); c.translate(mx, my); c.rotate(a);

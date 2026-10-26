@@ -3,6 +3,7 @@ import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
 import { initUsageUI } from './usageui.js';
 import { Minimap } from './minimap.js';
+import { phaseTwo, renderChoices } from './choices.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -206,6 +207,18 @@ async function boot() {
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) minimap.cycle(); });
   minimap.set(minimap.mode);
+  // phase two: choices (C opens the pause menu with the choices panel)
+  let waypoint = null;
+  const wpEl = document.getElementById('waypoint');
+  const setWaypoint = (x, z, label) => { waypoint = x == null ? null : { x, z, label }; minimap.setMarker(x, z, label); if (x == null) wpEl.textContent = ''; };
+  const showChoices = () => {
+    const on = phaseTwo();
+    document.getElementById('chint').hidden = !on;
+    document.querySelectorAll('[data-choices]').forEach((el) => { el.hidden = !on; if (on) renderChoices(el, { player, chunks, lake, setWaypoint }); });
+  };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat && started && phaseTwo()) { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } });
+  new MutationObserver(showChoices).observe(ui.els.paused, { attributes: true, attributeFilter: ['class'] });
+  showChoices();
   initUsageUI();
   const pr = document.querySelectorAll('[data-pressure]'), prv = document.querySelectorAll('[data-pressure-val]');
   const showP = () => prv.forEach((e) => { e.textContent = PRESSURE.target < 0.01 ? 'none (park as it is)' : `${Math.round(PRESSURE.target * 100)}%`; });
@@ -252,6 +265,11 @@ async function boot() {
     }
     PRESSURE.update(dt);
     minimap.update();
+    if (waypoint) {
+      const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);
+      if (d < 9) { ui.toast(`You have arrived: ${waypoint.label}.`); setWaypoint(null); }
+      else wpEl.textContent = `${waypoint.label}  ${Math.round(d)} m ${['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][Math.round(Math.atan2(-dz * -1, dx) / (Math.PI / 4) + 8) % 8]}`;
+    }
     shared.harm.value = PRESSURE.harm;
     if (Math.abs(PRESSURE.harm - (PRESSURE._applied ?? -1)) > 0.004 || (PRESSURE._tick = (PRESSURE._tick || 0) + dt) > 1.5) {
       PRESSURE._applied = PRESSURE.harm; PRESSURE._tick = 0; chunks.applyHarm(PRESSURE.harm);

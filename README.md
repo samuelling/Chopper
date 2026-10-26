@@ -18,6 +18,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
 | M | optional minimap: off, nearby, or whole park (also a Map button on the title and pause screens; north is up, the dam is at the bottom) |
+| C | (phase two) make choices |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 
 ## On a phone
@@ -50,6 +51,10 @@ Turtles bask on logs and rocks and slip into the water when you run past.
 ## Pressure (art experiment)
 
 A single dial, **Pressure** (0-100%, pause menu or `?pressure=0.5`), stands in for how heavily AI and data-center use leans on a place. As it rises the reservoir is held lower, colours fade, and fish, turtles, songbirds, squirrels and geese show up less. It is **not a measurement**: the mapping is invented and exaggerated on purpose so the cost is visible. The harm is **lasting**: pressure builds damage over minutes, and turning the dial down only lets the park heal over about an hour. The unluckiest trees brown first and, at full harm, roughly 30% are gone (they stop blocking and can't be chopped), and they return slowly as the park recovers. `?damage=0.5` starts with existing harm. You tell the park about your AI use in three coarse ways (title and pause screens, "Your footprint"): a **typical day** tier, a **daily check-in** ("how much did you lean on AI today?"), or by letting the game **count a Claude Code log** (`~/.claude/projects/**/*.jsonl`, pick files or, in desktop Chrome/Edge, pick the folder once and re-check on later visits after a permission click). The browser totals tokens per day locally (input + output + cache writes, not cache reads) and keeps only the daily level; thresholds are invented and shown on screen. Nothing is uploaded. The log format is not a published interface, and claude.ai chat usage can't be read at all.
+
+## Choices (phase two)
+
+Once you have told the park about your AI use (or with `?phase=2`), a "C make choices" hint appears on the HUD card and **C** opens the pause menu with a choices panel. Every choice shows what it gives and what it costs before you commit. *AI* choices (survey the park, find a lookout, find a building site) add a one-time pulse of lasting harm and give a summary or a map and HUD marker. *Park* choices (harvest the nearest stand, hold off on AI today) act on the land. The benefits are placeholders until the real premise is set.
 
 ## Sound
 
