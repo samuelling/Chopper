@@ -19,9 +19,19 @@ export class Audio {
     this.gateSnd = this._loop(140, 1.5, 0.0);
     this.rustle = this._loop(3200, 0.6, 0.0);          // wind in the leaves
     this.rainHi = this._loop(5200, 0.5, 0.0); this.rainLo = this._loop(1100, 0.4, 0.0);   // rain on leaves and on the ground
-    this.cicada = this._loop(5600, 9, 0.0);            // summer: the drone of cicadas, pulsing
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 46; const lg = ctx.createGain(); lg.gain.value = 0.0;
+    this.cicada = this._loop(3900, 2.2, 0.0);            // summer: the drone of cicadas, pulsing
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 38; const lg = ctx.createGain(); lg.gain.value = 0.0;
     lfo.connect(lg); lg.connect(this.cicada.g.gain); lfo.start(); this.cicadaLfo = lg;
+    // crickets: a few steady, softly filtered chirpers (three quick pulses each) rather than random beeps
+    this.cricketG = ctx.createGain(); this.cricketG.gain.value = 0;
+    const clp = ctx.createBiquadFilter(); clp.type = 'lowpass'; clp.frequency.value = 5200; clp.Q.value = 0.3;
+    this.cricketG.connect(clp); clp.connect(this.master);
+    this.chirpers = [0, 1, 2, 3].map((i) => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 3900 + i * 190 + Math.random() * 60;
+      const g = ctx.createGain(); g.gain.value = 0; const pn = ctx.createStereoPanner(); pn.pan.value = -0.8 + i * 0.5;
+      o.connect(g); g.connect(pn); pn.connect(this.cricketG); o.start();
+      return { g, next: ctx.currentTime + Math.random(), period: 0.75 + Math.random() * 0.5 };
+    });
     this.ready = true;
     this.birdT = 3; this.insectT = 1; this.frogT = 4; this.creakT = 12; this.hawkT = 30;
   }
@@ -114,7 +124,7 @@ export class Audio {
   honk() { const n = 2 + ((Math.random() * 3) | 0); for (let i = 0; i < n; i++) setTimeout(() => { this._tone(540 + Math.random() * 60, 0.34, 0.05, 'sawtooth', 430); this._burst(700, 2, 0.34, 0.12, 'bandpass'); }, i * 430 + Math.random() * 100); }
   hawkCry() { this._burst(3600, 1.5, 1.2, 0.1, 'bandpass', 0.5); this._tone(3300, 0.9, 0.03, 'sawtooth', 2000); }
   peep() { this._tone(2800 + Math.random() * 300, 0.09, 0.022, 'sine', 3300); }
-  cricket() { for (let i = 0; i < 4; i++) setTimeout(() => this._tone(4300 + Math.random() * 200, 0.022, 0.014, 'sine'), i * 38); }
+  cricket() { for (let i = 0; i < 3; i++) setTimeout(() => this._tone(3900 + Math.random() * 100, 0.026, 0.012, 'sine'), i * 34); }
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
   owl() { if (!this.ready) return; [[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].forEach(([d, l]) => setTimeout(() => this._tone(l > 0.4 ? 330 : 400, l, 0.06, 'sine', l > 0.4 ? 260 : 390), d * 1000)); }
   coyote() { if (!this.ready) return; const n = 5 + ((Math.random() * 5) | 0); for (let i = 0; i < n; i++) setTimeout(() => this._tone(700 + Math.random() * 500, 0.22, 0.03, 'sawtooth', 900 + Math.random() * 400), i * 190 + Math.random() * 80); setTimeout(() => this._tone(620, 1.4, 0.04, 'sine', 980), n * 190); }
@@ -148,22 +158,32 @@ export class Audio {
     const rn = s.rain || 0; this.rainHi.g.gain.setTargetAtTime(s.snow ? 0 : 0.05 * rn, t, 0.8); this.rainLo.g.gain.setTargetAtTime(s.snow ? 0 : 0.035 * rn, t, 0.8);
     this.gateSnd.g.gain.setTargetAtTime(s.gate ? 0.18 : 0, t, 0.3);
     // summer: cicadas through the day, swelling and fading
-    const cic = SEASON === 'summer' ? (1 - evening * 0.7) * (0.55 + 0.45 * Math.sin(t * 0.13)) : SEASON === 'autumn' ? 0.35 * (1 - evening) * (0.5 + 0.5 * Math.sin(t * 0.09)) : 0;
-    this.cicada.g.gain.setTargetAtTime(0.012 * cic, t, 0.8);
-    this.cicadaLfo.gain.setTargetAtTime(0.012 * cic, t, 0.8);
+    const cic = SEASON === 'summer' ? (1 - evening * 0.7) * (0.35 + 0.65 * Math.max(0, Math.sin(t * 0.17))) : SEASON === 'autumn' ? 0.18 * (1 - evening) * Math.max(0, Math.sin(t * 0.11)) : 0;
+    this.cicada.g.gain.setTargetAtTime(0.018 * cic, t, 1.2);
+    this.cicadaLfo.gain.setTargetAtTime(0.008 * cic, t, 1.2);
     // birds: busy in spring, steady in summer, sparse in autumn, a few in winter
     this.birdT -= dt;
     if (this.birdT < 0) {
-      const iv = { spring: [1.5, 3.5], summer: [2.5, 6], autumn: [3, 8], winter: [9, 20] }[SEASON];
+      const iv = { spring: [1.5, 3.5], summer: [2.5, 6], autumn: [3, 8], winter: [18, 45] }[SEASON];
       this.birdT = (iv[0] + Math.random() * (iv[1] - iv[0])) * (1 + evening * 1.5);
       if (s.sdf > -5 && !(s.rain > 0.35)) this.bird();
     }
     // night-ish insects and frogs
+    // the cricket chorus: loudest at dusk and night, and only while it is warm
+    const cl = { summer: 0.5 + evening * 0.5, autumn: 0.25 + evening * 0.35, spring: 0, winter: 0 }[SEASON] * (s.rain > 0.35 ? 0.3 : 1);
+    this.cricketG.gain.setTargetAtTime(0.03 * cl, t, 1.5);
+    if (cl > 0) {
+      for (const ch of this.chirpers) {
+        while (ch.next < t + 0.4) {
+          if (Math.random() < 0.8) for (let p = 0; p < 3; p++) { const tp = Math.max(ch.next, t) + p * 0.034; ch.g.gain.setValueAtTime(0, tp); ch.g.gain.linearRampToValueAtTime(1, tp + 0.006); ch.g.gain.linearRampToValueAtTime(0, tp + 0.024); }
+          ch.next += ch.period * (0.9 + Math.random() * 0.25);
+        }
+      }
+      this.heardT = (this.heardT ?? 20) - dt; if (this.heardT < 0) { this.heardT = 40; this.onHeard?.('cricket'); }
+    }
     this.insectT -= dt;
     if (this.insectT < 0) {
       this.insectT = 0.3 + Math.random() * 0.5;
-      const cr = { summer: 0.3 + evening * 0.7, autumn: 0.35 + evening * 0.5, spring: 0, winter: 0 }[SEASON];
-      if (Math.random() < cr) this.cricket();
       if (SEASON === 'spring' && s.sdf < 40 && Math.random() < 0.35 + evening * 0.6) for (let i = 0; i < 1 + ((Math.random() * 3) | 0); i++) setTimeout(() => this.peep(), i * 90 + Math.random() * 60);
     }
     this.frogT -= dt;
