@@ -320,10 +320,13 @@ async function boot() {
       });
     }, hold);
   };
+  // a returning player lands on the opening menu (continue or start over); season changes within a visit reload straight into play
+  const inPlay = () => { try { return !!sessionStorage.getItem('ashland.inplay'); } catch { return false; } };
+  if (!RUN.fresh && !RUN.dev) document.querySelectorAll('#title .go span:not(.only-mobile)').forEach((s) => { s.textContent = 'Click to continue'; });
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.fresh; b.addEventListener('click', restart); });
-  ui.els.title.addEventListener('click', () => { if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
+  ui.els.title.addEventListener('click', () => { try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
     if (e.code === 'Digit1') setMood(0);
@@ -387,7 +390,7 @@ async function boot() {
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
   } else {
-    if (!RUN.dev && !RUN.fresh) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
+    if (!RUN.dev && !RUN.fresh && inPlay()) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
     if (!params.has('noflyover')) flyover.start();
   }
   if (!RUN.dev) {
