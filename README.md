@@ -96,7 +96,7 @@ Once you have told the park about your AI use (or with `?phase=2`), a "C make ch
 
 ## Sound
 
-All audio is synthesised with WebAudio, no sample files. The ambience changes by season (spring peepers and song, summer crickets and cicadas, autumn wind and crows, winter near-silence). Footsteps depend on the surface: paving on the dam and ramp, gravel in the lots, sand on the beach, mud in wetlands, dirt on trails, leaves in autumn, crunchy snow in winter, grass otherwise. Only checked for errors in a headless browser, so tune it by ear.
+All audio is synthesised with WebAudio, no sample files. The ambience changes by season (spring peepers and song, summer crickets and cicadas, autumn crickets, a few cicadas and crows, winter near-silence). The wind is kept low with a calm floor and soft random gusts every few seconds, after the Dry Stack soundscape. Footsteps depend on the surface: paving on the dam and ramp, gravel in the lots, sand on the beach, mud in wetlands, dirt on trails, leaves in autumn, crunchy snow in winter, grass otherwise. Only checked for errors in a headless browser, so tune it by ear.
 
 ## How it is built
 

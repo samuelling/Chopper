@@ -14,7 +14,7 @@ export class Audio {
     const d = this.noiseBuf.getChannelData(0);
     let b0 = 0; for (let i = 0; i < len; i++) { b0 = 0.97 * b0 + (Math.random() * 2 - 1) * 0.2; d[i] = b0 * 3; }
     // wind bed
-    this.wind = this._loop(420, 0.7, 0.05);
+    this.wind = this._loop(380, 0.4, 0.02);
     this.lap = this._loop(900, 0.6, 0.0);
     this.gateSnd = this._loop(140, 1.5, 0.0);
     this.rustle = this._loop(3200, 0.6, 0.0);          // wind in the leaves
@@ -129,20 +129,24 @@ export class Audio {
   update(dt, s) {
     if (!this.ready) return;
     const t = this.ctx.currentTime, evening = s.mood >= 2 ? 1 : s.mood === 1 ? 0.3 : 0;
-    const gust = 0.5 + 0.5 * Math.sin(t * 0.23) * Math.sin(t * 0.11 + 1);
+    // gentle gusts: a calm floor with a soft swell every few seconds, drawn at random
+    this.gustT = (this.gustT ?? 0) - dt;
+    if (this.gustT < 0) { this.gustT = 3 + Math.random() * 6; this.gustTo = Math.random() < 0.35 ? 0.6 + Math.random() * 0.4 : Math.random() * 0.3; }
+    this.gustV = (this.gustV ?? 0.2) + ((this.gustTo ?? 0.2) - (this.gustV ?? 0.2)) * Math.min(1, dt / 2.2);
+    const gust = this.gustV;
     // the wind bed and the leaves it moves through, by season
-    const w = { spring: [0.045, 0.012], summer: [0.03, 0.015], autumn: [0.06, 0.035], winter: [0.07, 0.0] }[SEASON];
-    this.wind.g.gain.setTargetAtTime(w[0] * (0.7 + 0.6 * gust) + s.wind * 0.03, t, 0.4);
-    this.wind.f.frequency.setTargetAtTime((SEASON === 'winter' ? 260 : 350) + 150 * Math.sin(t * 0.21), t, 0.5);
-    this.rustle.g.gain.setTargetAtTime(w[1] * (0.3 + gust), t, 0.5);
-    this.rustle.f.frequency.setTargetAtTime(2600 + 900 * gust, t, 0.5);
+    const w = { spring: [0.022, 0.006], summer: [0.014, 0.007], autumn: [0.026, 0.014], winter: [0.034, 0.0] }[SEASON];
+    this.wind.g.gain.setTargetAtTime(w[0] * (0.35 + 1.1 * gust) + s.wind * 0.015, t, 0.4);
+    this.wind.f.frequency.setTargetAtTime((SEASON === 'winter' ? 220 : 280) + 200 * gust, t, 0.5);
+    this.rustle.g.gain.setTargetAtTime(w[1] * (0.15 + 1.2 * gust * gust), t, 0.5);
+    this.rustle.f.frequency.setTargetAtTime(2200 + 800 * gust, t, 0.5);
     // lapping loudest at the water's edge
     const near = Math.max(0, 1 - Math.max(0, s.sdf) / 45) * (s.lakeFrac);
     this.lap.g.gain.setTargetAtTime((SEASON === 'winter' ? 0.025 : 0.045) * near, t, 0.5);
     const rn = s.rain || 0; this.rainHi.g.gain.setTargetAtTime(s.snow ? 0 : 0.05 * rn, t, 0.8); this.rainLo.g.gain.setTargetAtTime(s.snow ? 0 : 0.035 * rn, t, 0.8);
     this.gateSnd.g.gain.setTargetAtTime(s.gate ? 0.18 : 0, t, 0.3);
     // summer: cicadas through the day, swelling and fading
-    const cic = SEASON === 'summer' ? (1 - evening * 0.7) * (0.55 + 0.45 * Math.sin(t * 0.13)) : 0;
+    const cic = SEASON === 'summer' ? (1 - evening * 0.7) * (0.55 + 0.45 * Math.sin(t * 0.13)) : SEASON === 'autumn' ? 0.35 * (1 - evening) * (0.5 + 0.5 * Math.sin(t * 0.09)) : 0;
     this.cicada.g.gain.setTargetAtTime(0.012 * cic, t, 0.8);
     this.cicadaLfo.gain.setTargetAtTime(0.012 * cic, t, 0.8);
     // birds: busy in spring, steady in summer, sparse in autumn, a few in winter
@@ -156,7 +160,7 @@ export class Audio {
     this.insectT -= dt;
     if (this.insectT < 0) {
       this.insectT = 0.3 + Math.random() * 0.5;
-      const cr = { summer: 0.3 + evening * 0.7, autumn: evening * 0.35, spring: 0, winter: 0 }[SEASON];
+      const cr = { summer: 0.3 + evening * 0.7, autumn: 0.35 + evening * 0.5, spring: 0, winter: 0 }[SEASON];
       if (Math.random() < cr) this.cricket();
       if (SEASON === 'spring' && s.sdf < 40 && Math.random() < 0.35 + evening * 0.6) for (let i = 0; i < 1 + ((Math.random() * 3) | 0); i++) setTimeout(() => this.peep(), i * 90 + Math.random() * 60);
     }

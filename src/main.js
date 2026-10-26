@@ -340,11 +340,12 @@ async function boot() {
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = b.closest('#paused') ? false : RUN.fresh; b.addEventListener('click', restart); });
   // the life clock: ask for a birth year once (optional); it only sets how many game years you get
   const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
-  if (!RUN.dev && RUN.s.born == null) birthEl.hidden = false;
+  if (!RUN.dev) { birthEl.hidden = false; if (RUN.s.born != null && !RUN.s.assumed) birthIn.value = RUN.s.born; }
   ['click', 'keydown', 'keyup'].forEach((ev) => birthEl.addEventListener(ev, (e) => e.stopPropagation()));
   const ensureBorn = () => {
-    if (RUN.dev || RUN.s.born != null) return;
+    if (RUN.dev) return;
     const y = parseInt(birthIn.value), now = new Date().getFullYear();
+    if (RUN.s.born != null && !(y >= 1900 && y <= now && y !== RUN.s.born)) return;
     if (y >= 1900 && y <= now) RUN.setBorn(y, false); else RUN.setBorn(now - 40, true);
   };
   ui.els.title.addEventListener('click', () => { ensureBorn(); try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
