@@ -337,7 +337,7 @@ async function boot() {
   document.querySelectorAll('.logtut').forEach((d) => d.addEventListener('click', (e) => e.stopPropagation()));
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
-  document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.fresh; b.addEventListener('click', restart); });
+  document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = b.closest('#paused') ? false : RUN.fresh; b.addEventListener('click', restart); });
   // the life clock: ask for a birth year once (optional); it only sets how many game years you get
   const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
   if (!RUN.dev && RUN.s.born == null) birthEl.hidden = false;
