@@ -18,17 +18,23 @@ import { FX } from './fx.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
 import { ui } from './ui.js';
+import { TouchControls } from './touch.js';
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
+// Phones and tablets: touch controls + a lighter renderer. ?mobile=1 / ?desktop=1 force either.
+const MOBILE = params.has('desktop') ? false : params.has('mobile')
+  || (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches)
+  || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+if (MOBILE) document.body.classList.add('mobile');
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 window.addEventListener('error', (e) => { document.getElementById('err').textContent += `${e.message} (${e.filename?.split('/').pop()}:${e.lineno})\n`; });
 window.addEventListener('unhandledrejection', (e) => { document.getElementById('err').textContent += `${e.reason?.stack || e.reason}\n`; });
 
 async function boot() {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: AUTO });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  const renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance', preserveDrawingBuffer: AUTO });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.25 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -54,6 +60,12 @@ async function boot() {
   ui.progress('Painting the sky…', 0.2); await tick();
   const atmosphere = new Atmosphere(scene);
   atmosphere.setSunAzimuth(-0.85, 0.5);
+  if (MOBILE) {
+    const sh = atmosphere.sun.shadow;
+    sh.mapSize.set(1024, 1024);
+    sh.camera.left = sh.camera.bottom = -42; sh.camera.right = sh.camera.top = 42;
+    sh.camera.updateProjectionMatrix();
+  }
   const startPreset = clamp(parseInt(params.get('preset') ?? '0', 10) || 0, 0, PRESETS.length - 1);
   atmosphere.setPreset(startPreset);
   if (startPreset) { atmosphere.blend = 1; atmosphere.state = atmosphere._clone(atmosphere.target); atmosphere.applyState(atmosphere.state, PRESETS[startPreset]); }
@@ -69,14 +81,18 @@ async function boot() {
   const walls = buildWalls();
   const chunks = new ChunkManager({ scene, colliders, layout, treeModels, propModels, walls, spawnClear: { x: SPAWN.x, z: SPAWN.z, r: 5 } });
 
+  if (MOBILE) {
+    chunks.loadR = 190; chunks.unloadR = 240;
+    for (const d of Object.values(chunks.defs)) { d.nearDist *= 0.7; d.farDist *= 0.72; }
+  }
   const player = new Player(camera, colliders, renderer.domElement);
   const sx = parseFloat(params.get('x') ?? SPAWN.x), sz = parseFloat(params.get('z') ?? SPAWN.z);
   player.teleport(sx, sz, parseFloat(params.get('yaw') ?? SPAWN.yaw), parseFloat(params.get('pitch') ?? 0));
   player._applyCamera();
 
   ui.progress('Raking the leaves…', 0.6); await tick();
-  const litter = new Litter(scene);
-  const fx = new FX(scene);
+  const litter = MOBILE ? new Litter(scene, 3500, 34) : new Litter(scene);
+  const fx = new FX(scene, MOBILE ? 350 : 900);
   const audio = new Audio();
   chunks.preload(camera.position);
 
@@ -84,7 +100,7 @@ async function boot() {
   {
     const rng = mulberry32(99);
     const places = [];
-    for (let i = 0; i < 90 && places.length < 20; i++) {
+    for (let i = 0; i < 90 && places.length < (MOBILE ? 7 : 20); i++) {
       const a = rng() * 6.28, r = 12 + rng() * 120;
       const x = sx + Math.cos(a) * r, z = sz + Math.sin(a) * r;
       if (sdfAt(x, z) < 4) continue;
@@ -136,9 +152,15 @@ async function boot() {
   let started = false;
   const begin = () => {
     audio.init();
-    renderer.domElement.requestPointerLock?.();
     started = true;
+    if (MOBILE) {
+      player.locked = true;
+      ui.els.title.classList.add('hidden');
+      ui.els.hud.classList.add('on');
+      touch.show();
+    } else renderer.domElement.requestPointerLock?.();
   };
+  const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
   ui.els.title.addEventListener('click', begin);
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
@@ -152,6 +174,7 @@ async function boot() {
   ui.els.loading.classList.add('hidden');
   if (AUTO) {
     started = true; player.locked = true;
+    if (MOBILE) touch.show();
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
   } else ui.els.title.classList.remove('hidden');
@@ -199,12 +222,12 @@ async function boot() {
     const s = sdfAt(player.pos.x, player.pos.z);
     audio.update(dt, { wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
-    ui.prompt(landmarks.nearGate(player.pos) ? (lake.gateOpen ? '[E]  close the drawdown gate' : '[E]  open the drawdown gate') : '');
+    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : '');
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
   const render = () => renderer.render(scene, camera);
-  window.chopper = { render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

@@ -79,6 +79,7 @@ export class ChunkManager {
     this.stumpMat = fillStatic;
     this.stumpOutline = outlineStatic;
     this.queue = [];
+    this.loadR = 285; this.unloadR = 345;
   }
 
   // -------------------------------------------------------------------------
@@ -90,7 +91,7 @@ export class ChunkManager {
   }
 
   update(dt, cam, audioHooks, budget = 2) {
-    const loadR = 285, unloadR = 345;
+    const loadR = this.loadR, unloadR = this.unloadR;
     const [ccx, ccz] = this.chunkAt(cam.x, cam.z);
     const span = Math.ceil(loadR / CHUNK) + 1;
     const want = [];
@@ -120,7 +121,7 @@ export class ChunkManager {
   }
 
   preload(cam, budget = Infinity) {
-    const loadR = 285;
+    const loadR = this.loadR;
     const [ccx, ccz] = this.chunkAt(cam.x, cam.z);
     const span = Math.ceil(loadR / CHUNK) + 1;
     for (let cz = ccz - span; cz <= ccz + span; cz++) {

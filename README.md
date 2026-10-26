@@ -17,6 +17,10 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 
+## On a phone
+
+Phones and tablets are detected automatically (or force it with `?mobile=1`; `?desktop=1` forces the desktop version). You get an on-screen joystick (left thumb), drag-to-look (right side), SWING / HOP / USE buttons and a sun button for the light, plus a lighter renderer: smaller shadow map, shorter draw distance, less leaf litter, lower pixel ratio. The title screen says it is best played on a desktop. Landscape works best.
+
 ## About the place (what is real, what is not)
 
 The map is built from **real OpenStreetMap data** (© OpenStreetMap contributors, ODbL), exported with Overpass Turbo and stored in `data/ashland_osm.json` / `src/ashland_data.js`:

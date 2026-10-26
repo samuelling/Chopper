@@ -14,6 +14,7 @@ export class Player {
     this.yaw = 0; this.pitch = 0;
     this.onGround = true;
     this.keys = {};
+    this.touch = { x: 0, y: 0 };      // virtual joystick, -1..1 (y down is positive)
     this.locked = false;
     this.stepDist = 0;
     this.wasWet = false;
@@ -68,6 +69,8 @@ export class Player {
     this.camera.add(g);
   }
 
+  look(dx, dy) { this.yaw -= dx; this.pitch = clamp(this.pitch - dy, -1.45, 1.45); }
+
   teleport(x, z, yaw = this.yaw, pitch = 0) {
     this.pos.set(x, groundY(x, z), z);
     this.yaw = yaw; this.pitch = pitch; this.vy = 0;
@@ -101,14 +104,16 @@ export class Player {
       fz = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       fx = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
     }
-    const sprint = k.ShiftLeft || k.ShiftRight;
+    if (this.locked && (this.touch.x || this.touch.y)) { fx += this.touch.x; fz -= this.touch.y; }
+    const sprint = k.ShiftLeft || k.ShiftRight || Math.hypot(this.touch.x, this.touch.y) > 0.92;
     const depth = waterDepthAt(this.pos.x, this.pos.z);
     let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
     const len = Math.hypot(fx, fz) || 1;
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     // forward = (-sin, -cos), right = (cos, -sin)
-    let vx = (-sy * fz + cy * fx) / len * sp;
-    let vz = (-cy * fz - sy * fx) / len * sp;
+    const mag = Math.min(1, len);
+    let vx = (-sy * fz + cy * fx) / len * sp * mag;
+    let vz = (-cy * fz - sy * fx) / len * sp * mag;
     if (!fx && !fz) { vx = 0; vz = 0; }
     // slight smoothing
     this.vx = (this.vx ?? 0) + (vx - (this.vx ?? 0)) * Math.min(1, dt * 12);
