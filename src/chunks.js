@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
 import { treeColor, SPECIES, buildStump } from './trees.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
+import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
 import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
@@ -218,8 +219,11 @@ export class ChunkManager {
         if (sdf < 0 && groundY(x, z) < LEVEL + 1.15) continue; // open water (islands are fine)
         // forest density: glades and thickets
         const dn = fbm(x * 0.013 + 9.0, z * 0.013 - 4.0, 3, 7);
-        const dens = 0.2 + 0.8 * smoothstep(0.34, 0.54, dn);
-        if (roll > dens * 0.84) continue;
+        const lc = landcoverAt(x, z);
+        const thick = 0.35 + 0.65 * smoothstep(0.30, 0.52, dn);
+        const dens = lc ? lc.dens * thick : 0.2 + 0.8 * smoothstep(0.34, 0.54, dn);
+        if (roll > dens * 0.9) continue;
+        const pf = lc ? lc.pine : 0.2;
         const y = groundY(x, z);
         if (y < LEVEL + 0.8 && sdf < 12 && sdf >= 0) continue;
         if (this._blocked(x, z, 1.4)) continue;
@@ -230,10 +234,10 @@ export class ChunkManager {
         const wet = smoothstep(150, 8, sdf);
         const high = smoothstep(LEVEL + 7, LEVEL + 24, y);
         const pineN = fbm(x * 0.016 + 2.0, z * 0.016 + 8.0, 3, 13);
-        const wPine = 0.22 + 1.8 * smoothstep(0.5, 0.72, pineN) + 1.1 * high + 0.6 * smoothstep(180, 280, sdf);
-        const wBirch = 0.14 + 1.4 * smoothstep(60, 6, sdf);
-        const wMaple = 1.5 + 1.0 * wet;
-        const wOak = 0.5 + 0.9 * high + 0.4 * smoothstep(0.35, 0.55, pineN);
+        const wPine = 0.1 + 3.2 * pf * pf + 0.5 * high + 0.3 * smoothstep(0.5, 0.72, pineN);
+        const wBirch = (0.14 + 1.4 * smoothstep(60, 6, sdf)) * (1 - 0.6 * pf);
+        const wMaple = (1.5 + 1.0 * wet) * (1 - 0.7 * pf);
+        const wOak = (0.5 + 0.9 * high + 0.4 * smoothstep(0.35, 0.55, pineN)) * (1 - 0.6 * pf);
         const tot = wPine + wBirch + wMaple + wOak;
         let r = rng() * tot, sp;
         if ((r -= wMaple) < 0) sp = 'maple';
