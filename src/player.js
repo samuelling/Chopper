@@ -72,14 +72,25 @@ export class Player {
   }
 
   _buildPhone() {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.158, 0.011), simpleToon('#1b1a20'));
-    const ol = new THREE.Mesh(body.geometry, simpleToon('#0b0a0d', { side: THREE.BackSide })); ol.scale.setScalar(1.08);
+    const rr = (w, h, r) => { const s = new THREE.Shape(), x = -w / 2, y = -h / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s; };
+    const g = new THREE.Group(), W = 0.074, H = 0.152, T = 0.0085;
+    const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(rr(W, H, 0.012), { depth: T, bevelEnabled: true, bevelThickness: 0.0016, bevelSize: 0.0016, bevelSegments: 2 }), simpleToon('#8d8a94'));
+    frame.position.z = -T / 2;
+    const back = new THREE.Mesh(new THREE.ExtrudeGeometry(rr(W - 0.002, H - 0.002, 0.011), { depth: 0.0006, bevelEnabled: false }), simpleToon('#37333f'));
+    back.position.z = -T / 2 - 0.0026;
+    const lump = new THREE.Mesh(new THREE.ExtrudeGeometry(rr(0.03, 0.03, 0.007), { depth: 0.003, bevelEnabled: false }), simpleToon('#2a2630'));
+    lump.position.set(-0.017, 0.049, -T / 2 - 0.0056);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.003, 10), simpleToon('#0b0a0d')); lens.rotation.x = Math.PI / 2; lens.position.set(-0.023, 0.055, -T / 2 - 0.0082);
+    const lens2 = lens.clone(); lens2.position.set(-0.011, 0.043, -T / 2 - 0.0082);
+    const glass = new THREE.Mesh(new THREE.ExtrudeGeometry(rr(W - 0.006, H - 0.006, 0.009), { depth: 0.0004, bevelEnabled: false }), simpleToon('#0a090c'));
+    glass.position.z = T / 2 + 0.0017;
+    const olm = simpleToon('#1a1820', { side: THREE.BackSide });
+    const ol = new THREE.Mesh(frame.geometry, olm); ol.position.copy(frame.position); ol.scale.set(1.07, 1.035, 1.5);
     this.screenCv = document.createElement('canvas'); this.screenCv.width = 240; this.screenCv.height = 490;
     this.screenTex = new THREE.CanvasTexture(this.screenCv); this.screenTex.colorSpace = THREE.SRGBColorSpace;
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.146), new THREE.MeshBasicMaterial({ map: this.screenTex, toneMapped: false }));
-    scr.position.z = 0.0062;
-    g.add(ol, body, scr);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.0085, H - 0.0085), new THREE.MeshBasicMaterial({ map: this.screenTex, toneMapped: false }));
+    scr.position.z = T / 2 + 0.0023;
+    g.add(ol, frame, back, lump, lens, lens2, glass, scr);
     g.traverse((o) => { o.frustumCulled = false; });
     this.phone = g; this.camera.add(g);
   }

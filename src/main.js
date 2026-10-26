@@ -273,8 +273,8 @@ async function boot() {
   initHud();
   const jobQueue = [];
   const phone = new Phone({ audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
-    onOpen: () => { phoneOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
-    onClose: () => { phoneOn = false; player.raiseTo = 0; if (started && !interludeOn) begin(); } });
+    onOpen: () => { phoneOn = true; player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry(player.carry === 'axe' ? 'phone' : 'axe'); ui.toast(player.carry === 'axe' ? 'Axe in hand. Q for your phone.' : 'Phone in hand.', 1.4); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) {
       if (phone.isOpen) phone.close();
@@ -355,11 +355,12 @@ async function boot() {
   const dirsN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   function drawPhoneScreen() {
     const cv = player.screenCv, c = cv.getContext('2d'), W = cv.width, H = cv.height;
+    c.save(); c.beginPath(); c.roundRect(0, 0, W, H, 38); c.clip();
     const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a2733'); g.addColorStop(1, '#17151c');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     const hd = ((Math.atan2(-Math.sin(player.yaw), -Math.cos(player.yaw)) * 180 / Math.PI) + 360) % 360;
     c.fillStyle = '#f4e6c8'; c.textAlign = 'center';
-    c.font = '700 40px Georgia, serif'; c.fillText(`${Math.round(hd)}\u00b0 ${dirsN[Math.round(hd / 45) % 8]}`, W / 2, 62);
+    c.font = '700 40px Georgia, serif'; c.fillText(`${Math.round(hd)}\u00b0 ${dirsN[Math.round(hd / 45) % 8]}`, W / 2, 74);
     c.font = '20px Georgia, serif'; c.globalAlpha = 0.7; c.fillText(SEASON_DEF.label.toUpperCase(), W / 2, 92); c.globalAlpha = 1;
     const r = 100, cx = W / 2, cy = 232;
     c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 6.2832); c.clip();
@@ -374,6 +375,7 @@ async function boot() {
       c.fillStyle = '#f4e6c8'; c.font = '18px Georgia, serif'; c.fillText('harm \u2190   \u2192 care', W / 2, 410);
     }
     c.globalAlpha = 0.55; c.font = '18px Georgia, serif'; c.fillText('P raise \u00b7 Q axe', W / 2, 462); c.globalAlpha = 1;
+    c.fillStyle = '#000'; c.beginPath(); c.roundRect(W / 2 - 34, 10, 68, 20, 10); c.fill(); c.restore();
     player.screenTex.needsUpdate = true;
   }
   function step(dt) {
