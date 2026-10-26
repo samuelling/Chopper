@@ -134,7 +134,7 @@ export class Landmarks {
     const b = new GeoBuilder();
     // --- the gatehouse (the original was demolished in 1976; this is a stylised rebuild) ---
     const gx = GATE.x, gz = GATE.z, gy = groundY(gx, gz);
-    this._box(b, gx, gy - 0.4, gz, 4.0, 3.6, 3.6, '#8f8b82', { noise: true });
+    this._box(b, gx, gy - 0.4, gz, 4.0, 3.6, 3.6, '#80848a', { noise: true });
     // stringcourse + quoins
     this._box(b, gx, gy + 3.0, gz, 4.3, 0.28, 3.9, '#a7a398');
     // slate hip roof
