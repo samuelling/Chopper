@@ -15,18 +15,20 @@ export function showInterlude(el, ctx, onContinue) {
   const need = first;                  // the first interlude asks how much you lean on AI
   el.classList.remove('hidden');
   el.innerHTML = `
-    <h1 class="small">${cap(RUN.season)} has passed</h1>
-    <div class="ibody">
-      <p data-i-text></p>
-      ${need ? '<div data-usage-panel2></div>' : ''}
-      <div data-i-changes></div>
-      <div data-i-choices class="usage"></div>
-      <div class="go inactive" data-i-go>Continue to ${cap(RUN.next)}</div>
+    <div class="phone clyde">
+      <div class="pbar"><span class="pname">Clyde</span><small>${cap(RUN.season)} has passed</small></div>
+      <div class="pscroll">
+        <div class="bubble" data-i-text></div>
+        ${need ? '<div data-usage-panel2></div>' : ''}
+        <div data-i-changes></div>
+        <div data-i-choices class="usage"></div>
+        <div class="go inactive" data-i-go>Continue to ${cap(RUN.next)}</div>
+      </div>
     </div>`;
   const text = el.querySelector('[data-i-text]');
   text.textContent = first
-    ? 'Until now the park was only a park. From here it answers to you: the things you ask of it, and the things you ask of AI, leave marks on the place you have been enjoying. Tell it how much you lean on AI, then make a choice.'
-    : 'The season turned, and the park carries what you did and what you asked of it. Another choice.';
+    ? "Hi, I'm Clyde. Until now the park was only a park. I can take on the paperwork, the plans and the upkeep it never had staff for, and every request I answer uses real energy and water somewhere else. Tell me how much you lean on AI, then pick one thing."
+    : 'The season turned. Here is what the park carries from what you did and what you asked of me. Pick one thing.';
   const go = el.querySelector('[data-i-go]');
   let chose = false, said = !need || Usage.level() !== null;
   const ready = () => go.classList.toggle('inactive', !(chose && said));

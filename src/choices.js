@@ -61,13 +61,6 @@ export const CHOICES = [
       if (!best) return { ok: false, msg: 'No good site within reach.' };
       setWaypoint(best.x, best.z, 'Building site'); return { msg: 'A site is marked: the flattest, least wooded ground nearby.' };
     } },
-  { id: 'harvest', kind: 'Park', title: 'Sell a stand of timber', gain: 'Fells up to 12 trees within 40 m. The sale funds upkeep', care: 0.03, cost: 0, saved: 3000, note: 'Costs trees, not Pressure. They do not come back.',
-    run({ player, chunks }) {
-      const px = player.pos.x, pz = player.pos.z;
-      const t = chunks.treesNear(px, pz, 40).sort((a, b) => Math.hypot(a.x - px, a.z - pz) - Math.hypot(b.x - px, b.z - pz)).slice(0, 12);
-      if (!t.length) return { ok: false, msg: 'No standing trees nearby.' };
-      t.forEach((tr) => chunks.fell(tr, px, pz)); return { msg: `You felled ${t.length} trees and sold the timber.` };
-    } },
   { id: 'hold', kind: 'Park', title: 'Hold off on AI today', gain: 'Sets today to "none" so no new harm builds; the park starts to heal', care: 0, cost: 0, note: 'Recovery is slow. Past harm stays, and so does any good you could have done.',
     run() { Usage.checkin(0); return { msg: 'Today is set to none. The park starts to heal.' }; } },
 ];
@@ -81,7 +74,7 @@ export function pickChoices(seed, n = 6) {
 
 const pct = (x) => `${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%`;
 export function renderChoices(el, ctx, onDone, list = CHOICES) {
-  el.innerHTML = `<div class="uh">Make a choice</div><small>Each shows what it gives and what it costs before you commit. AI choices cost a little lasting harm and give real benefits; park choices change the land.</small>
+  el.innerHTML = `<div class="uh">Make a choice</div><small>Each shows what it gives and what it costs before you commit. AI choices cost a little lasting harm and give real benefits; the one park choice is to hold off.</small>
   ${list.map((c) => `<button class="choice" data-choice="${c.id}"><b>${c.kind === 'AI' ? '◈' : '❖'} ${c.title}</b><span>Gives: ${c.gain}</span><span class="cost">${c.care ? `Care +${pct(c.care)}` : ''}${c.care && c.cost ? ' · ' : ''}${c.cost ? `harm +${pct(c.cost)}` : ''}${c.note ? `${c.care || c.cost ? ' · ' : ''}${c.note}` : ''}</span></button>`).join('')}
   <small data-choice-note></small>`;
   el.querySelectorAll('[data-choice]').forEach((b) => b.addEventListener('click', (e) => {

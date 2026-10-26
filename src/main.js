@@ -6,6 +6,7 @@ import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
 import { RUN } from './run.js';
 import { Flyover } from './flyover.js';
+import { Phone } from './phone.js';
 import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
@@ -187,10 +188,10 @@ async function boot() {
   };
   player.onLockChange = (locked) => {
     ui.els.title.classList.add('hidden');
-    ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn);
+    ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn || phoneOn);
     ui.els.hud.classList.toggle('on', locked || started);
   };
-  let started = false, interludeOn = false;
+  let started = false, interludeOn = false, phoneOn = false;
   const begin = () => {
     audio.init();
     started = true; flyover.stop();
@@ -229,6 +230,11 @@ async function boot() {
   const minimap = new Minimap(lake, player);
   const gauge = new Gauge(document.getElementById('hud'));
   initHud();
+  const jobQueue = [];
+  const phone = new Phone({ el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+    onOpen: () => { phoneOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    onClose: () => { phoneOn = false; if (started && !interludeOn) begin(); } });
+  addEventListener('keydown', (e) => { if (e.code === 'KeyP' && !e.repeat && started && !interludeOn) (phone.isOpen ? phone.close() : phone.open()); if (e.code === 'Escape' && phone.isOpen) phone.close(); });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
   minimap.set(minimap.mode);
@@ -269,7 +275,7 @@ async function boot() {
     document.querySelectorAll('[data-seasons]').forEach((e) => e.remove());
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · M map · H hide dashboard';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Click swing · E gate · 1 2 3 light · P phone · M map · H hide dashboard';
     document.querySelectorAll('.controls kbd').forEach((k) => { if (k.textContent === 'T') { const n = k.nextSibling; if (n && n.nodeType === 3) n.textContent = n.textContent.replace('change season', ''); k.remove(); } });
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -320,7 +326,11 @@ async function boot() {
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if (RUN.s.played >= RUN.len) beginInterlude();
     }
-    minimap.update();
+    minimap.update(); phone.update();
+    if (jobQueue.length && !phone.isOpen && !interludeOn) {                       // the crew works while you walk
+      for (const j of jobQueue) j.at -= dt;
+      while (jobQueue.length && jobQueue[0].at <= 0) { const j = jobQueue.shift(); if (j.tree.alive && !j.tree.gone) chunks.fell(j.tree, j.from[0], j.from[1]); }
+    }
     gauge.setVisible(RUN.dev ? phaseTwo() : RUN.phaseTwo); gauge.update(dt);
     if (waypoint) {
       const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);

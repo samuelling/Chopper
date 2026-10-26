@@ -17,6 +17,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
+| P | phone (map, status, jobs, Clyde) |
 | M | optional minimap: off, nearby, or whole park (also a Map button on the title and pause screens; north is up, the dam is at the bottom) |
 | C | (phase two) make choices |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
@@ -39,6 +40,10 @@ The lakebed follows the **real MassWildlife depth survey** of Ashland Reservoir 
 Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like everything else, and only appears while the lake is full. The gray squirrels (they dart between pauses and scamper up the nearest tree if you get close) and the beaver-gnawed stumps along the shore are invented too: the stumps are scattered procedurally near the water, with no survey of real beaver activity behind them.
 
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
+
+## The phone
+
+**P** raises your phone: a Map tab (with heading), a Status tab (the harm/care gauge and figures), **Jobs** (Park Service Jobs: delegate tree work to the crew, who fell the trees over the next minute or two) and **Clyde**. Clyde is the AI assistant: at the end of each season you pick one of its offers (benches, a boardwalk, a kiosk, paperwork and so on), each showing its care and harm before you commit.
 
 ## Fly-over
 

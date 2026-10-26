@@ -82,12 +82,22 @@
   .choice b { display:block; font-size:13px; } .choice span { display:block; font-size:11px; opacity:.85; line-height:1.35; } .choice .cost { color:#ffd9a0; }
   #waypoint { position:absolute; left:50%; top:18px; transform:translateX(-50%); font-size:14px; letter-spacing:.08em; color:#ffe29a; text-shadow:0 1px 6px rgba(0,0,0,.7); }
   #chint { margin-top:8px; font-size:11px; letter-spacing:.1em; opacity:.8; }
-  #seasoncard { z-index:8; } #interlude { z-index:9; overflow-y:auto; justify-content:flex-start; cursor:default; padding:28px 16px 48px; }
+  #seasoncard { z-index:8; } #interlude { z-index:9; cursor:default; padding:16px; }
   .newgame { position:absolute; bottom:22px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; padding:6px 12px; }
   .newgame:hover { opacity:1; }
   h1.small { font-size:clamp(34px,6vw,64px); } .ibody { max-width:640px; text-align:left; margin-top:14px; } .ibody p { font-size:15px; line-height:1.55; }
   .go.inactive { opacity:.35; pointer-events:none; filter:grayscale(.6); }
   #seasonbar { position:absolute; left:0; right:0; top:0; height:3px; background:rgba(244,230,200,.12); } #seasonbar i { display:block; height:100%; width:0; background:rgba(244,230,200,.55); }
+  .phone { width:min(94vw,440px); max-height:92vh; display:flex; flex-direction:column; text-align:left; background:#1d1b22; border:9px solid #0f0e12; border-radius:40px; box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06); overflow:hidden; cursor:default; }
+  .pbar { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:16px 22px 10px; background:#25222c; border-bottom:1px solid rgba(255,255,255,.07); }
+  .pname { font-size:20px; font-weight:800; letter-spacing:.04em; color:#ffd9a0; } .pbar small { font-size:11px; opacity:.7; letter-spacing:.08em; }
+  .ptabs { display:flex; background:#25222c; } .ptabs button { flex:1; font:inherit; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); background:none; border:0; border-bottom:3px solid transparent; padding:10px 0; cursor:pointer; opacity:.6; } .ptabs button.on { opacity:1; border-color:#ffd9a0; }
+  .pscroll { overflow-y:auto; padding:14px 16px 20px; flex:1; }
+  .bubble { background:#2d2a36; border-radius:16px 16px 16px 4px; padding:11px 14px; font-size:14px; line-height:1.5; margin-bottom:12px; }
+  .phone .usage { max-width:none; margin-top:10px; } .phone .go { margin:14px auto 0; text-align:center; font-size:15px; padding:11px 18px; }
+  #phone { z-index:6; background:rgba(14,10,12,.55); } #phone .pscroll canvas { position:static !important; display:block; margin:6px auto; }
+  .phone .choice { font:inherit; color:var(--paper); background:rgba(40,36,48,.9); border:2px solid rgba(244,230,200,.35); border-radius:10px; cursor:pointer; } .phone .choice:hover:not(:disabled) { border-color:rgba(255,226,170,.9); }
+  .compass { text-align:center; font-size:13px; letter-spacing:.14em; margin:2px 0 6px; opacity:.85; }
   .fsbtn { margin-top:14px; padding:6px 16px; border:2px solid rgba(244,230,200,.6); border-radius:6px; font-size:14px; letter-spacing:.1em; cursor:pointer; pointer-events:auto; }
   .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
@@ -103,7 +113,7 @@
 
 <div id="title" class="overlay hidden">
   <h1>ASHLAND</h1>
-  <div class="sub">fell trees · drain lakes · wander</div>
+  <div class="sub">wander. make decisions.</div>
   <div class="place" id="placeline">Ashland State Park, Massachusetts — late October</div>
   <div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div>
   <div class="go"><span class="only-desktop">Click to begin</span><span class="only-mobile">Tap to begin</span></div>
@@ -112,7 +122,7 @@
   <div class="controls only-desktop">
     <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop<br>
     <kbd>Click</kbd> swing the axe &nbsp; <kbd>E</kbd> work the gate wheel<br>
-    <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> time of day &nbsp; <kbd>T</kbd> change season &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>F</kbd> fullscreen
+    <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> time of day &nbsp; <kbd>T</kbd> change season &nbsp; <kbd>M</kbd> map &nbsp; <kbd>P</kbd> phone &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>F</kbd> fullscreen
   </div>
   <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone: Share &rarr; Add to Home Screen, then open Ashland from there.</div>
   <div class="controls only-mobile">Left thumb: walk (push far to hurry)<br>Drag the right side: look around<br>SWING chops · HOP jumps · USE works the gate<br>The sun button changes the light</div>
@@ -121,6 +131,7 @@
 
 <div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>
+<div id="phone" class="overlay hidden"></div>
 <div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div></div>
 
 <div id="hud">
