@@ -8,7 +8,7 @@ export class Audio {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
     const ctx = this.ctx = new C();
-    this.master = ctx.createGain(); this.master.gain.value = 0.7; this.master.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.gain.value = 0; this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 1.2); this.master.connect(ctx.destination);   // fades in rather than starting at full
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -25,6 +25,8 @@ export class Audio {
     this.ready = true;
     this.birdT = 3; this.insectT = 1; this.frogT = 4; this.creakT = 12; this.hawkT = 30;
   }
+  /** let everything sink away over `sec` seconds (the season turning through black) */
+  fadeOut(sec = 1.5) { if (!this.ready) return; const t = this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(this.master.gain.value, t); this.master.gain.linearRampToValueAtTime(0, t + sec); }
   _loop(freq, q, gain) {
     const ctx = this.ctx;
     const s = ctx.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;

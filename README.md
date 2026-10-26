@@ -16,11 +16,15 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe and empty hands, and click swings the axe (a big tree takes several swings) |
 | E | pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
-| T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
+| Pause menu | Spring / Summer / Autumn / Winter buttons jump to a season (`?season=winter` does too; **T** cycles seasons in dev mode only) |
+| B | sit and wait: stay still and the woods come closer |
+| G | plant a seed (collected from litter) |
+| H | hide or bring back the dashboard |
+| Esc | pause menu with every control |
 | P | phone (a home screen of app icons: Map, Park, Field Guide, Photos, Park Jobs, Clyde) |
 | V | camera: narrows the view; click to photograph a tree, bird or animal in the frame |
-| M | optional minimap: off, nearby, or whole park (also a Map button on the title and pause screens; north is up, the dam is at the bottom) |
-| C | (phase two) make choices |
+| M | optional minimap: off, nearby, or whole park (also a Map button on the pause screen; north is up, the dam is at the bottom) |
+| C | make choices (from Year Two, once the AI phase begins) |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 
 ## On a phone
@@ -82,7 +86,7 @@ Turtles bask on logs and rocks and slip into the water when you run past.
 
 **How help offsets harm.** Harm is what the land shows (fewer animals, a lower lake, faded colour, dying trees). Four things can push back, all set by the choices Clyde offers: **slower new harm** (pest scan, boardwalk, kiosk; stacks to 60%), **faster healing** (paperwork, forecasts, replanting; up to 3x the base rate), **healing now** (paperwork, replanting; small, one-off) and **upkeep that softens how harm looks** (benches, boardwalk, kiosk, cameras and so on; up to 40%, and the interlude shows lasting harm and visible harm separately). Rough balance from a hand-run simulation of the constants (not play-tested): Light use stays near zero, Medium use done with good picks levels off around 40-50% instead of ruining the park, Heavy and Very heavy still wreck it within about two to three seasons. Everything is invented and exaggerated on purpose.
 
-**Time speed.** The opening and pause menus have a *Time passes* setting (½×, normal, 2×, 4×; remembered on this device). It scales world time: the season clock, the harm and healing rates, the crew's work and the end-of-park timers, so a season weighs the same at any speed. Walking and the animals stay in real time.
+**Time speed.** The pause menu has a *Time passes* setting (½×, normal, 2×, 4×; remembered on this device). It scales world time: the season clock, the harm and healing rates, the crew's work and the end-of-park timers, so a season weighs the same at any speed. Walking and the animals stay in real time.
 
 ## Endings
 
