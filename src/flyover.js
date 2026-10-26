@@ -2,7 +2,7 @@
 // The route follows the real lake's centre line, up one side and back the other, so the shoreline, islands and ridges all drift past.
 import * as THREE from 'three';
 import { lakeSdf, LAKE_BOX, DAM_Z } from './ashland.js';
-import { groundY, LEVEL } from './world.js';
+import { groundY, LEVEL, sdfAt } from './world.js';
 
 export class Flyover {
   constructor(camera, player) {
@@ -23,8 +23,24 @@ export class Flyover {
   }
   start() { this.active = true; this.player.carryHidden = true; this.player.refreshCarry(); }
   stop() { this.active = false; this.player.carryHidden = false; this.player.refreshCarry(); }
+  /** the nearest dry, gentle spot just ahead of the drone: {x, z, yaw} (yaw faces the direction of flight) */
+  landingSpot() {
+    const L = this.len, cur = new THREE.Vector3(), nxt = new THREE.Vector3();
+    for (let ahead = 40; ahead <= 700; ahead += 25) {
+      const u = (this.t + ahead / L) % 1;
+      this.curve.getPointAt(u, cur); this.curve.getPointAt((u + 20 / L) % 1, nxt);
+      for (let r = 0; r <= 110; r += 8) for (let a = 0; a < (r ? 12 : 1); a++) {
+        const x = cur.x + Math.cos(a / 12 * 6.2832) * r, z = cur.z + Math.sin(a / 12 * 6.2832) * r;
+        if (sdfAt(x, z) < 10) continue;
+        const gy = groundY(x, z);
+        if (gy < LEVEL + 1.0 || Math.abs(groundY(x + 4, z) - gy) > 1.2 || Math.abs(groundY(x, z + 4) - gy) > 1.2) continue;
+        return { x, z, yaw: Math.atan2(-(nxt.x - cur.x), -(nxt.z - cur.z)) };
+      }
+    }
+    return null;
+  }
   /** leave the drone path and settle onto the player's eyes (position and view), then call done */
-  glideTo(done, secs = 3) {
+  glideTo(done, secs = 2.8) {
     this.glide = { t: 0, secs, done, from: this.camera.position.clone(), fq: this.camera.quaternion.clone() };
   }
   update(dt) {

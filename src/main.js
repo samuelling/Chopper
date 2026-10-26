@@ -240,19 +240,20 @@ async function boot() {
   card.addEventListener('click', () => { if (autoCard) return; card.classList.add('hidden'); begin(); });
   // after the first season the card holds a moment, then the drone glides down to where you stand; no click needed
   let autoCard = false;
-  const autoSeason = () => {
+  const autoSeason = (spawnFromDrone = false) => {
     autoCard = true; newgame.hidden = true;
     setTimeout(() => {
       card.classList.add('hidden');
+      if (spawnFromDrone) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
         audio.init(); started = true; autoCard = false;
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else { ui.els.hud.classList.add('on'); ui.els.paused.classList.remove('hidden'); }   // the browser needs one click to capture the mouse
       });
-    }, 1400);
+    }, 1200);
   };
   newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
-  ui.els.title.addEventListener('click', () => (RUN.dev ? begin() : showCard()));
+  ui.els.title.addEventListener('click', () => { if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
     if (e.code === 'Digit1') setMood(0);
