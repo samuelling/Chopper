@@ -338,6 +338,14 @@ async function boot() {
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = b.closest('#paused') ? false : RUN.fresh; b.addEventListener('click', restart); });
+  // testing aid: land at the end of summer, a few seconds before Clyde first appears and Year Two begins
+  document.querySelectorAll('[data-skip2]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation(); if (RUN.dev) return;
+    if (RUN.s.born == null) RUN.setBorn(new Date().getFullYear() - 40, true);
+    RUN.s.n = 3; RUN.s.played = Math.max(0, RUN.len - 12); RUN.s.end = null; RUN.save();
+    try { sessionStorage.setItem('ashland.inplay', '1'); } catch {}
+    const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'season'].forEach((k) => p.delete(k)); location.search = p.toString();
+  }));
   // the life clock: ask for a birth year once (optional); it only sets how many game years you get
   const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
   
