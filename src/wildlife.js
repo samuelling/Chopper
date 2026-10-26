@@ -7,7 +7,7 @@ import { GeoBuilder, matrix } from './builder.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
 import { groundY, sdfAt } from './world.js';
 import { mulberry32 } from './noise.js';
-import { IS_WINTER } from './season.js';
+import { WILDLIFE } from './season.js';
 
 const C = (h) => new THREE.Color(h);
 const _c = new THREE.Color();
@@ -110,7 +110,7 @@ export class Wildlife {
 
     // schools: a wandering leader plus followers with fixed offsets
     this.schools = [];
-    for (let s = 0; s < schools; s++) {
+    for (let s = 0; s < (WILDLIFE.fish ? schools : 0); s++) {
       const bass = s % 3 === 2;
       const n = bass ? 3 : perSchool;
       const mem = [];
@@ -118,7 +118,7 @@ export class Wildlife {
       this.schools.push({ bass, mem, x: 0, z: 0, h: this.rng() * 6.28, spd: bass ? 0.9 : 0.7, active: false, bad: 0, dy: 0.3 + this.rng() * 0.25 });
     }
     this.turtles = [];
-    for (let i = 0; i < (IS_WINTER ? 0 : turtles); i++) this.turtles.push({ x: 0, z: 0, h: this.rng() * 6.28, active: false, bad: 0, cycle: 8 + this.rng() * 25, surf: 0, sc: 0.9 + this.rng() * 0.5, ph: this.rng() * 6 });
+    for (let i = 0; i < (WILDLIFE.turtles ? turtles : 0); i++) this.turtles.push({ x: 0, z: 0, h: this.rng() * 6.28, active: false, bad: 0, cycle: 8 + this.rng() * 25, surf: 0, sc: 0.9 + this.rng() * 0.5, ph: this.rng() * 6 });
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3(); this._e = new THREE.Euler(); this._up = new THREE.Vector3(0, 1, 0);
     this._body = new THREE.Matrix4(); this._a = new THREE.Matrix4(); this._b = new THREE.Matrix4(); this._q2 = new THREE.Quaternion(); this._e2 = new THREE.Euler(); this._one = new THREE.Vector3(1, 1, 1);
   }

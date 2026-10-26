@@ -17,6 +17,7 @@ import { Litter } from './litter.js';
 import { FX } from './fx.js';
 import { SnowTrail } from './snowtrail.js';
 import { IS_WINTER } from './season.js';
+import { Birds } from './birds.js';
 import { Wildlife } from './wildlife.js';
 import { Squirrels } from './squirrels.js';
 import { Audio } from './audio.js';
@@ -102,6 +103,7 @@ async function boot() {
   const fx = new FX(scene, MOBILE ? 350 : 900);
   if (IS_WINTER) litter.mesh.visible = false;   // the fallen leaves are under the snow
   const snowTrail = IS_WINTER ? new SnowTrail() : null;
+  const birds = new Birds(scene, chunks, lake, { mobile: MOBILE });
   wildlife.chunks = chunks; wildlife.fx = fx;
   const audio = new Audio();
   chunks.preload(camera.position);
@@ -229,6 +231,7 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
+    birds.update(dt, player.pos);
     if (snowTrail) snowTrail.update(dt, player.pos, sdfAt(player.pos.x, player.pos.z) > 1.5);
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
@@ -243,7 +246,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

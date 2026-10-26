@@ -211,6 +211,15 @@ export class ChunkManager {
   // -------------------------------------------------------------------------
   // generation
   // -------------------------------------------------------------------------
+  /** live trees within r of a point (for birds choosing perches) */
+  treesNear(x, z, r) {
+    const out = [], [cx, cz] = this.chunkAt(x, z), n = Math.ceil(r / CHUNK);
+    for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
+      const ch = this.chunks.get(this.keyOf(cx + dx, cz + dz));
+      if (ch) for (const t of ch.trees) if (t.alive && Math.hypot(t.x - x, t.z - z) <= r) out.push(t);
+    }
+    return out;
+  }
   /** basking logs/rocks (loaded chunks only) within [rmin, rmax] of a point */
   baskSpots(x, z, rmin, rmax) {
     const out = [], [cx, cz] = this.chunkAt(x, z), n = Math.ceil(rmax / CHUNK);

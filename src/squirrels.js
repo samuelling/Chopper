@@ -6,6 +6,7 @@ import { GeoBuilder, matrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt } from './world.js';
 import { mulberry32 } from './noise.js';
+import { WILDLIFE } from './season.js';
 
 const C = (h) => new THREE.Color(h);
 const _c = new THREE.Color();
@@ -135,7 +136,7 @@ export class Squirrels {
         if (!a.active) continue;
       }
       const dp = Math.hypot(a.x - px, a.z - pz);
-      if (dp > 70) { a.active = false; a.wait = 20; continue; }
+      if (dp > 70) { a.active = false; a.wait = 20 * WILDLIFE.squirrelRate; continue; }
       let y = groundY(a.x, a.z);
       let vTarget = 0, nowSit = a.st === 'sit';
 
@@ -169,7 +170,7 @@ export class Squirrels {
         const reach = a.tree ? a.tree.radius + 0.25 : 0.4;
         if (d < reach || a.timer <= 0) {
           if (fast && a.tree) { a.st = 'climb'; a.climb = 0; a.h = Math.atan2(a.tree.x - a.x, a.tree.z - a.z); }
-          else if (fast) { a.active = false; a.wait = 25 + this.rng() * 30; continue; }
+          else if (fast) { a.active = false; a.wait = (25 + this.rng() * 30) * WILDLIFE.squirrelRate; continue; }
           else { a.st = 'sit'; a.timer = 3 + this.rng() * 6; a.lookT = 0.5; }
         }
         // ease off as the target nears
@@ -181,7 +182,7 @@ export class Squirrels {
         const top = Math.min(tr.H * 0.75, 7);
         y = groundY(tr.x, tr.z) + 0.05 + a.climb;
         a.x = tr.x - Math.sin(a.h) * (tr.radius + 0.06); a.z = tr.z - Math.cos(a.h) * (tr.radius + 0.06);
-        if (a.climb > top || !tr.alive) { a.active = false; a.wait = 30 + this.rng() * 40; continue; }
+        if (a.climb > top || !tr.alive) { a.active = false; a.wait = (30 + this.rng() * 40) * WILDLIFE.squirrelRate; continue; }
       }
 
       // ---- motion state ----
