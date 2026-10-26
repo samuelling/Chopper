@@ -5,6 +5,15 @@ import { RUN } from './run.js';
 import { JOBS, delegate } from './jobs.js';
 import { GUIDE, ENTRIES, BY_ID } from './guide.js';
 
+const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
+const APPS = [
+  { id: 'map', name: 'Map', bg: 'linear-gradient(#4fb286,#2a7d6a)', svg: ic('<path d="M24 41s-12-11-12-20a12 12 0 0124 0c0 9-12 20-12 20z"/><circle cx="24" cy="21" r="4.5"/>') },
+  { id: 'status', name: 'Park', bg: 'linear-gradient(#e0884a,#b24a34)', svg: ic('<path d="M8 33a16 16 0 0132 0"/><path d="M24 33l8-11"/>', '<circle cx="24" cy="33" r="2.5" fill="#fff"/>') },
+  { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>'), badge: () => '' },
+  { id: 'photos', name: 'Photos', bg: 'linear-gradient(#f2c14e,#e0803c)', svg: ic('<rect x="7" y="14" width="34" height="24" rx="5"/><circle cx="24" cy="26" r="7"/><path d="M17 14l3-5h8l3 5"/>'), badge: () => (GUIDE.photos.length || '') },
+  { id: 'jobs', name: 'Park Jobs', bg: 'linear-gradient(#7a8ea8,#455a78)', svg: ic('<rect x="8" y="16" width="32" height="22" rx="4"/><path d="M18 16v-4a3 3 0 013-3h6a3 3 0 013 3v4M8 26h32"/>') },
+  { id: 'clyde', name: 'Clyde', bg: 'linear-gradient(#d98a6a,#a8503c)', svg: ic('<path d="M10 13h28a3 3 0 013 3v15a3 3 0 01-3 3H22l-8 7v-7h-4a3 3 0 01-3-3V16a3 3 0 013-3z"/>', '<circle cx="18" cy="23.5" r="1.8" fill="#fff"/><circle cx="25" cy="23.5" r="1.8" fill="#fff"/><circle cx="32" cy="23.5" r="1.8" fill="#fff"/>') },
+];
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
   constructor({ audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
@@ -12,13 +21,12 @@ export class Phone {
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
   }
-  open(tab = this.tab) {
+  open(tab = 'home') {
     this.isOpen = true; this.tab = tab; this.onOpen?.();
-    this.el.innerHTML = `<div class="phone"><div class="pbar"><span class="pname">Phone</span><small data-ph-sub></small></div>
-      <div class="ptabs"><button data-tab="map">Map</button><button data-tab="status">Status</button><button data-tab="guide">Guide</button><button data-tab="photos">Photos</button><button data-tab="jobs">Jobs</button><button data-tab="clyde">Clyde</button></div>
-      <div class="pscroll" data-ph-body></div></div>`;
+    this.el.innerHTML = `<div class="phone"><div class="pbar"><button class="pback" data-home>\u2039</button><span class="pname" data-ph-name>Home</span><small data-ph-sub></small></div>
+      <div class="pscroll" data-ph-body></div><div class="phomebar"><i data-home></i></div></div>`;
     this.el.classList.remove('hidden');
-    this.el.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.show(b.dataset.tab); }));
+    this.el.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.show('home'); }));
     this.show(tab);
   }
   _release() {
@@ -32,8 +40,24 @@ export class Phone {
   show(tab) {
     this.tab = tab; this._release();
     const body = this.el.querySelector('[data-ph-body]'); body.innerHTML = '';
-    this.el.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    if (tab === 'map') {
+    const home = tab === 'home', pb = this.el.querySelector('.pbar'), nm = this.el.querySelector('[data-ph-name]');
+    pb.classList.toggle('home', home); nm.textContent = home ? '' : (APPS.find((x) => x.id === tab)?.name || '');
+    this.el.querySelector('.phone').classList.toggle('onhome', home);
+    if (home) {
+      const now = new Date(), clock = document.createElement('div');
+      clock.innerHTML = `<div style="font-size:54px;font-weight:300;letter-spacing:.02em">${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')}</div><div style="font-size:13px;opacity:.75;margin-top:-2px">${now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>`;
+      clock.style.cssText = 'text-align:center;margin:6px 0 22px'; body.appendChild(clock);
+      const grid = document.createElement('div'); grid.className = 'appgrid';
+      for (const ap of APPS) {
+        const badge = ap.badge?.();
+        const d = document.createElement('button'); d.className = 'app';
+        d.innerHTML = `<span class="ico" style="background:${ap.bg}">${ap.svg}${badge ? `<em>${badge}</em>` : ''}</span><span class="lbl">${ap.name}</span>`;
+        d.addEventListener('click', (e) => { e.stopPropagation(); this.show(ap.id); });
+        grid.appendChild(d);
+      }
+      body.appendChild(grid);
+      const hint = document.createElement('div'); hint.style.cssText = 'text-align:center;font-size:11px;opacity:.5;margin-top:26px;letter-spacing:.06em'; hint.textContent = 'P or Esc to put it away'; body.appendChild(hint);
+    } else if (tab === 'map') {
       const comp = document.createElement('div'); comp.className = 'compass'; comp.dataset.compass = ''; body.appendChild(comp);
       this._prevMap = this.minimap.mode; this.minimap.set('full');
       const cv = this._borrow(this.minimap); cv.style.display = 'block'; cv.style.border = '3px solid rgba(244,230,200,.6)'; body.appendChild(cv);
@@ -59,7 +83,7 @@ export class Phone {
           row.dataset.id = e.id;
           row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}<br><small style="opacity:.8">${known ? e.blurb : (e.songOnly ? 'Listen for it.' : 'Photograph it.')}</small></div>`;
           if (e.song && d.heard) { const b = document.createElement('button'); b.textContent = '\u25b6'; b.title = 'Play its song'; b.style.cssText = 'font:inherit;background:#3a3646;color:inherit;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;cursor:pointer'; b.addEventListener('click', (ev) => { ev.stopPropagation(); this.audio?.replay(e.song); }); row.appendChild(b); }
-          if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === 'photos')); this._photos(body, i, e.id); } }); }
+          if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelector('[data-ph-name]').textContent = 'Photos'; this._photos(body, i, e.id); } }); }
           body.appendChild(row);
         }
       }
