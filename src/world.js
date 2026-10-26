@@ -6,6 +6,7 @@ import {
   lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
+import { depthFtAt } from './ashland_bathy.js';
 import { elevLatLon, DEM } from './ashland_dem.js';
 export { NX, NZ, WORLD, LEVEL, lakeSdf };
 export const CELL = WORLD.cell;
@@ -70,8 +71,14 @@ function heightCore(x, z) {
     const dn = (0.62 + 0.55 * smoothstep(0.95, 0.2, t)) * (0.85 + 0.3 * noise2(x * 0.03 + 4, z * 0.03, 5));
     let prof = smoothstep(0, -52, sdf);
     // the dam's upstream face is steep riprap, not a beach
-    prof = Math.max(prof, 0.92 * smoothstep(0, 9, z - DAM_Z) * smoothstep(DAM_HALF + 30, DAM_HALF - 5, Math.abs(x)));
-    h = (LEVEL + 0.45) - (MAX_DEPTH + 0.45) * prof * dn;
+    const damProf = 0.92 * smoothstep(0, 9, z - DAM_Z) * smoothstep(DAM_HALF + 30, DAM_HALF - 5, Math.abs(x));
+    const damDepth = (MAX_DEPTH + 0.45) * damProf * dn;
+    // real MassWildlife depth survey (feet -> game metres at the terrain's vertical scale)
+    const surveyFt = depthFtAt(x, z);
+    let depth;
+    if (surveyFt > 0) depth = Math.max(surveyFt * 0.3048 * VS * smoothstep(0, -5, sdf), damDepth);
+    else depth = Math.max((MAX_DEPTH + 0.45) * prof * dn, damDepth);
+    h = (LEVEL + 0.45) - depth;
     h += (noise2(x * 0.35, z * 0.35, 8) - 0.5) * 0.3 * prof; // lumpy rubble bed
   }
   // the two real islands
