@@ -16,7 +16,14 @@ const panelHTML = () => `
   ${RUN.dev ? '<details><summary>Manual dial (testing)</summary><label>Pressure <input type="range" min="0" max="100" value="0" data-pressure> <b data-pressure-val></b></label></details>' : ''}
 </div>`;
 
+// just the log-linking row, for the opening menu (nothing is judged or applied to the park until the end of the first year)
+const logOnlyHTML = () => `<div class="urow"><span>Link it now</span>
+    <label class="ubtn">Claude Code log files<input type="file" accept=".jsonl" multiple hidden data-logfiles></label>
+    ${canPickFolder() ? '<button data-logfolder>Pick log folder</button><button data-logre hidden>Re-check folder</button>' : ''}
+  </div><small data-usage-note></small>`;
+
 export function initUsageUI(root = document, onChange) {
+  root.querySelectorAll('[data-log-panel]').forEach((el) => { el.innerHTML = logOnlyHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   root.querySelectorAll('[data-usage-panel]').forEach((el) => { el.innerHTML = panelHTML(); el.addEventListener('click', (e) => e.stopPropagation()); });
   const note = (t) => { root.querySelectorAll('[data-usage-note]').forEach((e) => { e.textContent = t; }); onChange?.(); };
   const refresh = () => {
