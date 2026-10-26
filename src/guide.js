@@ -2,7 +2,7 @@
 // Species are habitat-typical for a Massachusetts reservoir forest, NOT from a survey of the real park.
 import * as THREE from 'three';
 
-const KEY = 'ashland.guide';
+const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
   { id: 'maple', cat: 'Trees', name: 'Red Maple', blurb: 'First to colour in autumn, and a swamp tree: wet feet do not bother it.' },
   { id: 'oak', cat: 'Trees', name: 'Northern Red Oak', blurb: 'Slow, broad and generous with acorns. Its leaves turn late and rust-brown.' },
@@ -31,16 +31,26 @@ export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
 const SONG_TO_ID = {}; for (const e of ENTRIES) if (e.song) SONG_TO_ID[e.song] = e.id;
 
 export const GUIDE = {
+  photos: [],                               // album, newest last: { id, season, at, data }
   d: {},                                    // id -> { photos, thumb, season, heard }
   onNew: null,                              // (kind, entry) => void
-  load() { try { this.d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { this.d = {}; } },
+  load() { try { this.d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { this.d = {}; } try { this.photos = JSON.parse(localStorage.getItem(PKEY)) || []; } catch { this.photos = []; } },
   save() { try { localStorage.setItem(KEY, JSON.stringify(this.d)); } catch {} },
-  reset() { this.d = {}; try { localStorage.removeItem(KEY); } catch {} },
+  savePhotos() {
+    for (let k = 0; k < 12; k++) { try { localStorage.setItem(PKEY, JSON.stringify(this.photos)); return; } catch { if (this.photos.length < 2) return; this.photos.shift(); } }
+  },
+  removePhoto(p) {
+    this.photos = this.photos.filter((q) => q !== p); this.savePhotos();
+    const mine = this.photos.filter((q) => q.id === p.id), r = this.d[p.id];
+    if (r) { r.photos = mine.length || (r.photos > 0 ? r.photos : 0); if (mine.length) r.thumb = mine[mine.length - 1].thumb || r.thumb; }
+  },
+  reset() { this.d = {}; this.photos = []; try { localStorage.removeItem(KEY); localStorage.removeItem(PKEY); } catch {} },
   photographed(id) { return !!this.d[id]?.photos; },
   heard(id) { return !!this.d[id]?.heard; },
   found(id) { return this.photographed(id) || this.heard(id); },
   count() { return ENTRIES.filter((e) => this.found(e.id)).length; },
-  addPhoto(id, thumb, season) {
+  addPhoto(id, thumb, season, big) {
+    if (big) { this.photos.push({ id, season, at: Date.now(), data: big, thumb }); if (this.photos.length > MAXPHOTOS) this.photos.shift(); this.savePhotos(); }
     const r = (this.d[id] ||= {}), first = !r.photos;
     r.photos = (r.photos || 0) + 1; r.thumb = thumb; r.season ||= season; this.save();
     if (first) this.onNew?.('photo', BY_ID[id]);

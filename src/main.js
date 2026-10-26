@@ -226,8 +226,10 @@ async function boot() {
     const src = renderer.domElement, tw = 192, th = 128, cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
     const sw = Math.min(src.width, src.height * 1.5) * 0.7, sh = sw / 1.5;
     cv.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, tw, th);
+    const bg = document.createElement('canvas'); bg.width = 480; bg.height = 320;
+    bg.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 320);
     const had = GUIDE.photographed(id);
-    GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON);
+    GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON, bg.toDataURL('image/jpeg', 0.72));
     if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
   };
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
