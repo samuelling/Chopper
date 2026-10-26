@@ -47,3 +47,8 @@ What is **not** real: the dam face and the area north of the survey, which are a
 - Sound is synthesised with WebAudio.
 
 Debug: add `?auto=1` to skip the title screen, `&preset=1`, `&x=&z=&yaw=` to place the camera; `window.chopper` exposes internals.
+
+
+## Terrain editing (for future building)
+
+The ground is editable at runtime. `flattenArea(x, z, r, {y, blend})` in `src/world.js` levels a circular site and blends it into the surrounding slope, updating `groundY`, the shader height texture, the mesh normals and the slope-based colouring together (`editTerrain(x0, z0, x1, z1, fn)` is the general version). `ChunkManager.clearArea(x, z, r)` keeps trees, props, walls and their colliders out of the site and regenerates the affected chunks. `window.chopper.buildSite(x, z, r)` does both. The lake basin itself is left alone, so don't plan sites on the shoreline.

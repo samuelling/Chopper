@@ -256,6 +256,8 @@ const SAND = new THREE.Color('#d6c28f');
 const GRASS = new THREE.Color('#8e9a46');
 const tmp = new THREE.Color();
 
+let terrainLive = null;
+
 export function buildTerrain() {
   const pos = new Float32Array(NX * NZ * 3);
   const col = new Float32Array(NX * NZ * 3);
@@ -283,9 +285,7 @@ export function buildTerrain() {
   geo.computeVertexNormals();
   const nrm = geo.attributes.normal.array;
 
-  for (let j = 0; j < NZ; j++) {
-    for (let i = 0; i < NX; i++) {
-      const k = j * NX + i;
+  const paint = (k) => {
       const x = pos[k * 3], h = pos[k * 3 + 1], z = pos[k * 3 + 2];
       const sdf = TEX[k * 4 + 1];
       const slope = 1 - nrm[k * 3 + 1];
@@ -323,10 +323,11 @@ export function buildTerrain() {
 
       col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;
       litterA[k] = litterW;
-    }
-  }
+  };
+  for (let k = 0; k < NX * NZ; k++) paint(k);
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('aLitter', new THREE.BufferAttribute(litterA, 1));
+  terrainLive = { geo, pos, paint };
 
   const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap });
   mat.customProgramCacheKey = () => 'terrain-ashland';
@@ -391,4 +392,50 @@ export function buildTerrain() {
   mesh.matrixAutoUpdate = false;
   mesh.frustumCulled = false;
   return mesh;
+}
+
+// ---------------------------------------------------------------------------
+// Live terrain editing (for building sites, paths, digging...).
+// Everything that reads height (groundY, the shader height texture, the mesh,
+// its normals and its slope-based colouring) is updated together.  Props that
+// were generated earlier keep their old height, so pair this with
+// ChunkManager.clearArea() / reloadRect(), which regenerates the affected chunks.
+// ---------------------------------------------------------------------------
+/** apply fn(x, z, oldHeight) -> newHeight to every grid cell inside the rectangle */
+export function editTerrain(x0, z0, x1, z1, fn) {
+  const i0 = Math.max(0, Math.floor((x0 - WORLD.minX) / CELL)), i1 = Math.min(NX - 1, Math.ceil((x1 - WORLD.minX) / CELL));
+  const j0 = Math.max(0, Math.floor((z0 - WORLD.minZ) / CELL)), j1 = Math.min(NZ - 1, Math.ceil((z1 - WORLD.minZ) / CELL));
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      const k = j * NX + i;
+      const h = fn(WORLD.minX + i * CELL, WORLD.minZ + j * CELL, H[k]);
+      H[k] = h; TEX[k * 4] = h;
+      if (terrainLive) terrainLive.pos[k * 3 + 1] = h;
+    }
+  }
+  if (terrainLive) {
+    const g = terrainLive.geo;
+    g.attributes.position.needsUpdate = true;
+    g.computeVertexNormals();
+    // repaint the edited cells and a ring around them (their normals changed)
+    for (let j = Math.max(0, j0 - 1); j <= Math.min(NZ - 1, j1 + 1); j++) {
+      for (let i = Math.max(0, i0 - 1); i <= Math.min(NX - 1, i1 + 1); i++) terrainLive.paint(j * NX + i);
+    }
+    g.attributes.color.needsUpdate = true; g.attributes.aLitter.needsUpdate = true;
+  }
+  if (heightUniforms.uHeightTex.value) heightUniforms.uHeightTex.value.needsUpdate = true;
+}
+
+/**
+ * Level a circular site to height y (default: the ground at its centre), blending back into the
+ * surrounding slope over `blend` metres.  The lake basin is left alone.
+ */
+export function flattenArea(cx, cz, r, { y = groundY(cx, cz), blend = r * 0.7 } = {}) {
+  const R = r + blend;
+  editTerrain(cx - R, cz - R, cx + R, cz + R, (x, z, h) => {
+    const d = Math.hypot(x - cx, z - cz);
+    const w = smoothstep(R, r, d) * smoothstep(1, 6, sdfAt(x, z));
+    return w > 0 ? lerp(h, y, w) : h;
+  });
+  return y;
 }

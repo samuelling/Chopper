@@ -86,6 +86,7 @@ export class ChunkManager {
     this.stumpMat = fillStatic;
     this.stumpOutline = outlineStatic;
     this.queue = [];
+    this.cleared = [];
     this.loadR = 285; this.unloadR = 345;
   }
 
@@ -162,6 +163,14 @@ export class ChunkManager {
     this._genUnderstory(ch, push);
     this._genWalls(ch, push);
 
+    if (this.cleared.length) {
+      for (const [name, items] of buckets) {
+        buckets.set(name, items.filter((it) => !this._inCleared(it.matrix.elements[12], it.matrix.elements[14])));
+      }
+      for (const c of ch.colliders.slice()) {
+        if (this._inCleared(c.x, c.z)) { this.colliders.remove(c); ch.colliders.splice(ch.colliders.indexOf(c), 1); }
+      }
+    }
     for (const [name, items] of buckets) {
       if (!items.length) continue;
       ch.batches.push(new InstanceBatch(group, this.defs[name], items));
@@ -216,7 +225,28 @@ export class ChunkManager {
     return best;
   }
 
+  /** keep trees and props out of a circle (a building site), regenerating any loaded chunks it touches */
+  clearArea(x, z, r) {
+    this.cleared.push({ x, z, r });
+    this.reloadRect(x - r - 6, z - r - 6, x + r + 6, z + r + 6);
+  }
+  /** unload and regenerate the loaded chunks overlapping a rectangle (after the terrain under them changed) */
+  reloadRect(x0, z0, x1, z1) {
+    const [a, b] = this.chunkAt(x0, z0), [c, d] = this.chunkAt(x1, z1);
+    for (let cz = b; cz <= d; cz++) for (let cx = a; cx <= c; cx++) {
+      const key = this.keyOf(cx, cz);
+      if (!this.chunks.has(key)) continue;
+      this.unload(key);
+      this.load(cx, cz);
+    }
+  }
+  _inCleared(x, z, pad = 0) {
+    for (const c of this.cleared) if (Math.hypot(x - c.x, z - c.z) < c.r + pad) return true;
+    return false;
+  }
+
   _blocked(x, z, pad) {
+    if (this.cleared.length && this._inCleared(x, z, pad)) return true;
     if (this.layout.blocked(x, z, pad)) return true;
     if (trailDistAt(x, z) < 2.6 + pad) return true;
     if (gravelAt(x, z) < 2 + pad) return true;
@@ -426,7 +456,7 @@ export class ChunkManager {
           const y = groundY(x, z);
           if (y < LEVEL + 0.15 || y > LEVEL + 3.2) continue;
           const lodge = fbm(x * 0.012 + 31, z * 0.012 - 17, 2, 97);     // beavers work a few stretches of shore
-          if (roll > 0.55 * smoothstep(0.55, 0.7, lodge)) continue;
+          if (roll > 0.3 * smoothstep(0.55, 0.7, lodge)) continue;
           if (z < DAM_Z + 14) continue;
           if (Math.hypot(x - BEACH.x, z - BEACH.z) < BEACH.r * 1.2) continue;
           if (Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r * 1.5) continue;

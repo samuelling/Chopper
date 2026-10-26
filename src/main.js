@@ -3,7 +3,7 @@ import { shared } from './toon.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD } from './ashland.js';
 import {
-  buildGrid, makeHeightTexture, buildTerrain, groundY, sdfAt, lake, TRAIL,
+  buildGrid, makeHeightTexture, flattenArea, editTerrain, buildTerrain, groundY, sdfAt, lake, TRAIL,
 } from './world.js';
 import { Atmosphere, PRESETS } from './atmosphere.js';
 import { Water } from './water.js';
@@ -235,7 +235,9 @@ async function boot() {
   }
 
   const render = () => renderer.render(scene, camera);
-  window.chopper = { MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  // Clear and level a circular building site on demand (hook for the future building mechanic).
+  const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
+  window.chopper = { buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
