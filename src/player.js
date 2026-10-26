@@ -230,8 +230,8 @@ export class Player {
     this.axe.position.set(px, py, pz);
     this.axe.rotation.set(rx, ry, rz);
     // phone: low in the right corner, screen tipped toward you; raised, it fills the middle of the view
-    const k = this.raise, e = k * k * (3 - 2 * k), sway = Math.sin(this.bob) * 0.012 * Math.min(1, this.speed / 3.6);
-    this.phone.position.set(0.25 * (1 - e) + sway, -0.23 * (1 - e) - 0.01 * e + bobY * 0.6, -0.46 + 0.2 * e);
+    const k = this.raise, e = k * k * (3 - 2 * k), sway = Math.sin(this.bob * 0.5) * 0.003 * Math.min(1, this.speed / 3.6);
+    this.phone.position.set(0.25 * (1 - e) + sway, -0.23 * (1 - e) - 0.01 * e, -0.46 + 0.2 * e);
     this.phone.rotation.set(-0.55 * (1 - e) + 0.0 * e, -0.38 * (1 - e), 0.18 * (1 - e));
   }
 }
