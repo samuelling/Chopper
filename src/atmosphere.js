@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { GLSL_NOISE, fbm, mulberry32, smoothstep, lerp, clamp } from './noise.js';
 import { shared } from './toon.js';
+import { IS_WINTER } from './season.js';
 
 // ---------------------------------------------------------------------------
 // Time-of-day presets (press 1 / 2 / 3). Everything lerps between them.
 // ---------------------------------------------------------------------------
-export const PRESETS = [
+const AUTUMN_PRESETS = [
   {
     name: 'Golden hour',
     skyTop: '#3b79b0', skyMid: '#86b4c8', horizon: '#f6bd78',
@@ -34,6 +35,36 @@ export const PRESETS = [
     shafts: 0.7, grade: 1.0,
   },
 ];
+const WINTER_PRESETS = [
+  {
+    name: 'Cold bright',
+    skyTop: '#4f86b8', skyMid: '#a9c8dc', horizon: '#f5e6d6',
+    fog: '#d9e4ec', fogDensity: 0.0042,
+    sunColor: '#ffe6c8', sunInt: 3.1, sunElev: 17,
+    hemiSky: '#bcd4ee', hemiGround: '#9db0c8', hemiInt: 1.7,
+    cloudLit: '#ffffff', cloudShade: '#b4c2d2', cloudAmt: 0.5,
+    shafts: 0.8, grade: 1.0,
+  },
+  {
+    name: 'Snow haze',
+    skyTop: '#9fb4c6', skyMid: '#cfd9e0', horizon: '#eef0ee',
+    fog: '#e3e9ee', fogDensity: 0.0095,
+    sunColor: '#fff3e0', sunInt: 1.9, sunElev: 12,
+    hemiSky: '#d0dcea', hemiGround: '#a9b8c8', hemiInt: 1.95,
+    cloudLit: '#ffffff', cloudShade: '#c4cfd8', cloudAmt: 0.85,
+    shafts: 1.1, grade: 1.0,
+  },
+  {
+    name: 'Winter dusk',
+    skyTop: '#2b3d78', skyMid: '#9a86b4', horizon: '#ffb48c',
+    fog: '#cfa6b0', fogDensity: 0.0046,
+    sunColor: '#ffa070', sunInt: 2.4, sunElev: 4,
+    hemiSky: '#8c9ad0', hemiGround: '#7c86ac', hemiInt: 1.4,
+    cloudLit: '#ffc29a', cloudShade: '#6a5a92', cloudAmt: 0.55,
+    shafts: 0.7, grade: 1.0,
+  },
+];
+export const PRESETS = IS_WINTER ? WINTER_PRESETS : AUTUMN_PRESETS;
 
 function colorOf(h) { return new THREE.Color(h); }
 
@@ -107,7 +138,7 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
-const RIDGE_COLORS = ['#a9402a', '#c8782a', '#b79030', '#7d7a30', '#4d6a3a'].map(colorOf);
+const RIDGE_COLORS = (IS_WINTER ? ['#7d8aa0', '#8e99ad', '#a3acbc', '#5d6f78', '#3f5a52'] : ['#a9402a', '#c8782a', '#b79030', '#7d7a30', '#4d6a3a']).map(colorOf);
 
 function buildRidge(radius, seed, baseH, amp, rough) {
   const seg = 360;

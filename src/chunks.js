@@ -7,6 +7,7 @@ import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
+import { IS_WINTER } from './season.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
 import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
 
@@ -352,6 +353,7 @@ export class ChunkManager {
 
   _genUnderstory(ch, push) {
     const mkItem = (name, x, z, sc, yaw, color, dy = 0) => {
+      if (IS_WINTER && (name === 'fern' || name === 'shrub')) return null;
       const y = groundY(x, z) + dy;
       const m = new THREE.Matrix4().compose(
         new THREE.Vector3(x, y, z),

@@ -6,6 +6,8 @@ import {
   lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
+import { IS_WINTER } from './season.js';
+import { trailUniforms } from './snowtrail.js';
 import { wetlandAt } from './ashland_wetlands.js';
 import { depthFtAt } from './ashland_bathy.js';
 import { elevLatLon, DEM } from './ashland_dem.js';
@@ -253,6 +255,8 @@ const MUD = new THREE.Color('#4a3b2c');
 const MUD_OLIVE = new THREE.Color('#4a4a2c');
 const ROCK = new THREE.Color('#756759');
 const SAND = new THREE.Color('#d6c28f');
+const SNOWC = new THREE.Color('#e9eff4');
+const SNOW_SH = new THREE.Color('#c4d2e0');
 const GRASS = new THREE.Color('#8e9a46');
 const tmp = new THREE.Color();
 
@@ -321,6 +325,12 @@ export function buildTerrain() {
       const gw = smoothstep(-DAM_HALF - 50, -DAM_HALF - 12, x) * smoothstep(DAM_HALF + 40, DAM_HALF + 2, x) * smoothstep(DAM_Z - 44, DAM_Z - 30, z) * smoothstep(DAM_Z + 12, DAM_Z + 4, z) * (1 - rk * 0.5);
       if (gw > 0) { tmp.lerp(GRASS, gw); litterW *= 1 - gw; }
 
+      if (IS_WINTER) {
+        // snow over everything above the waterline; steep rock stays bare, packed trails show through (in the shader)
+        const sw = Math.max(smoothstep(LEVEL - 0.15, LEVEL + 0.45, h), smoothstep(1, 5, sdf)) * (1 - rk * 0.75);
+        tmp.lerp(SNOWC.clone().lerp(SNOW_SH, 0.55 * smoothstep(0.0, 0.2, slope)), sw * 0.94);
+        litterW *= 1 - sw * 0.97;
+      }
       col[k * 3] = tmp.r; col[k * 3 + 1] = tmp.g; col[k * 3 + 2] = tmp.b;
       litterA[k] = litterW;
   };
@@ -335,6 +345,7 @@ export function buildTerrain() {
     shader.uniforms.uHeightTex = heightUniforms.uHeightTex;
     shader.uniforms.uHeightInfo = heightUniforms.uHeightInfo;
     shader.uniforms.uGridDim = heightUniforms.uGridDim;
+    shader.uniforms.uTrail = trailUniforms.uTrail; shader.uniforms.uTrailInfo = trailUniforms.uTrailInfo;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
         attribute float aLitter; varying float vLitter; varying vec3 vWorld;`)
@@ -345,6 +356,7 @@ export function buildTerrain() {
         varying float vLitter; varying vec3 vWorld;
         ${GLSL_NOISE}
         ${GLSL_HEIGHT}
+        uniform sampler2D uTrail; uniform vec4 uTrailInfo;
         const float LEVEL_HI = ${(LEVEL + 1.2).toFixed(2)};`)
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
@@ -371,6 +383,14 @@ export function buildTerrain() {
           vec3 gravel = vec3(0.30, 0.285, 0.26) * (0.8 + 0.4 * step(0.55, n3));
           base = mix(base, dirt, trail * 0.95);
           base = mix(base, gravel, gr);
+          ${IS_WINTER ? `{
+            // trampled snow: a crisp painted band of compacted, blue-shadowed snow with earth showing through
+            float tm = smoothstep(0.38, 0.52, texture2D(uTrail, (w - uTrailInfo.xy) / uTrailInfo.zw).r);
+            float sn = 1.0 - smoothstep(0.0, 0.25, vLitter);
+            vec3 pk = vec3(0.60, 0.67, 0.78) * (0.92 + 0.14 * n2);
+            pk = mix(pk, vec3(0.30, 0.23, 0.18), step(0.74, n3) * 0.55);
+            base = mix(base, pk, tm * sn);
+          }` : ''}
           diffuseColor.rgb = mix(base * lum, base * 1.0, max(trail, gr));
           // beyond the streamed forest: a painted canopy mosaic so the far hills read as woods
           {
@@ -379,8 +399,9 @@ export function buildTerrain() {
                       * smoothstep(LEVEL_HI, LEVEL_HI + 1.5, fld.r);
             float c1 = vnoise(w * 0.035 + 7.0), c2 = vnoise(w * 0.09 + 3.0);
             float k = c1 * 0.8 + c2 * 0.35;
-            vec3 can = k < 0.30 ? vec3(0.50, 0.075, 0.03) : k < 0.46 ? vec3(0.62, 0.30, 0.04)
-                     : k < 0.60 ? vec3(0.66, 0.46, 0.07) : k < 0.74 ? vec3(0.30, 0.34, 0.07) : vec3(0.08, 0.20, 0.10);
+            vec3 can = ${IS_WINTER
+              ? 'k < 0.30 ? vec3(0.40, 0.33, 0.30) : k < 0.46 ? vec3(0.52, 0.45, 0.42) : k < 0.60 ? vec3(0.34, 0.30, 0.28) : k < 0.74 ? vec3(0.13, 0.27, 0.19) : vec3(0.07, 0.19, 0.12)'
+              : 'k < 0.30 ? vec3(0.50, 0.075, 0.03) : k < 0.46 ? vec3(0.62, 0.30, 0.04) : k < 0.60 ? vec3(0.66, 0.46, 0.07) : k < 0.74 ? vec3(0.30, 0.34, 0.07) : vec3(0.08, 0.20, 0.10)'};
             can *= 0.75 + 0.35 * step(0.5, c2);
             diffuseColor.rgb = mix(diffuseColor.rgb, can, cov);
           }

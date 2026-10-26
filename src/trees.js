@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GeoBuilder, jitterGeometry, matrix, branchMatrix } from './builder.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
 
+import { IS_WINTER } from './season.js';
 import { mulberry32, hash2, fbm, smoothstep, pickWeighted, lerp, clamp } from './noise.js';
 
 
@@ -139,7 +140,7 @@ function buildOak(variant, lod) {
   return { geo: b.build({ smoothNormals: !lod }), H: cy + ry + 1.8, rBase };
 }
 
-function buildPine(variant, lod) {
+function buildPine(variant, lod, snow = IS_WINTER) {
   const rng = mulberry32(300 + variant * 7 + lod);
   const b = new GeoBuilder();
   const H = 16.5 + variant * 3;
@@ -164,6 +165,12 @@ function buildPine(variant, lod) {
         return tc.setRGB(m * 0.95, m, m * 1.04);
       },
     });
+    if (snow) {   // a cap of snow on the upper half of each tier
+      const cap = new THREE.ConeGeometry(R * 0.6, hc * 0.46, lod ? 6 : 9, 1, false);
+      b.add(cap, matrix(0, y + hc * 0.77, 0, 0, rng() * 6.28, 0), {
+        tint: 0, colorFn: (p, n) => tc.setRGB(0.88 + 0.1 * Math.max(n.y, 0), 0.92 + 0.07 * Math.max(n.y, 0), 0.97),
+      });
+    }
   }
   // leader
   const top = new THREE.ConeGeometry(0.55, lod ? 3.2 : 2.6, lod ? 5 : 6);
@@ -196,6 +203,59 @@ function buildBirch(variant, lod) {
       { detail: lod ? 0 : 1, seed: 41 + variant, yMin, yMax, jitter: 0.18 });
   }
   return { geo: b.build({ smoothNormals: !lod }), H: cy + 3, rBase };
+}
+
+
+// ---------------------------------------------------------------------------
+// Winter: bare, branching deciduous trees (recursive limbs, a line of snow along the near-level ones)
+// ---------------------------------------------------------------------------
+function growLimb(b, rng, a, dir, len, rad, depth, o) {
+  const tip = a.clone().addScaledVector(dir, len);
+  const rTip = rad * o.taper;
+  addBranch(b, a, tip, rad, rTip, depth >= 2 ? o.twig : o.bark);
+  if (o.snow && depth <= 2 && Math.abs(dir.y) < 0.6 && len > 0.9) {
+    const up = new THREE.Vector3(0, rad * 0.8, 0);
+    addBranch(b, a.clone().add(up), tip.clone().add(up), rad * 0.5, rTip * 0.5, '#f1f5f9');
+  }
+  if (depth >= o.maxDepth) return;
+  const kids = depth === 0 ? o.fan : o.kids;
+  for (let i = 0; i < kids; i++) {
+    const d = dir.clone();
+    const ax = new THREE.Vector3(rng() - 0.5, 0, rng() - 0.5).normalize();
+    const perp = new THREE.Vector3().crossVectors(d, new THREE.Vector3(0, 1, 0)).normalize();
+    if (!isFinite(perp.x)) perp.set(1, 0, 0);
+    const spin = (i / kids) * Math.PI * 2 + rng() * 1.6;
+    d.applyAxisAngle(perp, (i === 0 && depth > 0 ? 0.25 : o.spread) * (0.7 + rng() * 0.6));
+    d.applyAxisAngle(dir, spin);
+    d.y += o.up - (depth >= 2 ? o.droop : 0);
+    d.normalize();
+    growLimb(b, rng, tip.clone(), d, len * o.lenK * (0.82 + rng() * 0.36), rTip * o.radK, depth + 1, o);
+  }
+}
+
+function buildBare(spName, variant, lod) {
+  const rng = mulberry32(900 + variant * 17 + (spName === 'oak' ? 40 : spName === 'birch' ? 80 : 0) + lod);
+  const b = new GeoBuilder();
+  const P = {
+    maple: { th: 6.0 + variant * 0.5, rB: 0.34 + variant * 0.02, rT: 0.14, y0: 2.8, y1: 6.0, n: 6, elev: [0.5, 0.85], len: 2.7, rad: 0.17, o: { fan: 2, kids: 2, spread: 0.6, lenK: 0.74, radK: 0.62, up: 0.22, droop: 0, maxDepth: 4 } },
+    oak: { th: 3.7, rB: 0.52, rT: 0.3, y0: 2.5, y1: 3.9, n: 5, elev: [0.95, 1.3], len: 3.7, rad: 0.27, o: { fan: 3, kids: 3, spread: 0.8, lenK: 0.72, radK: 0.6, up: 0.08, droop: 0.05, maxDepth: 3 } },
+    birch: { th: 10.2 + variant * 1.4, rB: 0.17, rT: 0.05, y0: 4.8, y1: 10, n: 8, elev: [0.35, 0.6], len: 2.0, rad: 0.055, o: { fan: 2, kids: 2, spread: 0.55, lenK: 0.78, radK: 0.6, up: 0.0, droop: 0.5, maxDepth: 3 } },
+  }[spName];
+  const bark = BARK[spName];
+  addTrunk(b, { h: P.th + 0.6, rBase: P.rB, rTop: P.rT, flare: 1.5, birch: spName === 'birch', bark, segs: lod ? 5 : 8, rings: lod ? 2 : spName === 'birch' ? Math.round(P.th / 0.7) : 4 });
+  const depthCut = lod ? 1 : 0;
+  const o = { ...P.o, maxDepth: P.o.maxDepth - depthCut, taper: 0.62, bark: spName === 'birch' ? '#d8d1c0' : bark[1], twig: spName === 'birch' ? '#5a4a3e' : '#3b2f29', snow: true };
+  const count = lod ? Math.max(4, P.n - 2) : P.n;
+  for (let i = 0; i < count; i++) {
+    const t = (i + rng() * 0.6) / count;
+    const y = lerp(P.y0, P.y1, t);
+    const ang = i * 2.4 + rng();
+    const el = lerp(P.elev[1], P.elev[0], t) * (0.85 + rng() * 0.3);   // lower limbs spread wider, upper ones climb
+    const d = new THREE.Vector3(Math.cos(ang) * Math.sin(el), Math.cos(el), Math.sin(ang) * Math.sin(el)).normalize();
+    growLimb(b, rng, new THREE.Vector3(0, y, 0), d, P.len * (1.25 - 0.45 * t), P.rad, 0, o);
+  }
+  growLimb(b, rng, new THREE.Vector3(0, P.th + 0.5, 0), new THREE.Vector3(0.05, 1, 0.05).normalize(), P.len * 0.8, P.rad * 0.7, 1, { ...o, fan: 2 });
+  return b.build({ smoothNormals: false });
 }
 
 const SPECIES = {
@@ -259,6 +319,10 @@ export function buildTreeModels() {
     for (let v = 0; v < sp.variants; v++) {
       const near = sp.build(v, 0);
       const far = sp.build(v, 1);
+      if (IS_WINTER && name !== 'pine') {
+        out[name].push({ geo: buildBare(name, v, 0), geoFar: buildBare(name, v, 1), H: near.H, rBase: near.rBase });
+        continue;
+      }
       out[name].push({ geo: near.geo, geoFar: far.geo, H: near.H, rBase: near.rBase });
     }
   }
