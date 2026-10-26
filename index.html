@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chopper — Ashland State Park</title>
+<style>
+  :root { --ink:#2b1d1a; --paper:#f4e6c8; --ember:#d9572b; --gold:#f2b229; }
+  html,body { margin:0; height:100%; overflow:hidden; background:#1c1517; font-family: "Avenir Next", "Trebuchet MS", Georgia, serif; color:var(--paper); }
+  canvas { display:block; position:fixed; inset:0; width:100%; height:100%; }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    background: radial-gradient(ellipse at 50% 60%, rgba(60,28,26,.55), rgba(20,12,16,.88)); z-index:5; padding:24px; cursor:pointer; }
+  .overlay.hidden { display:none; }
+  h1 { font-size: clamp(54px, 11vw, 120px); letter-spacing:.06em; margin:0; color:var(--paper); text-shadow: 0 4px 0 var(--ember), 0 8px 0 #7b2a1c; font-weight:900; }
+  .sub { margin:22px 0 4px; font-size:clamp(15px,2.2vw,20px); letter-spacing:.28em; text-transform:uppercase; color:var(--gold); }
+  .place { opacity:.8; font-style:italic; margin-bottom:28px; }
+  .go { padding:14px 38px; border:3px solid var(--paper); border-radius:4px; font-size:20px; letter-spacing:.2em; text-transform:uppercase; background:rgba(217,87,43,.9); color:#fff; }
+  .controls { margin-top:28px; font-size:14px; line-height:1.9; opacity:.85; }
+  kbd { display:inline-block; min-width:1.4em; padding:0 .45em; margin:0 .1em; border:2px solid var(--paper); border-bottom-width:4px; border-radius:4px; font:inherit; font-size:.85em; }
+  .note { margin-top:20px; max-width:560px; font-size:12px; opacity:.55; line-height:1.5; }
+  #loading { z-index:9; cursor:default; background:#1c1517; }
+  #bar { width:min(380px,70vw); height:8px; border:2px solid var(--paper); border-radius:6px; margin-top:20px; overflow:hidden; }
+  #bar i { display:block; height:100%; width:0; background:var(--ember); transition:width .2s; }
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:3; opacity:0; transition:opacity .6s; }
+  #hud.on { opacity:1; }
+  .card { position:absolute; top:18px; left:18px; padding:10px 14px; background:rgba(34,20,22,.62); border:2px solid rgba(244,230,200,.55); border-radius:6px; min-width:210px; backdrop-filter: blur(3px); }
+  .card b { color:var(--gold); letter-spacing:.14em; text-transform:uppercase; font-size:11px; display:block; }
+  .card .v { font-size:20px; }
+  .meter { height:8px; background:rgba(0,0,0,.4); border-radius:5px; margin-top:6px; overflow:hidden; border:1px solid rgba(244,230,200,.4); }
+  .meter i { display:block; height:100%; width:100%; background:#4fa3a5; }
+  #cross { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; background:rgba(255,248,230,.85); box-shadow:0 0 0 2px rgba(40,24,24,.6); }
+  #prompt { position:absolute; left:50%; bottom:14%; transform:translateX(-50%); padding:8px 16px; background:rgba(34,20,22,.7); border:2px solid var(--paper); border-radius:6px; font-size:17px; opacity:0; transition:opacity .2s; white-space:nowrap; }
+  #prompt.on { opacity:1; }
+  #toast { position:absolute; left:50%; top:16%; transform:translateX(-50%); font-size:clamp(20px,3vw,32px); text-shadow:0 3px 0 rgba(40,20,20,.8); opacity:0; transition:opacity .5s; text-align:center; max-width:80vw; }
+  #toast.on { opacity:1; }
+  #hint { position:absolute; right:16px; bottom:14px; font-size:12px; opacity:.7; text-align:right; line-height:1.7; }
+  #mood { position:absolute; right:18px; top:18px; font-size:12px; letter-spacing:.2em; text-transform:uppercase; opacity:.8; }
+  #err { position:fixed; left:10px; bottom:10px; color:#ffb4a0; font:12px monospace; z-index:20; white-space:pre-wrap; max-width:80vw; }
+</style>
+</head>
+<body>
+<div id="loading" class="overlay"><h1 style="font-size:clamp(40px,8vw,80px)">CHOPPER</h1><div class="sub" id="loadmsg">Surveying the reservoir…</div><div id="bar"><i></i></div></div>
+
+<div id="title" class="overlay hidden">
+  <h1>CHOPPER</h1>
+  <div class="sub">fell trees · drain lakes · wander</div>
+  <div class="place">Ashland State Park, Massachusetts — late October</div>
+  <div class="go">Click to begin</div>
+  <div class="controls">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop<br>
+    <kbd>Click</kbd> swing the axe &nbsp; <kbd>E</kbd> work the gate wheel<br>
+    <kbd>1</kbd> golden hour &nbsp; <kbd>2</kbd> morning mist &nbsp; <kbd>3</kbd> dusk
+  </div>
+  <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
+</div>
+
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div></div>
+
+<div id="hud">
+  <div class="card"><b>Trees felled</b><div class="v" id="felled">0</div>
+    <b style="margin-top:8px" id="lakename">Ashland Reservoir</b><div class="v" id="lakepct">Full</div>
+    <div class="meter"><i id="lakebar"></i></div></div>
+  <div id="mood"></div>
+  <div id="cross"></div>
+  <div id="prompt"></div>
+  <div id="toast"></div>
+  <div id="hint">Click swing · E gate · 1 2 3 light</div>
+</div>
+<div id="err"></div>
+
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

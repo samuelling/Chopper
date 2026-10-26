@@ -1,0 +1,356 @@
+import * as THREE from 'three';
+import { GLSL_NOISE, fbm, mulberry32, smoothstep, lerp, clamp } from './noise.js';
+import { shared } from './toon.js';
+
+// ---------------------------------------------------------------------------
+// Time-of-day presets (press 1 / 2 / 3). Everything lerps between them.
+// ---------------------------------------------------------------------------
+export const PRESETS = [
+  {
+    name: 'Golden hour',
+    skyTop: '#3b79b0', skyMid: '#86b4c8', horizon: '#f6bd78',
+    fog: '#eebb84', fogDensity: 0.0056,
+    sunColor: '#ffc88a', sunInt: 3.5, sunElev: 21,
+    hemiSky: '#a6c6e8', hemiGround: '#bf6e2c', hemiInt: 1.45,
+    cloudLit: '#ffe0b0', cloudShade: '#d49aa6', cloudAmt: 0.55,
+    shafts: 1.0, grade: 1.0,
+  },
+  {
+    name: 'Morning mist',
+    skyTop: '#8fb0c6', skyMid: '#c3d3d6', horizon: '#ece3d0',
+    fog: '#dfe0d6', fogDensity: 0.0105,
+    sunColor: '#fff0d0', sunInt: 2.3, sunElev: 13,
+    hemiSky: '#c6d6e2', hemiGround: '#9a8a62', hemiInt: 1.7,
+    cloudLit: '#ffffff', cloudShade: '#b9c4cc', cloudAmt: 0.8,
+    shafts: 1.5, grade: 1.0,
+  },
+  {
+    name: 'Dusk',
+    skyTop: '#2a3b70', skyMid: '#8a5f86', horizon: '#ff8c5e',
+    fog: '#d98a73', fogDensity: 0.0066,
+    sunColor: '#ff9358', sunInt: 2.5, sunElev: 5,
+    hemiSky: '#7d78b8', hemiGround: '#8c4a3a', hemiInt: 1.25,
+    cloudLit: '#ffb27a', cloudShade: '#6c4a7e', cloudAmt: 0.6,
+    shafts: 0.7, grade: 1.0,
+  },
+];
+
+function colorOf(h) { return new THREE.Color(h); }
+
+// ---------------------------------------------------------------------------
+// Sky dome
+// ---------------------------------------------------------------------------
+const SKY_VERT = /* glsl */ `
+varying vec3 vDir;
+void main(){
+  vDir = position;
+  vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  gl_Position = p.xyww; // always at the far plane
+}`;
+
+const SKY_FRAG = /* glsl */ `
+uniform vec3 uTop, uMid, uHorizon, uSunDir, uSunColor, uCloudLit, uCloudShade;
+uniform float uTime, uCloudAmt;
+varying vec3 vDir;
+${GLSL_NOISE}
+void main(){
+  vec3 d = normalize(vDir);
+  float h = max(d.y, 0.0);
+  vec3 col = mix(uHorizon, uMid, smoothstep(0.0, 0.3, h));
+  col = mix(col, uTop, smoothstep(0.2, 0.9, h));
+  float sd = max(dot(d, uSunDir), 0.0);
+  col += uSunColor * (pow(sd, 5.0) * 0.20 + pow(sd, 36.0) * 0.30);
+
+  // painterly, hard-edged clouds with a lit rim on the sun-facing side
+  if (d.y > 0.0) {
+    vec2 p = d.xz / (d.y + 0.15);
+    p *= vec2(0.6, 1.5) * 1.1;
+    p += vec2(uTime * 0.005, 0.0);
+    float n  = fbm4(p);
+    float thr = 0.60 - uCloudAmt * 0.13;
+    float m  = step(thr, n);
+    vec2 sdir = normalize(uSunDir.xz + 0.0001) * 0.085;
+    float nl = fbm4(p + sdir * vec2(0.6, 1.5));
+    float rim = m * (1.0 - step(thr, nl));
+    float rim2 = step(thr + 0.06, n);
+    vec3 body = mix(uCloudShade, uCloudLit, 0.25 + 0.45 * pow(sd, 3.0));
+    vec3 cc = mix(body, uCloudLit, rim);
+    cc = mix(cc, uCloudShade * 0.9, (1.0 - rim2) * m * 0.0);
+    float fade = smoothstep(0.0, 0.2, d.y);
+    cc = mix(uHorizon, cc, fade);
+    col = mix(col, cc, m * fade * 0.96);
+  }
+  float disc = smoothstep(0.9990, 0.9995, sd);
+  col = mix(col, vec3(1.25, 1.1, 0.85), disc);
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`;
+
+// ---------------------------------------------------------------------------
+// Distant ridges (layered hazy hills — the Firewatch backdrop)
+// ---------------------------------------------------------------------------
+const RIDGE_VERT = /* glsl */ `
+attribute float aG;
+varying vec3 vCol; varying float vG; varying float vY;
+void main(){
+  vCol = color; vG = aG; vY = position.y;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const RIDGE_FRAG = /* glsl */ `
+uniform vec3 uFog; uniform vec3 uHaze; uniform float uMix;
+varying vec3 vCol; varying float vG; varying float vY;
+void main(){
+  vec3 col = mix(vCol, uHaze, uMix);
+  col = mix(uFog, col, smoothstep(0.0, 0.55, vG));
+  col = mix(col, uFog, (1.0 - vG) * 0.35);
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`;
+
+const RIDGE_COLORS = ['#a9402a', '#c8782a', '#b79030', '#7d7a30', '#4d6a3a'].map(colorOf);
+
+function buildRidge(radius, seed, baseH, amp, rough) {
+  const seg = 360;
+  const pos = [], col = [], g = [], idx = [];
+  const c = new THREE.Color();
+  for (let i = 0; i <= seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const h = baseH + amp * (fbm(ca * rough + seed, sa * rough + seed * 1.7, 4, seed) - 0.25) * 1.6
+      + amp * 0.35 * fbm(ca * rough * 4 + seed, sa * rough * 4, 2, seed + 3);
+    pos.push(ca * radius, h, sa * radius);
+    pos.push(ca * radius, -60, sa * radius);
+    // calm, low-frequency autumn mosaic (continuous, so no stripes)
+    const n = fbm(ca * 1.6 + seed * 3, sa * 1.6 - seed, 2, seed + 9);
+    const f = clamp((n - 0.3) * 2.2, 0, 0.999) * (RIDGE_COLORS.length - 1);
+    const i0 = Math.floor(f);
+    c.copy(RIDGE_COLORS[i0]).lerp(RIDGE_COLORS[i0 + 1], f - i0);
+    c.multiplyScalar(0.95 + 0.1 * fbm(ca * 6, sa * 6, 2, seed));
+    col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    g.push(1, 0);
+  }
+  for (let i = 0; i < seg; i++) {
+    const a = i * 2, b = a + 1, c2 = a + 2, d = a + 3;
+    idx.push(a, c2, b, b, c2, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setAttribute('aG', new THREE.Float32BufferAttribute(g, 1));
+  geo.setIndex(idx);
+  return geo;
+}
+
+// ---------------------------------------------------------------------------
+// Light shafts
+// ---------------------------------------------------------------------------
+const SHAFT_VERT = /* glsl */ `
+varying vec2 vUv; varying float vDepth;
+void main(){
+  vUv = uv;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vDepth = -mv.z;
+  gl_Position = projectionMatrix * mv;
+}`;
+const SHAFT_FRAG = /* glsl */ `
+uniform vec3 uColor; uniform float uAlpha; uniform float uTime; uniform float uPhase;
+varying vec2 vUv; varying float vDepth;
+void main(){
+  float across = smoothstep(0.0, 0.5, 1.0 - abs(vUv.x * 2.0 - 1.0));
+  float along = smoothstep(0.0, 0.22, vUv.y) * (1.0 - smoothstep(0.62, 1.0, vUv.y));
+  float shimmer = 0.7 + 0.3 * sin(uTime * 0.6 + uPhase + vUv.y * 5.0);
+  float dist = smoothstep(190.0, 40.0, vDepth) * smoothstep(1.0, 5.0, vDepth);
+  float a = across * along * uAlpha * shimmer * dist;
+  gl_FragColor = vec4(uColor * a, a);
+  #include <colorspace_fragment>
+}`;
+
+// ---------------------------------------------------------------------------
+// Atmosphere: owns sky, fog, sun, hemisphere light, ridges, shafts
+// ---------------------------------------------------------------------------
+export class Atmosphere {
+  constructor(scene) {
+    this.scene = scene;
+    this.sunAz = 0;
+    this.presetIndex = 0;
+    this.blend = 1;
+    this.from = null;
+    this.target = null;
+    this.state = this._stateFrom(PRESETS[0]);
+
+    scene.fog = new THREE.FogExp2(this.state.fog.getHex(), PRESETS[0].fogDensity);
+
+    // lights
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
+    this.sun = new THREE.DirectionalLight(0xffffff, 3);
+    this.sun.castShadow = true;
+    const sh = this.sun.shadow;
+    sh.mapSize.set(3072, 3072);
+    sh.camera.left = -64; sh.camera.right = 64; sh.camera.top = 64; sh.camera.bottom = -64;
+    sh.camera.near = 20; sh.camera.far = 330;
+    sh.bias = -0.0004;
+    sh.normalBias = 0.35;
+    sh.radius = 1.5;
+    scene.add(this.hemi, this.sun, this.sun.target);
+
+    // sky
+    this.skyUniforms = {
+      uTop: { value: new THREE.Color() }, uMid: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() },
+      uSunDir: { value: new THREE.Vector3(0, 0.4, -1).normalize() }, uSunColor: { value: new THREE.Color() },
+      uCloudLit: { value: new THREE.Color() }, uCloudShade: { value: new THREE.Color() },
+      uTime: shared.time, uCloudAmt: { value: 0.5 },
+    };
+    this.sky = new THREE.Mesh(
+      new THREE.SphereGeometry(2600, 40, 20),
+      new THREE.ShaderMaterial({
+        uniforms: this.skyUniforms, vertexShader: SKY_VERT, fragmentShader: SKY_FRAG,
+        side: THREE.BackSide, depthWrite: false, depthTest: true, fog: false,
+      }));
+    this.sky.frustumCulled = false;
+    this.sky.renderOrder = -10;
+    scene.add(this.sky);
+
+    // ridges
+    this.ridges = [];
+    const layers = [
+      { r: 950, seed: 3, base: 70, amp: 70, rough: 2.4, mix: 0.42 },
+      { r: 1250, seed: 7, base: 110, amp: 95, rough: 1.9, mix: 0.62 },
+      { r: 1650, seed: 12, base: 170, amp: 130, rough: 1.5, mix: 0.80 },
+    ];
+    for (const L of layers) {
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { uFog: { value: new THREE.Color() }, uHaze: { value: new THREE.Color() }, uMix: { value: L.mix } },
+        vertexShader: RIDGE_VERT, fragmentShader: RIDGE_FRAG, vertexColors: true, side: THREE.DoubleSide, fog: false,
+      });
+      const mesh = new THREE.Mesh(buildRidge(L.r, L.seed, L.base, L.amp, L.rough), mat);
+      mesh.frustumCulled = false;
+      mesh.renderOrder = -5;
+      scene.add(mesh);
+      this.ridges.push({ mesh, mat, L });
+    }
+
+    this.shaftGroup = new THREE.Group();
+    scene.add(this.shaftGroup);
+    this.shafts = [];
+
+    this.applyState(this.state, PRESETS[0]);
+  }
+
+  _stateFrom(p) {
+    return {
+      skyTop: colorOf(p.skyTop), skyMid: colorOf(p.skyMid), horizon: colorOf(p.horizon),
+      fog: colorOf(p.fog), fogDensity: p.fogDensity,
+      sunColor: colorOf(p.sunColor), sunInt: p.sunInt, sunElev: p.sunElev,
+      hemiSky: colorOf(p.hemiSky), hemiGround: colorOf(p.hemiGround), hemiInt: p.hemiInt,
+      cloudLit: colorOf(p.cloudLit), cloudShade: colorOf(p.cloudShade), cloudAmt: p.cloudAmt,
+      shafts: p.shafts,
+    };
+  }
+
+  setSunAzimuth(dirX, dirZ) {
+    const l = Math.hypot(dirX, dirZ) || 1;
+    this.sunHoriz = new THREE.Vector2(dirX / l, dirZ / l);
+    this.applyState(this.state);
+  }
+
+  setPreset(i) {
+    if (i === this.presetIndex && this.blend >= 1) return;
+    this.presetIndex = i;
+    this.from = this._clone(this.state);
+    this.target = this._stateFrom(PRESETS[i]);
+    this.blend = 0;
+  }
+
+  _clone(s) {
+    const o = {};
+    for (const k in s) o[k] = s[k] && s[k].isColor ? s[k].clone() : s[k];
+    return o;
+  }
+
+  sunDir() {
+    const e = THREE.MathUtils.degToRad(this.state.sunElev);
+    const h = this.sunHoriz || new THREE.Vector2(0, -1);
+    return new THREE.Vector3(h.x * Math.cos(e), Math.sin(e), h.y * Math.cos(e)).normalize();
+  }
+
+  applyState(s) {
+    const u = this.skyUniforms;
+    u.uTop.value.copy(s.skyTop); u.uMid.value.copy(s.skyMid); u.uHorizon.value.copy(s.horizon);
+    u.uSunColor.value.copy(s.sunColor); u.uCloudLit.value.copy(s.cloudLit); u.uCloudShade.value.copy(s.cloudShade);
+    u.uCloudAmt.value = s.cloudAmt;
+    const sd = this.sunDir();
+    u.uSunDir.value.copy(sd);
+    this.scene.fog.color.copy(s.fog);
+    this.scene.fog.density = s.fogDensity;
+    this.sun.color.copy(s.sunColor);
+    this.sun.intensity = s.sunInt;
+    this.hemi.color.copy(s.hemiSky);
+    this.hemi.groundColor.copy(s.hemiGround);
+    this.hemi.intensity = s.hemiInt;
+    this._sunDir = sd;
+    for (const r of this.ridges) {
+      r.mat.uniforms.uFog.value.copy(s.fog);
+      r.mat.uniforms.uHaze.value.copy(s.fog).lerp(s.skyMid, 0.45);
+    }
+    for (const sh of this.shafts) {
+      sh.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sd);
+      sh.mat.uniforms.uColor.value.copy(s.sunColor);
+      sh.mat.uniforms.uAlpha.value = sh.alpha * s.shafts;
+    }
+    this.state = s;
+  }
+
+  // scatter light shafts: places = [{x, y, z}] ground points
+  buildShafts(places, rng) {
+    const sd = this._sunDir || this.sunDir();
+    const geo = new THREE.PlaneGeometry(1, 1);
+    for (const p of places) {
+      const w = 2.6 + rng() * 4.2;
+      const len = 24 + rng() * 10;
+      const alpha = 0.09 + rng() * 0.07;
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uColor: { value: this.state.sunColor.clone() }, uAlpha: { value: alpha }, uTime: shared.time, uPhase: { value: rng() * 6.28 },
+        },
+        vertexShader: SHAFT_VERT, fragmentShader: SHAFT_FRAG,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      });
+      const holder = new THREE.Group();
+      for (let k = 0; k < 2; k++) {
+        const m = new THREE.Mesh(geo, mat);
+        m.scale.set(w, len, 1);
+        m.rotation.y = k * Math.PI / 2;
+        m.position.y = len * 0.5;
+        holder.add(m);
+      }
+      holder.position.set(p.x, p.y, p.z);
+      holder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sd);
+      holder.frustumCulled = false;
+      holder.traverse((o) => { o.frustumCulled = false; o.renderOrder = 5; });
+      this.shaftGroup.add(holder);
+      this.shafts.push({ mesh: holder, mat, alpha });
+    }
+  }
+
+  update(dt, camera, focus) {
+    if (this.blend < 1 && this.target) {
+      this.blend = Math.min(1, this.blend + dt / 1.6);
+      const k = this.blend * this.blend * (3 - 2 * this.blend);
+      const a = this.from, b = this.target, s = this.state;
+      for (const key in s) {
+        if (s[key] && s[key].isColor) s[key].copy(a[key]).lerp(b[key], k);
+        else s[key] = lerp(a[key], b[key], k);
+      }
+      this.applyState(s);
+    }
+    this.sky.position.copy(camera.position);
+    for (const r of this.ridges) r.mesh.position.set(camera.position.x * 0.96, 0, camera.position.z * 0.96);
+
+    // keep the shadow frustum centred on the player (snapped to avoid shimmer)
+    const snap = 0.5;
+    const fx = Math.round(focus.x / snap) * snap, fz = Math.round(focus.z / snap) * snap;
+    this.sun.target.position.set(fx, focus.y, fz);
+    this.sun.position.set(fx, focus.y, fz).addScaledVector(this._sunDir, 150);
+    this.sun.target.updateMatrixWorld();
+  }
+}
