@@ -162,8 +162,8 @@ export class Player {
       const stride = sprint ? 2.0 : 1.55;
       if (this.stepDist > stride) {
         this.stepDist = 0;
-        const kind = wet ? 'water' : (this.pos.z < -468 && this.pos.z > -480 ? 'dam' : 'leaf');
-        this.events.step?.(kind);
+        const kind = wet ? 'water' : (this.surfaceAt ? this.surfaceAt(this.pos.x, this.pos.z) : 'grass');
+        this.events.step?.(kind, sprint ? 1.35 : 1);
       }
     } else this.bob *= 0.9;
 

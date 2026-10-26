@@ -1,3 +1,4 @@
+import { SEASON_DEF } from './season.js';
 import * as THREE from 'three';
 
 // Small pooled particles: wood chips, leaf bursts, drifting leaves, splashes.
@@ -33,7 +34,7 @@ export class FX {
     }
   }
   leaves(x, y, z, n = 24, spread = 2, up = 1) {
-    const cols = ['#d4341c', '#e8721c', '#f2b229', '#a42a2c', '#c8801c'];
+    const cols = SEASON_DEF.leafFx;
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.28, sp = Math.random() * spread;
       this.spawn(x + Math.cos(a) * sp * 0.4, y + Math.random() * 1.5, z + Math.sin(a) * sp * 0.4, Math.cos(a) * sp, up * (1 + Math.random() * 3), Math.sin(a) * sp, 2.5 + Math.random() * 2.2, 0.16 + Math.random() * 0.1, cols[(Math.random() * cols.length) | 0], 1.1, 1.6);

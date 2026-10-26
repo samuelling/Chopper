@@ -16,6 +16,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | Mouse, click | look, swing the axe (a big tree takes several swings) |
 | E | at the gatehouse on the dam, open or close the drawdown gate |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
+| T | change season (also the Spring / Summer / Autumn / Winter buttons on the title and pause screens, or `?season=winter`) |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 
 ## On a phone
@@ -36,6 +37,18 @@ The lakebed follows the **real MassWildlife depth survey** of Ashland Reservoir 
 Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like everything else, and only appears while the lake is full. The gray squirrels (they dart between pauses and scamper up the nearest tree if you get close) and the beaver-gnawed stumps along the shore are invented too: the stumps are scattered procedurally near the water, with no survey of real beaver activity behind them.
 
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
+
+## Seasons
+
+Four seasons share one world: spring leaf-out and blossom shrubs, deep-green summer, the original autumn, and a snowy winter (bare cel-shaded branches, snow caps on pines, snow on the ground with a trail that stays trampled where you walk). Ground litter only shows in autumn. Switching season reloads the page at your current spot, so felled trees and lake level reset (a live blend is a possible later step).
+
+Wildlife follows the season (for example no turtles or fish in winter, geese passing through in spring and autumn). The birds (chickadee, blue jay, great blue heron, Canada goose, red-tailed hawk) are species typical of the habitat, **not** from a park survey.
+
+Turtles bask on logs and rocks and slip into the water when you run past.
+
+## Sound
+
+All audio is synthesised with WebAudio, no sample files. The ambience changes by season (spring peepers and song, summer crickets and cicadas, autumn wind and crows, winter near-silence). Footsteps depend on the surface: paving on the dam and ramp, gravel in the lots, sand on the beach, mud in wetlands, dirt on trails, leaves in autumn, crunchy snow in winter, grass otherwise. Only checked for errors in a headless browser, so tune it by ear.
 
 ## How it is built
 

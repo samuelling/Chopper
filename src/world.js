@@ -6,7 +6,7 @@ import {
   lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
-import { IS_WINTER } from './season.js';
+import { IS_WINTER, SEASON_DEF } from './season.js';
 import { trailUniforms } from './snowtrail.js';
 import { wetlandAt } from './ashland_wetlands.js';
 import { depthFtAt } from './ashland_bathy.js';
@@ -250,7 +250,7 @@ export function makeHeightTexture() {
 // ---------------------------------------------------------------------------
 // Terrain mesh
 // ---------------------------------------------------------------------------
-const LITTER = ['#a65b27', '#94562b', '#b87a31', '#80502d', '#9c4a24'].map((c) => new THREE.Color(c));
+const LITTER = (SEASON_DEF.ground ?? ['#a65b27', '#94562b', '#b87a31', '#80502d', '#9c4a24']).map((c) => new THREE.Color(c));
 const MUD = new THREE.Color('#4a3b2c');
 const MUD_OLIVE = new THREE.Color('#4a4a2c');
 const ROCK = new THREE.Color('#756759');
@@ -368,11 +368,11 @@ export function buildTerrain() {
           float lum = 0.80 + 0.13 * step(0.46, n1) + 0.12 * step(0.58, n2);
           vec3 base = diffuseColor.rgb;
           float moss = step(0.63, vnoise(w * 0.11 + 40.0)) * vLitter;
-          base = mix(base, vec3(0.085, 0.16, 0.035) * (0.85 + 0.5 * n2), moss * 0.9);
+          base = mix(base, ${SEASON_DEF.moss} * (0.85 + 0.5 * n2), moss * 0.9);
           float fleck = step(0.80, n3) * vLitter;
-          base = mix(base, vec3(0.42, 0.045, 0.012) * (0.8 + 0.5 * n2), fleck * 0.7);
+          base = mix(base, ${SEASON_DEF.fleck} * (0.8 + 0.5 * n2), fleck * 0.7);
           float fleck2 = step(0.84, vnoise(w * 2.3 + 9.0)) * vLitter;
-          base = mix(base, vec3(0.62, 0.30, 0.02), fleck2 * 0.65);
+          base = mix(base, ${SEASON_DEF.fleck2}, fleck2 * 0.65);
           // the loop trail: packed earth with a crisp, slightly ragged edge
           float tw = 1.55 + 0.55 * vnoise(w * 0.9) + 0.25 * n3;
           float trail = 1.0 - smoothstep(tw - 0.18, tw + 0.18, fld.b);
@@ -399,9 +399,7 @@ export function buildTerrain() {
                       * smoothstep(LEVEL_HI, LEVEL_HI + 1.5, fld.r);
             float c1 = vnoise(w * 0.035 + 7.0), c2 = vnoise(w * 0.09 + 3.0);
             float k = c1 * 0.8 + c2 * 0.35;
-            vec3 can = ${IS_WINTER
-              ? 'k < 0.30 ? vec3(0.40, 0.33, 0.30) : k < 0.46 ? vec3(0.52, 0.45, 0.42) : k < 0.60 ? vec3(0.34, 0.30, 0.28) : k < 0.74 ? vec3(0.13, 0.27, 0.19) : vec3(0.07, 0.19, 0.12)'
-              : 'k < 0.30 ? vec3(0.50, 0.075, 0.03) : k < 0.46 ? vec3(0.62, 0.30, 0.04) : k < 0.60 ? vec3(0.66, 0.46, 0.07) : k < 0.74 ? vec3(0.30, 0.34, 0.07) : vec3(0.08, 0.20, 0.10)'};
+            vec3 can = ${SEASON_DEF.canopy};
             can *= 0.75 + 0.35 * step(0.5, c2);
             diffuseColor.rgb = mix(diffuseColor.rgb, can, cov);
           }

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { shared } from './toon.js';
 import { mulberry32, clamp } from './noise.js';
-import { LEVEL, SPAWN, DAM_Z, WORLD } from './ashland.js';
+import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
+import { wetlandAt } from './ashland_wetlands.js';
 import {
-  buildGrid, makeHeightTexture, flattenArea, editTerrain, buildTerrain, groundY, sdfAt, lake, TRAIL,
+  buildGrid, makeHeightTexture, gravelAt, trailDistAt, flattenArea, editTerrain, buildTerrain, groundY, sdfAt, lake, TRAIL,
 } from './world.js';
 import { Atmosphere, PRESETS } from './atmosphere.js';
 import { Water } from './water.js';
@@ -16,7 +17,7 @@ import { Landmarks } from './landmarks.js';
 import { Litter } from './litter.js';
 import { FX } from './fx.js';
 import { SnowTrail } from './snowtrail.js';
-import { IS_WINTER } from './season.js';
+import { IS_WINTER, SEASON, SEASONS, SEASON_DEF, goToSeason } from './season.js';
 import { Birds } from './birds.js';
 import { Wildlife } from './wildlife.js';
 import { Squirrels } from './squirrels.js';
@@ -101,7 +102,7 @@ async function boot() {
   ui.progress('Raking the leaves…', 0.6); await tick();
   const litter = MOBILE ? new Litter(scene, 3500, 34) : new Litter(scene);
   const fx = new FX(scene, MOBILE ? 350 : 900);
-  if (IS_WINTER) litter.mesh.visible = false;   // the fallen leaves are under the snow
+  if (!SEASON_DEF.litter) litter.mesh.visible = false;   // fallen leaves only in autumn (under the snow in winter)
   const snowTrail = IS_WINTER ? new SnowTrail() : null;
   const birds = new Birds(scene, chunks, lake, { mobile: MOBILE });
   wildlife.chunks = chunks; wildlife.fx = fx;
@@ -124,7 +125,17 @@ async function boot() {
 
   // ------------------------------------------------------------------ gameplay wiring
   const tmpDir = new THREE.Vector3();
-  player.events.step = (k) => audio.footstep(k);
+  player.events.step = (k, loud) => audio.footstep(k, loud);
+  player.surfaceAt = (x, z) => {
+    if (z < DAM_Z + 2 && z > DAM_Z - 12 && Math.abs(x) < DAM_HALF + 10) return 'pave';                                                              // the dam crest
+    const g = gravelAt(x, z);
+    if (g < 0.3) return Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r + 0.5 ? 'pave' : 'gravel';  // boat ramp / parking lot
+    if (Math.hypot(x - BEACH.x, z - BEACH.z) < BEACH.r * 0.7 && groundY(x, z) < LEVEL + 0.8) return 'sand';
+    const sdf = sdfAt(x, z), gy = groundY(x, z);
+    if ((wetlandAt(x, z) >= 2 && sdf > 0) || (sdf < 6 && gy < LEVEL + 0.3)) return 'mud';
+    if (trailDistAt(x, z) < 1.5) return 'dirt';
+    return SEASON === 'autumn' ? 'leaves' : SEASON === 'winter' ? 'snow' : 'grass';
+  };
   player.events.swing = () => audio.swing();
   player.events.splash = () => { audio.splash(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z); };
   player.events.strike = () => {
@@ -183,6 +194,15 @@ async function boot() {
   let mood = startPreset;
   function setMood(i) { mood = i; atmosphere.setPreset(i); }
 
+  // season picker (reloads at the current spot for now) + the T key
+  document.querySelectorAll('[data-seasons] button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.season === SEASON);
+    b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
+  });
+  const place = document.getElementById('placeline');
+  if (place) place.textContent = `Ashland State Park, Massachusetts — ${SEASON_DEF.place}`;
+  addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
+
   initFullscreen({ mobile: MOBILE });
   ui.els.loading.classList.add('hidden');
   if (AUTO) {
@@ -237,7 +257,7 @@ async function boot() {
     fx.update(dt);
 
     const s = sdfAt(player.pos.x, player.pos.z);
-    audio.update(dt, { wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
+    audio.update(dt, { mood, hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : '');
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
@@ -246,7 +266,7 @@ async function boot() {
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

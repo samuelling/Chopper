@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GeoBuilder, jitterGeometry, matrix, branchMatrix } from './builder.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
 
-import { IS_WINTER } from './season.js';
+import { IS_WINTER, IS_AUTUMN, SEASON_DEF } from './season.js';
 import { mulberry32, hash2, fbm, smoothstep, pickWeighted, lerp, clamp } from './noise.js';
 
 
@@ -335,8 +335,8 @@ export function buildTreeModels() {
  * wet: 0..1 how close to the water, rng: () => [0,1)
  */
 export function treeColor(sp, x, z, wet, rng) {
-  let pal = SPECIES[sp].palette;
-  if (sp === 'maple') {
+  let pal = SEASON_DEF.palette?.[sp] ?? SPECIES[sp].palette;
+  if (sp === 'maple' && IS_AUTUMN) {
     // red maples (wet) run scarlet/crimson; sugar maples (dry) run orange/gold
     pal = [
       ['#d4341c', 1.2 + 3.2 * wet], ['#a42a2c', 0.4 + 2.0 * wet], ['#e8721c', 3.2 - 1.8 * wet],

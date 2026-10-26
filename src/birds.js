@@ -347,7 +347,7 @@ export class Birds {
         flap: flapPh, amp: 0.65, fold: 0, neckP: -0.05, neckY: 0, tailP: 0, legP: 1.3, spread: 0.15, scale: 1.6,
       });
     }
-    if (g.t > g.dur) { g.mode = 'none'; g.wait = 150 + this.rng() * 200; }
+    if (g.t > g.dur) { g.mode = 'none'; g.wait = (150 + this.rng() * 200) * WILDLIFE.geeseRate; }
   }
 
   // ---- geese afloat: a small flock drifting on the water, taking off with a run if you come near ----
@@ -396,7 +396,7 @@ export class Birds {
     }
     if (f.mode === 'run') {
       f.timer += dt; f.cx = f.birds[0].x; f.cz = f.birds[0].z;
-      if (f.timer > 12 || Math.hypot(f.cx - px, f.cz - pz) > 85) { f.active = false; f.wait = 180 + this.rng() * 240; }
+      if (f.timer > 12 || Math.hypot(f.cx - px, f.cz - pz) > 85) { f.active = false; f.wait = (180 + this.rng() * 240) * 1.0; }
     }
   }
 

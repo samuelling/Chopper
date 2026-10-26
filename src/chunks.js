@@ -7,16 +7,16 @@ import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
-import { IS_WINTER } from './season.js';
+import { IS_WINTER, SEASON_DEF } from './season.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
 import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
 
 export const CHUNK = 64;
 const UP = new THREE.Vector3(0, 1, 0);
 
-const FERN_COLORS = ['#c9892f', '#b4601f', '#8d9a3a', '#d6a73a', '#a8561e'].map((c) => new THREE.Color(c));
-const SHRUB_COLORS = ['#b3252a', '#e0701f', '#e8b92c', '#6a8a35', '#8a2535'].map((c) => new THREE.Color(c));
-const REED_COLORS = ['#c9b36a', '#a98a4a', '#d8c887'].map((c) => new THREE.Color(c));
+const FERN_COLORS = SEASON_DEF.fern.map((c) => new THREE.Color(c));
+const SHRUB_COLORS = SEASON_DEF.shrub.map((c) => new THREE.Color(c));
+const REED_COLORS = SEASON_DEF.reeds.map((c) => new THREE.Color(c));
 const STONE_COLORS = ['#8a8479', '#776f66', '#9a9284', '#6d6a5c'].map((c) => new THREE.Color(c));
 
 function onDam(x, z) { return x > -DAM_HALF - 55 && x < DAM_HALF + 55 && z > DAM_Z - 50 && z < DAM_Z + 11; }

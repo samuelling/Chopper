@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLSL_NOISE, fbm, mulberry32, smoothstep, lerp, clamp } from './noise.js';
 import { shared } from './toon.js';
-import { IS_WINTER } from './season.js';
+import { SEASON, SEASON_DEF } from './season.js';
 
 // ---------------------------------------------------------------------------
 // Time-of-day presets (press 1 / 2 / 3). Everything lerps between them.
@@ -64,7 +64,65 @@ const WINTER_PRESETS = [
     shafts: 0.7, grade: 1.0,
   },
 ];
-export const PRESETS = IS_WINTER ? WINTER_PRESETS : AUTUMN_PRESETS;
+const SPRING_PRESETS = [
+  {
+    name: 'Fresh morning',
+    skyTop: '#5d95c4', skyMid: '#b4d4de', horizon: '#fbe6c4',
+    fog: '#e6e8d6', fogDensity: 0.0058,
+    sunColor: '#ffe9bf', sunInt: 3.0, sunElev: 20,
+    hemiSky: '#bad6ea', hemiGround: '#a8b46a', hemiInt: 1.65,
+    cloudLit: '#ffffff', cloudShade: '#c8d2dc', cloudAmt: 0.6,
+    shafts: 1.1, grade: 1.0,
+  },
+  {
+    name: 'Soft mist',
+    skyTop: '#93b2c6', skyMid: '#cbdadc', horizon: '#f0ecd8',
+    fog: '#e1e6dc', fogDensity: 0.0100,
+    sunColor: '#fff2d6', sunInt: 2.1, sunElev: 14,
+    hemiSky: '#cddbe6', hemiGround: '#9aa86a', hemiInt: 1.85,
+    cloudLit: '#ffffff', cloudShade: '#bcc8d0', cloudAmt: 0.85,
+    shafts: 1.4, grade: 1.0,
+  },
+  {
+    name: 'Spring dusk',
+    skyTop: '#3a4d86', skyMid: '#a68cb4', horizon: '#ffc09c',
+    fog: '#d8b4b0', fogDensity: 0.0046,
+    sunColor: '#ffb084', sunInt: 2.4, sunElev: 5,
+    hemiSky: '#9aa0d4', hemiGround: '#8c9a62', hemiInt: 1.3,
+    cloudLit: '#ffc8a2', cloudShade: '#7a6a9a', cloudAmt: 0.6,
+    shafts: 0.8, grade: 1.0,
+  },
+];
+const SUMMER_PRESETS = [
+  {
+    name: 'High summer',
+    skyTop: '#2f6fb8', skyMid: '#7db2d8', horizon: '#f3dfb0',
+    fog: '#d6e0d0', fogDensity: 0.0034,
+    sunColor: '#fff0cc', sunInt: 3.8, sunElev: 38,
+    hemiSky: '#a2c8ee', hemiGround: '#7a9a4c', hemiInt: 1.55,
+    cloudLit: '#ffffff', cloudShade: '#bccadc', cloudAmt: 0.5,
+    shafts: 1.2, grade: 1.0,
+  },
+  {
+    name: 'Hazy afternoon',
+    skyTop: '#5a8cc0', skyMid: '#b0cde0', horizon: '#f6e6c2',
+    fog: '#e6e4cc', fogDensity: 0.0075,
+    sunColor: '#ffe2a6', sunInt: 3.0, sunElev: 26,
+    hemiSky: '#b8d2ea', hemiGround: '#9aa45a', hemiInt: 1.7,
+    cloudLit: '#fff6e2', cloudShade: '#c6ccd2', cloudAmt: 0.7,
+    shafts: 1.5, grade: 1.0,
+  },
+  {
+    name: 'Firefly dusk',
+    skyTop: '#26386e', skyMid: '#8a6e9e', horizon: '#ff9e6a',
+    fog: '#c88e8c', fogDensity: 0.0044,
+    sunColor: '#ff8f55', sunInt: 2.5, sunElev: 4,
+    hemiSky: '#7a82c0', hemiGround: '#6e7a4e', hemiInt: 1.25,
+    cloudLit: '#ffae7c', cloudShade: '#5e4a82', cloudAmt: 0.55,
+    shafts: 0.9, grade: 1.0,
+  },
+];
+export const PRESETS = { spring: SPRING_PRESETS, summer: SUMMER_PRESETS, autumn: AUTUMN_PRESETS, winter: WINTER_PRESETS }[SEASON];
 
 function colorOf(h) { return new THREE.Color(h); }
 
@@ -138,7 +196,7 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
-const RIDGE_COLORS = (IS_WINTER ? ['#7d8aa0', '#8e99ad', '#a3acbc', '#5d6f78', '#3f5a52'] : ['#a9402a', '#c8782a', '#b79030', '#7d7a30', '#4d6a3a']).map(colorOf);
+const RIDGE_COLORS = SEASON_DEF.ridge.map(colorOf);
 
 function buildRidge(radius, seed, baseH, amp, rough) {
   const seg = 360;
