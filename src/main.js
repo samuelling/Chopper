@@ -320,7 +320,9 @@ async function boot() {
       });
     }, hold);
   };
-  newgame.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Start over from the first autumn? The park, your choices and your footprint reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } });
+  const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
+  newgame.addEventListener('click', restart);
+  document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.fresh; b.addEventListener('click', restart); });
   ui.els.title.addEventListener('click', () => { if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
