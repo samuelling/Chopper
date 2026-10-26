@@ -24,7 +24,7 @@ export const PRESSURE = {
   set(v) { this.target = clamp01(v); try { localStorage.setItem('ashland.pressure', String(this.target)); } catch {} },
   bump(x) { if (!this.live) return; this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
   update(dt) {
-    if (!this.live) return;
+    if (!this.live || RUN.s.end) return;
     this.damage = clamp01(this.damage + (this.target * UP * (1 - this.shield) - (1 - this.target) * DOWN * (1 + (RUN.s.recover || 0))) * dt);
     if ((this._save += dt) > 3) { this._save = 0; try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} }
   },

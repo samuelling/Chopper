@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
 import { initUsageUI } from './usageui.js';
+import { creditsHTML, rollCredits } from './ending.js';
 import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
 import { RUN } from './run.js';
@@ -199,7 +200,7 @@ async function boot() {
     if (landmarks.nearGate(player.pos)) {
       lake.gateOpen = !lake.gateOpen;
       audio.toggle();
-      ui.toast(lake.gateOpen ? 'The drawdown gate groans open.' : 'You crank the gate shut.');
+      ui.toast(lake.gateOpen ? (RUN.dev ? 'The drawdown gate groans open.' : 'The drawdown gate groans open. If the reservoir runs dry, the park does not come back.') : 'You crank the gate shut.', lake.gateOpen && !RUN.dev ? 5 : undefined);
     }
   };
   player.onLockChange = (locked) => {
@@ -296,8 +297,9 @@ async function boot() {
   // the first season of each year opens with "Year One", which dissolves into the season's name
   const WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
   const yearTitle = () => { if (RUN.dev || RUN.n % 4 !== 0) return null; const y = RUN.n / 4; return `Year ${WORDS[y] ?? y + 1}`; };
+  const ageLine = () => (RUN.dev || RUN.n % 4 !== 0 || RUN.ageNow == null) ? '' : `age ${RUN.ageNow}${RUN.lastYear ? ' \u00b7 the last year' : ''}`;
   const showCard = () => {
-    document.getElementById('scname').textContent = yearTitle() || SEASON_DEF.label;
+    document.getElementById('scname').textContent = yearTitle() || SEASON_DEF.label; document.getElementById('scage').textContent = ageLine();
     newgame.hidden = RUN.n === 0 && RUN.fresh;
     ui.els.title.classList.add('hidden'); card.classList.remove('hidden');
   };
@@ -308,8 +310,9 @@ async function boot() {
     autoCard = true; newgame.hidden = true;
     const nm = document.getElementById('scname'), yt = yearTitle(), hold = yt ? 1800 + 800 + 1300 : 1300;
     if (yt) {                               // Year One ... dissolve ... Autumn
-      setTimeout(() => nm.classList.add('dim'), 1800);
-      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); }, 2600);
+      const ag = document.getElementById('scage'); ag.textContent = ageLine(); ag.classList.remove('dim');
+      setTimeout(() => { nm.classList.add('dim'); ag.classList.add('dim'); }, 1800);
+      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); ag.textContent = ''; }, 2600);
     }
     setTimeout(() => {
       card.classList.add('hidden');
@@ -333,7 +336,16 @@ async function boot() {
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.fresh; b.addEventListener('click', restart); });
-  ui.els.title.addEventListener('click', () => { try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
+  // the life clock: ask for a birth year once (optional); it only sets how many game years you get
+  const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
+  if (!RUN.dev && RUN.s.born == null) birthEl.hidden = false;
+  ['click', 'keydown', 'keyup'].forEach((ev) => birthEl.addEventListener(ev, (e) => e.stopPropagation()));
+  const ensureBorn = () => {
+    if (RUN.dev || RUN.s.born != null) return;
+    const y = parseInt(birthIn.value), now = new Date().getFullYear();
+    if (y >= 1900 && y <= now) RUN.setBorn(y, false); else RUN.setBorn(now - 40, true);
+  };
+  ui.els.title.addEventListener('click', () => { ensureBorn(); try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); });
   ui.els.paused.addEventListener('click', begin);
   addEventListener('keydown', (e) => {
     if (e.code === 'Digit1') setMood(0);
@@ -397,7 +409,7 @@ async function boot() {
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
   } else {
-    if (!RUN.dev && !RUN.fresh && inPlay()) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
+    if (params.get('end')) { setTimeout(() => beginEnding(params.get('end')), 800); } else if (!RUN.dev && RUN.s.end) { setTimeout(() => beginEnding(RUN.s.end), 800); } else if (!RUN.dev && !RUN.fresh && inPlay()) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
     if (!params.has('noflyover')) flyover.start();
   }
   if (!RUN.dev) {
@@ -420,6 +432,40 @@ async function boot() {
     requestAnimationFrame(frame);
   }
 
+  // ---- the endings
+  let ending = false;
+  const endStats = () => ({
+    years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
+    felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
+    species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
+    harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours,
+  });
+  function beginEnding(kind) {
+    if (ending) return; ending = true;
+    if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
+    started = false; interludeOn = true; document.exitPointerLock?.();
+    ui.els.paused.classList.add('hidden'); ui.els.hud.classList.remove('on'); document.getElementById('interlude')?.classList.add('hidden');
+    player.setCarry?.('none'); player.carryHidden = true; player.refreshCarry();
+    if (kind === 'drained') { PRESSURE.damage = 1; RUN.s.buffer = 0; lake.level = lake.floor + 0.02; lake.drained = true; }
+    flyover.start(); flyover.speed = kind === 'drained' ? 10 : 8;
+    const stats = endStats();
+    rollCredits(document.getElementById('credits'), creditsHTML(kind, stats), {
+      onRestart: () => { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => p.delete(k)); location.search = p.toString(); },
+      onStay: () => {},
+    });
+  }
+  window.__end = beginEnding;
+  let maxT = 0, warned = false;
+  function checkEndings(dt) {
+    if (ending || RUN.dev || !started) return;
+    // the reservoir gives out: harm held at its limit for a minute, and it empties for good
+    if (PRESSURE.damage >= 0.995) maxT += dt; else maxT = 0;
+    if (!warned && PRESSURE.damage >= 0.9) { warned = true; ui.toast('The reservoir is failing. Turn your use down now, or it will not come back.', 6); }
+    if (PRESSURE.damage < 0.8) warned = false;
+    if (!RUN.s.collapse && maxT > 60) { RUN.s.collapse = true; RUN.save(); ui.toast('The reservoir gives out.', 6); }
+    if (RUN.s.collapse) lake.level = Math.max(lake.floor + 0.02, lake.level - 0.1 * dt);
+    if (lake.level <= lake.floor + 0.05 && (lake.drained || RUN.s.collapse)) { lake._endT = (lake._endT || 0) + dt; if (lake._endT > 5) beginEnding('drained'); } else lake._endT = 0;
+  }
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { player, chunks, lake, structures, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
@@ -487,11 +533,11 @@ async function boot() {
       if (lake.level < tgt) lake.level = Math.min(tgt, lake.level + 0.004 * dt);
       else if (lake.level > tgt + 0.01) lake.level = Math.max(tgt, lake.level - 0.03 * dt);
     }
-    PRESSURE.update(dt);
+    PRESSURE.update(dt); checkEndings(dt);
     if (!RUN.dev && started && player.locked && !interludeOn) {
       RUN.s.played += dt;
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
-      if (RUN.s.played >= RUN.len) (RUN.quiet ? quietTurn() : beginInterlude());
+      if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
     minimap.update(dt); phone.update(); discoveries.update(player.pos);
     if ((pinT += dt) > 1) { pinT = 0; minimap.pins = [...PLACES.list.map((p) => ({ x: p.x, z: p.z, name: p.name })), ...discoveries.foundList().map((f) => ({ x: f.x, z: f.z, found: true }))]; }
