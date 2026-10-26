@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { GeoBuilder, jitterGeometry, matrix } from './builder.js';
 import { mulberry32, hash2, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { lakeSdf, DAM_Z } from './ashland.js';
-import { TRAIL } from './world.js';
+import { TRAIL, sdfAt } from './world.js';
+import { WORLD } from './ashland.js';
 
 const tc = new THREE.Color();
 
@@ -248,6 +249,56 @@ export function buildPropModels() {
     reeds: { geo: buildReeds(0), geoFar: buildReeds(1) },
     stones: [buildStone(0), buildStone(1), buildStone(2)],
   };
+}
+
+// ---------------------------------------------------------------------------
+// The park's edge: a contour of the playable-area field, traced with marching squares and chained into polylines.
+// A tall dry-stone wall is stacked along it (chunks.js reads `perimeter`), so the edge of the park is a thing you meet, not an invisible barrier.
+// ---------------------------------------------------------------------------
+export const WALL_SDF = 166;   // just inside the player's hard limit (PLAY_SDF = 175 in player.js)
+export function buildPerimeterWalls(level = WALL_SDF, cell = 4) {
+  const x0 = WORLD.minX + 14, z0 = WORLD.minZ + 14;
+  const nx = Math.floor((WORLD.maxX - 14 - x0) / cell), nz = Math.floor((WORLD.maxZ - 14 - z0) / cell);
+  const f = new Float32Array((nx + 1) * (nz + 1));
+  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) f[j * (nx + 1) + i] = sdfAt(x0 + i * cell, z0 + j * cell) - level;
+  const F = (i, j) => f[j * (nx + 1) + i];
+  // an edge crossing is keyed by ('h'|'v', i, j) and located by linear interpolation
+  const pt = new Map(), adj = new Map();
+  const cross = (k, ax, ay, bx, by) => {   // corner a -> corner b in grid coords
+    if (!pt.has(k)) { const fa = F(ax, ay), fb = F(bx, by), t = fa / (fa - fb); pt.set(k, { x: x0 + (ax + (bx - ax) * t) * cell, z: z0 + (ay + (by - ay) * t) * cell }); }
+    return k;
+  };
+  const link = (a, b) => { if (!adj.has(a)) adj.set(a, []); if (!adj.has(b)) adj.set(b, []); adj.get(a).push(b); adj.get(b).push(a); };
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const v = [F(i, j), F(i + 1, j), F(i + 1, j + 1), F(i, j + 1)];
+    const inside = v.map((q) => q < 0);
+    const es = [];   // crossings around the cell: top, right, bottom, left
+    if (inside[0] !== inside[1]) es.push(cross(`h${i},${j}`, i, j, i + 1, j));
+    if (inside[1] !== inside[2]) es.push(cross(`v${i + 1},${j}`, i + 1, j, i + 1, j + 1));
+    if (inside[3] !== inside[2]) es.push(cross(`h${i},${j + 1}`, i, j + 1, i + 1, j + 1));
+    if (inside[0] !== inside[3]) es.push(cross(`v${i},${j}`, i, j, i, j + 1));
+    if (es.length === 2) link(es[0], es[1]);
+    else if (es.length === 4) { link(es[0], es[1]); link(es[2], es[3]); }
+  }
+  const seen = new Set(), out = [];
+  const walk = (start) => {
+    const keys = [start]; seen.add(start);
+    for (const dir of [0, 1]) {
+      let prev = start, cur = adj.get(start)[dir], first = true;
+      const side = [];
+      while (cur && !seen.has(cur)) { seen.add(cur); side.push(cur); const nb = adj.get(cur).find((n) => n !== prev && !seen.has(n)); prev = cur; cur = nb; }
+      if (dir === 0) keys.push(...side); else keys.unshift(...side.reverse());
+    }
+    return keys;
+  };
+  for (const k of adj.keys()) {
+    if (seen.has(k)) continue;
+    // start from an end if the chain is open
+    const keys = walk(k);
+    const p = keys.map((q) => pt.get(q));
+    if (p.length > 12) { if (adj.get(keys[0]).includes(keys[keys.length - 1])) p.push(p[0]); p.perimeter = true; out.push(p); }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

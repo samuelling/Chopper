@@ -564,15 +564,18 @@ export class ChunkManager {
           const si = gIdx++;
           const px = a.x + (dx / len) * k * spacing, pz = a.z + (dz / len) * k * spacing;
           if (!inChunk(px, pz)) continue;
-          if (trailDistAt(px, pz) < 2.4 || sdfAt(px, pz) < 18 || onDam(px, pz) || gravelAt(px, pz) < 3) continue;
+          const per = w.perimeter;
+          if (!per && (trailDistAt(px, pz) < 2.4 || sdfAt(px, pz) < 18 || onDam(px, pz) || gravelAt(px, pz) < 3)) continue;
           const rng = mulberry32(wi * 100003 + si * 31 + 7);
           const base = groundY(px, pz);
-          const layers = [0.2, 0.55, 0.88];
-          for (let l = 0; l < 3; l++) {
-            if (l === 2 && rng() < 0.4) continue;
+          // the park's edge wall is stacked chest-high (too tall to hop); the old pasture walls stay knee-high
+          const layers = per ? [0.2, 0.55, 0.88, 1.2, 1.5] : [0.2, 0.55, 0.88];
+          for (let l = 0; l < layers.length; l++) {
+            if (l === 2 && !per && rng() < 0.4) continue;
+            if (per && l >= 4 && rng() < 0.35) continue;
             const off = (rng() - 0.5) * 0.3;
             const x = px - Math.sin(ang) * off, z = pz + Math.cos(ang) * off;
-            const sc = (l === 2 ? 0.7 : 0.95) * (0.85 + rng() * 0.45);
+            const sc = (l >= 2 ? 0.7 : 0.95) * (0.85 + rng() * 0.45);
             const m = new THREE.Matrix4().compose(
               new THREE.Vector3(x, base + layers[l] - 0.12, z),
               new THREE.Quaternion().setFromEuler(new THREE.Euler((rng() - 0.5) * 0.2, ang + (rng() - 0.5) * 0.7, (rng() - 0.5) * 0.2, 'YXZ')),
@@ -581,7 +584,7 @@ export class ChunkManager {
             push(`stone:${Math.floor(rng() * 3)}`, m, col);
           }
           if (si % 2 === 0) {
-            const c = this.colliders.add(px, pz, 0.62, { h: 0.95, tag: 'wall' });
+            const c = this.colliders.add(px, pz, per ? 0.8 : 0.62, { h: per ? 3 : 0.95, tag: 'wall' });
             ch.colliders.push(c);
           }
         }

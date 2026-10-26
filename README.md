@@ -40,6 +40,8 @@ The lakebed follows the **real MassWildlife depth survey** of Ashland Reservoir 
 
 Pond life (sunfish, bass and painted turtles) is invented, cel-shaded like everything else, and only appears while the lake is full. The gray squirrels (they dart between pauses and scamper up the nearest tree if you get close) and the beaver-gnawed stumps along the shore are invented too: the stumps are scattered procedurally near the water, with no survey of real beaver activity behind them.
 
+The edge of the playable park is a continuous chest-high dry-stone wall (a traced contour of the park-boundary field, stacked five courses high, too tall to jump), so the limit of the park is something you walk up to rather than an invisible barrier. The wall is an invented marker, not a survey of any real wall.
+
 What is **not** real: the dam face and the area north of the survey, which are approximated, the gatehouse and spillway details, the helicopter wreck's exact position, and everything that sits on the land (individual trees, rocks, benches). Horizontal scale is `SCALE = 0.5` in `src/ashland.js` (set to 1 for true size; the lake is ~1.7 km long), and the map is rotated about 9 degrees so the dam runs along +x.
 
 ## The phone

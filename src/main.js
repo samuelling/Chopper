@@ -22,7 +22,7 @@ import { Water } from './water.js';
 import { Colliders } from './colliders.js';
 import { Layout } from './layout.js';
 import { buildTreeModels } from './trees.js';
-import { buildPropModels, buildWalls } from './propModels.js';
+import { buildPropModels, buildWalls, buildPerimeterWalls } from './propModels.js';
 import { ChunkManager } from './chunks.js';
 import { Landmarks } from './landmarks.js';
 import { Litter } from './litter.js';
@@ -105,7 +105,7 @@ async function boot() {
   const landmarks = new Landmarks(scene, colliders, layout);
   const treeModels = buildTreeModels();
   const propModels = buildPropModels();
-  const walls = buildWalls();
+  const walls = [...buildWalls(), ...buildPerimeterWalls()];
   const chunks = new ChunkManager({ scene, colliders, layout, treeModels, propModels, walls, spawnClear: { x: SPAWN.x, z: SPAWN.z, r: 5 } });
   const structures = new Structures(scene, colliders);
   // a playthrough carries its felled trees and lake level across seasons (each season is a page reload)
