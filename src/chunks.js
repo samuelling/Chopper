@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
 import { treeColor, SPECIES, buildStump } from './trees.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
+import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
@@ -235,10 +236,19 @@ export class ChunkManager {
         const wet = smoothstep(150, 8, sdf);
         const high = smoothstep(LEVEL + 7, LEVEL + 24, y);
         const pineN = fbm(x * 0.016 + 2.0, z * 0.016 + 8.0, 3, 13);
-        const wPine = 0.1 + 3.2 * pf * pf + 0.5 * high + 0.3 * smoothstep(0.5, 0.72, pineN);
-        const wBirch = (0.14 + 1.4 * smoothstep(60, 6, sdf)) * (1 - 0.6 * pf);
-        const wMaple = (1.5 + 1.0 * wet) * (1 - 0.7 * pf);
-        const wOak = (0.5 + 0.9 * high + 0.4 * smoothstep(0.35, 0.55, pineN)) * (1 - 0.6 * pf);
+        let wPine = 0.1 + 3.2 * pf * pf + 0.5 * high + 0.3 * smoothstep(0.5, 0.72, pineN);
+        let wBirch = (0.14 + 1.4 * smoothstep(60, 6, sdf)) * (1 - 0.6 * pf);
+        let wMaple = (1.5 + 1.0 * wet) * (1 - 0.7 * pf);
+        let wOak = (0.5 + 0.9 * high + 0.4 * smoothstep(0.35, 0.55, pineN)) * (1 - 0.6 * pf);
+        // real stand type (LANDFIRE) steers the mix; the generic mix above keeps a little variety
+        const sw = SPECIES_W[standAt(x, z)];
+        if (sw) {
+          const tw = wMaple + wOak + wPine + wBirch, ss = sw[0] + sw[1] + sw[2] + sw[3];
+          wMaple = 0.3 * wMaple + 0.7 * tw * sw[0] / ss;
+          wOak = 0.3 * wOak + 0.7 * tw * sw[1] / ss;
+          wPine = 0.3 * wPine + 0.7 * tw * sw[2] / ss;
+          wBirch = 0.3 * wBirch + 0.7 * tw * sw[3] / ss;
+        }
         const tot = wPine + wBirch + wMaple + wOak;
         let r = rng() * tot, sp;
         if ((r -= wMaple) < 0) sp = 'maple';
