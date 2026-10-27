@@ -1,6 +1,8 @@
 // The two ways the game ends: your years run out (someone else walks it next), or the reservoir empties and stays empty.
 // Both roll credits over the drone flight.  Figures are invented where they say so; the rest are counts of what you actually did.
 import { RUN } from './run.js';
+import { MEGAZINE_HTML, mountMegazine } from './megazine.js';
+let stopMz = null;
 
 const SPEED = parseFloat(new URLSearchParams(location.search).get('cspeed')) || 1;
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -35,26 +37,30 @@ export function creditsHTML(kind, st) {
     '<p>The coves, points, hills and swamps by name, the beaver lodge, the osprey nest, the sunken skiff and the old road under the water, the leads and who gives them, the park\u2019s page and what it pays.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
-    '<h2>Part of MEGAzine</h2>', '<p>Between money and doom</p>', '<p><a href="https://megazine.org" target="_blank" rel="noopener" style="color:inherit;pointer-events:auto">megazine.org</a></p>', '<div class="gap"></div>',
+    '<h2>Part of</h2>', MEGAZINE_HTML,
   ];
   return parts.join('');
 }
 
 /** scrolls the credits, then shows the end buttons.  Returns a stop function. */
 export function rollCredits(root, html, { onRestart, onStay, onMenu }) {
+  stopMz?.();
   root.classList.remove('hidden');
   root.innerHTML = `<div class="crscroll">${html}</div><button class="crskip" data-cr-menu>Skip to the start menu</button><div class="crend" hidden><button data-cr-stay>Stay and watch</button><button data-cr-restart>Begin again</button></div>`;
   const sc = root.querySelector('.crscroll'), end = root.querySelector('.crend');
+  stopMz = mountMegazine(root);
   let y = innerHeight, raf = 0, last = performance.now(), done = false;
   const tick = (now) => {
     const dt = Math.min(0.25, (now - last) / 1000); last = now;
     y -= 34 * SPEED * dt; sc.style.transform = `translateY(${y}px)`;
-    if (!done && y < -(sc.scrollHeight - innerHeight * 0.45)) { done = true; end.hidden = false; }
-    if (!done) raf = requestAnimationFrame(tick);
+    // stop with the megaZINE masthead held a little above centre, so the QR can be scanned
+    const mz = sc.querySelector('.mz'), stopAt = mz ? -(mz.offsetTop + mz.offsetHeight / 2 - innerHeight * 0.42) : -(sc.scrollHeight - innerHeight * 0.45);
+    if (y <= stopAt) { y = stopAt; sc.style.transform = `translateY(${y}px)`; if (!done) { done = true; end.hidden = false; } }
+    raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
-  root.querySelector('[data-cr-restart]').addEventListener('click', () => { if (confirm('Begin again from Year One? Everything resets.')) onRestart(); });
-  root.querySelector('[data-cr-stay]').addEventListener('click', () => { root.classList.add('hidden'); onStay?.(); });
-  root.querySelector('[data-cr-menu]').addEventListener('click', (e) => { e.stopPropagation(); cancelAnimationFrame(raf); root.classList.add('hidden'); onMenu?.(); });
-  return () => cancelAnimationFrame(raf);
+  root.querySelector('[data-cr-restart]').addEventListener('click', () => { if (confirm('Begin again from Year One? Everything resets.')) { stopMz?.(); onRestart(); } });
+  root.querySelector('[data-cr-stay]').addEventListener('click', () => { cancelAnimationFrame(raf); stopMz?.(); root.classList.add('hidden'); onStay?.(); });
+  root.querySelector('[data-cr-menu]').addEventListener('click', (e) => { e.stopPropagation(); cancelAnimationFrame(raf); stopMz?.(); root.classList.add('hidden'); onMenu?.(); });
+  return () => { cancelAnimationFrame(raf); stopMz?.(); };
 }
