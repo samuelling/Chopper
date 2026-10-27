@@ -155,11 +155,11 @@
   #phone .pscroll canvas { width:min(100%,320px) !important; height:auto !important; }
   /* a phone held sideways (the game is played in landscape on iOS): the in-game phone turns into a wide one that fits the screen, so nothing needs scrolling around */
   @media (orientation:landscape) and (max-height:540px) {
-    .phone { height:94vh; height:94dvh; width:min(96vw,820px); max-width:none; aspect-ratio:auto; min-height:0; max-height:none; border-width:5px; border-radius:24px; }
-    .phone::before { display:none; } .phone .pbar { padding:8px 18px 6px; } .pscroll { padding:10px 14px 12px; }
-    .phone.onhome .pscroll { padding-top:12px; } .appgrid { grid-template-columns:repeat(6,1fr); gap:10px 2px; } .app .ico { width:50px !important; height:50px !important; }
-    .dock { bottom:8px; left:30%; right:30%; padding:8px 6px; } .pdots { margin-top:8px; } .phomebar { height:16px; }
-    #phone .pscroll canvas { width:min(100%,300px) !important; }
+    body.mobile .phone { height:94vh; height:94dvh; width:min(96vw,820px); max-width:none; aspect-ratio:auto; min-height:0; max-height:none; border-width:5px; border-radius:24px; }
+    body.mobile .phone::before { display:none; } body.mobile .phone .pbar { padding:8px 18px 6px; } body.mobile .pscroll { padding:10px 14px 12px; }
+    body.mobile .phone.onhome .pscroll { padding-top:12px; } body.mobile .appgrid { grid-template-columns:repeat(6,1fr); gap:10px 2px; } body.mobile .app .ico { width:50px !important; height:50px !important; }
+    body.mobile .dock { bottom:8px; left:30%; right:30%; padding:8px 6px; } body.mobile .pdots { margin-top:8px; } body.mobile .phomebar { height:16px; }
+    body.mobile #phone .pscroll canvas { width:min(100%,300px) !important; }
   }
 
   .bubble { background:#2d2a36; border-radius:16px 16px 16px 4px; padding:11px 14px; font-size:14px; line-height:1.5; margin-bottom:12px; }
