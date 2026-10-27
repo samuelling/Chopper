@@ -291,6 +291,7 @@ async function boot() {
   audio.onHeard = (v) => GUIDE.addHeard(v);
   GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
+    tut.shot = true;
     const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
@@ -312,7 +313,17 @@ async function boot() {
   const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
   const tut = {
     i: -1, t: 0, done: (() => { try { return localStorage.getItem('ashland.tut') === '1'; } catch { return false; } })(),
-    steps: [
+    steps: MOBILE ? [
+      { text: 'Touch to begin', ok: () => player.locked, max: 1e9, always: true },
+      { text: 'Left thumb: <b>walk</b> (push to the edge to hurry) &nbsp; drag the right side of the screen to <b>look</b>', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
+      { text: 'The <b>Hop</b> button jumps. In deep water, hold it to dive', ok: () => tut.hopped || player.vy > 1, max: 25 },
+      { text: 'The <b>Phone</b> button (top right) opens your phone: map, journal, field guide, and <b>Tools</b>', ok: () => tut.phoned, max: 35 },
+      { text: 'In the phone, open <b>Camera</b>. Tap <b>Shoot</b> to photograph birds, animals and trees; <b>Put away</b> closes it', ok: () => tut.shot, max: 30 },
+      { text: 'Phone \u2192 <b>Tools</b> \u2192 <b>Sit and wait</b>: stay still, and the woods come closer', ok: () => player.sitting, max: 25 },
+      { text: 'Phone \u2192 <b>Tools</b> \u2192 <b>Fishing rod</b>. The big button casts, then tap again when the bobber dips; hold it to reel, and push the joystick sideways to counter a run', ok: () => tut.fished, max: 30 },
+      { text: 'At the boat ramp, <b>Use</b> gets you into the rowboat. The joystick rows and turns; <b>Use</b> again at the shore climbs out', ok: () => false, max: 14 },
+      { text: '<b>Tools</b> also picks up litter, plants a seed and turns the corner map on. At the dam gatehouse, <b>Use</b> works the gate', ok: () => false, max: 14 },
+    ] : [
       { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
       { text: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
@@ -459,7 +470,7 @@ async function boot() {
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } },
-    onOpen: () => { phoneOn = true; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    onOpen: () => { phoneOn = true; tut.phoned = true; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   const togglePhone = () => {
     if (phone.isOpen) phone.close();
