@@ -1,4 +1,5 @@
-// Optional HUD minimap.  M (or the Map button) cycles off -> local -> whole park.  North is up (the dam is at the bottom).
+// Optional HUD minimap.  M (or the Map button) cycles off -> local -> whole park.  North is up: the dam, at the reservoir's
+// north end, is at the top.  (Game +z is south, so screen y follows +z.)
 // Drawn from the real heightfield and OSM lines the game already uses, so it is exactly as accurate as the game world.
 import { groundY, sdfAt } from './world.js';
 import { WORLD, TRAIL_LINES, ROAD_LINES, GATE } from './ashland.js';
@@ -25,7 +26,11 @@ export class Minimap {
     // fog of war: the park is dark paper until you have walked there (remembered between visits)
     this.fog = document.createElement('canvas'); this.fog.width = this.bw; this.fog.height = this.bh; this.pins = [];
     { const f = this.fog.getContext('2d'); f.fillStyle = 'rgba(20,24,27,.95)'; f.fillRect(0, 0, this.bw, this.bh);
-      try { const u = localStorage.getItem('ashland.fog'); if (u) { const im = new Image(); im.onload = () => { if (im.width === this.bw && im.height === this.bh) { f.globalCompositeOperation = 'copy'; f.drawImage(im, 0, 0); f.globalCompositeOperation = 'source-over'; } }; im.src = u; } } catch {} }
+      try { const u = localStorage.getItem('ashland.fog'); if (u) { const im = new Image(); im.onload = () => { if (im.width === this.bw && im.height === this.bh) { f.globalCompositeOperation = 'copy';
+        // fog saved before the map was turned the right way up (north at the bottom) is flipped once to match
+        let old = true; try { old = localStorage.getItem('ashland.fogv') !== '2'; } catch {}
+        if (old) { f.save(); f.translate(0, this.bh); f.scale(1, -1); f.drawImage(im, 0, 0); f.restore(); this._fogDirty = true; this._fogT = 1e9; } else f.drawImage(im, 0, 0);
+        f.globalCompositeOperation = 'source-over'; } }; im.src = u; } } catch {} }
     this._fogT = 0; this._fogP = null;
     const c = document.createElement('canvas'); c.id = 'minimap'; c.width = c.height = 220;
     c.style.cssText = 'position:absolute;left:18px;bottom:18px;top:auto;right:auto;width:220px;height:220px;border-radius:50%;border:3px solid rgba(244,230,200,.75);box-shadow:0 2px 14px rgba(0,0,0,.45);display:none;background:#222';
@@ -44,11 +49,11 @@ export class Minimap {
   }
   setMarker(x, z, label) { this.marker = x == null ? null : { x, z, label }; }
   cycle() { this.set(MODES[(MODES.indexOf(this.mode) + 1) % 3]); }
-  // world (x,z) -> base pixel; z up on screen
+  // world (x,z) -> base pixel: east to the right, north (-z) up
   px(x) { return (x - WORLD.minX) * this.res; }
-  py(z) { return (WORLD.maxZ - z) * this.res; }
+  py(z) { return (z - WORLD.minZ) * this.res; }
   _buildHeights() {
-    for (let j = 0; j < this.bh; j++) { const z = WORLD.maxZ - (j + 0.5) / this.res; for (let i = 0; i < this.bw; i++) { const x = WORLD.minX + (i + 0.5) / this.res; this.hs[j * this.bw + i] = groundY(x, z); this.inb[j * this.bw + i] = sdfAt(x, z) < 1.5 ? 1 : 0; } }
+    for (let j = 0; j < this.bh; j++) { const z = WORLD.minZ + (j + 0.5) / this.res; for (let i = 0; i < this.bw; i++) { const x = WORLD.minX + (i + 0.5) / this.res; this.hs[j * this.bw + i] = groundY(x, z); this.inb[j * this.bw + i] = sdfAt(x, z) < 1.5 ? 1 : 0; } }
   }
   _paintLand() {
     const { bw, bh, hs } = this, ctx = this.base.getContext('2d'), img = ctx.createImageData(bw, bh), d = img.data;
@@ -56,7 +61,7 @@ export class Minimap {
     for (let j = 0; j < bh; j++) for (let i = 0; i < bw; i++) {
       const k = j * bw + i, h = hs[k];
       const hx = hs[k + (i < bw - 1 ? 1 : 0)] - hs[k - (i > 0 ? 1 : 0)], hz = hs[k + (j < bh - 1 ? bw : 0)] - hs[k - (j > 0 ? bw : 0)];
-      const shade = 0.82 + Math.max(-0.3, Math.min(0.3, (hx * -0.6 + hz * 0.6) * 0.07)) + Math.max(0, Math.min(0.18, (h - 20) * 0.006));
+      const shade = 0.82 + Math.max(-0.3, Math.min(0.3, (hx * -0.6 - hz * 0.6) * 0.07)) + Math.max(0, Math.min(0.18, (h - 20) * 0.006));
       d[k * 4] = Math.min(255, g[0] * shade); d[k * 4 + 1] = Math.min(255, g[1] * shade); d[k * 4 + 2] = Math.min(255, g[2] * shade); d[k * 4 + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
@@ -86,7 +91,7 @@ export class Minimap {
   }
   update(dt = 0.016) {
     this._reveal(this.player.pos.x, this.player.pos.z);
-    this._fogT += dt; if (this._fogT > 20 && this._fogDirty) { this._fogT = 0; this._fogDirty = false; try { localStorage.setItem('ashland.fog', this.fog.toDataURL('image/png')); } catch {} }
+    this._fogT += dt; if (this._fogT > 20 && this._fogDirty) { this._fogT = 0; this._fogDirty = false; try { localStorage.setItem('ashland.fog', this.fog.toDataURL('image/png')); localStorage.setItem('ashland.fogv', '2'); } catch {} }
     if (this.mode === 'off' && !this.hold) return;
     this._lt = (this._lt || 0) + 1; if (this._lt % 30 === 0) this._paintWater(false);
     const c = this.ctx, W = this.cv.width, H = this.cv.height, p = this.player;
@@ -125,8 +130,8 @@ export class Minimap {
       c.beginPath(); c.moveTo(ox, oy - 7); c.lineTo(ox + 5, oy); c.lineTo(ox, oy + 7); c.lineTo(ox - 5, oy); c.closePath(); c.fill(); c.stroke();
       if (this.mode === 'full' && pin.name) { c.font = '600 11px serif'; c.textAlign = 'left'; c.lineWidth = 3; c.strokeStyle = 'rgba(20,16,14,.85)'; c.strokeText(pin.name, ox + 8, oy + 4); c.fillStyle = '#f4e6c8'; c.fillText(pin.name, ox + 8, oy + 4); }
     }
-    // view cone + arrow (forward in world is (-sin yaw, -cos yaw); screen y is flipped)
-    const a = Math.atan2(Math.cos(p.yaw), -Math.sin(p.yaw));
+    // view cone + arrow: forward in the world is (-sin yaw, -cos yaw), and screen y runs with world z
+    const a = Math.atan2(-Math.cos(p.yaw), -Math.sin(p.yaw));
     c.save(); c.translate(mx, my); c.rotate(a);
     c.fillStyle = 'rgba(255,240,200,.28)'; c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, 38, -0.6, 0.6); c.closePath(); c.fill();
     c.fillStyle = '#ffefc2'; c.strokeStyle = '#3a2a22'; c.lineWidth = 2;

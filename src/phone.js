@@ -350,7 +350,7 @@ export class Phone {
   }
   update() {
     if (!this.isOpen) return;
-    const p = this.player, b = ((Math.atan2(-Math.sin(p.yaw), -Math.cos(p.yaw)) * 180 / Math.PI) + 360) % 360;
+    const p = this.player, b = ((Math.atan2(-Math.sin(p.yaw), Math.cos(p.yaw)) * 180 / Math.PI) + 360) % 360;
     const c = this.el.querySelector('[data-compass]'); if (c) c.textContent = `HEADING ${Math.round(b)}° ${dirs[Math.round(b / 45) % 8]}`;
     const dl = this.el.querySelector('[data-dial]'); if (dl) dl.style.transform = `rotate(${-b}deg)`;
     const s = this.el.querySelector('[data-ph-sub]'); if (s) s.textContent = `${Math.round(p.pos.y - 20)} m above the lake`;

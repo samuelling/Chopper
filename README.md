@@ -23,7 +23,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | Esc | pause menu with every control |
 | P | phone (a home screen of app icons: Map, Park, Field Guide, Photos, Park Jobs, Clyde) |
 | V | camera: narrows the view; click to photograph a tree, bird or animal in the frame |
-| M | optional minimap: off, nearby, or whole park (also a Map button on the pause screen; north is up, the dam is at the bottom) |
+| M | optional minimap: off, nearby, or whole park (also a Map button on the pause screen; north is up, the dam at the top) |
 | C | make choices (from Year Two, once the AI phase begins) |
 | F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
 

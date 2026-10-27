@@ -772,7 +772,7 @@ async function boot() {
     c.save(); c.beginPath(); c.roundRect(0, 0, W, H, 38); c.clip();
     const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a2733'); g.addColorStop(1, '#17151c');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
-    const hd = ((Math.atan2(-Math.sin(player.yaw), -Math.cos(player.yaw)) * 180 / Math.PI) + 360) % 360;
+    const hd = ((Math.atan2(-Math.sin(player.yaw), Math.cos(player.yaw)) * 180 / Math.PI) + 360) % 360;
     c.fillStyle = '#f4e6c8'; c.textAlign = 'center';
     c.font = '700 40px Georgia, serif'; c.fillText(`${Math.round(hd)}\u00b0 ${dirsN[Math.round(hd / 45) % 8]}`, W / 2, 74);
     c.font = '20px Georgia, serif'; c.globalAlpha = 0.7; c.fillText(SEASON_DEF.label.toUpperCase(), W / 2, 92); c.globalAlpha = 1;
@@ -828,7 +828,7 @@ async function boot() {
     if (waypoint) {
       const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);
       if (d < 9) { ui.toast(`You have arrived: ${waypoint.label}.`); setWaypoint(null); }
-      else wpEl.textContent = `${waypoint.label}  ${Math.round(d)} m ${['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][Math.round(Math.atan2(-dz * -1, dx) / (Math.PI / 4) + 8) % 8]}`;
+      else wpEl.textContent = `${waypoint.label}  ${Math.round(d)} m ${dirsN[Math.round(((Math.atan2(dx, -dz) * 180 / Math.PI) + 360) % 360 / 45) % 8]}`;
     }
     shared.harm.value = PRESSURE.harm;
     if (Math.abs(PRESSURE.harm - (PRESSURE._applied ?? -1)) > 0.004 || (PRESSURE._tick = (PRESSURE._tick || 0) + dt) > 1.5) {
