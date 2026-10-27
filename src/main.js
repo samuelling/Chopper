@@ -15,6 +15,7 @@ import { showInterlude } from './interlude.js';
 import { FUND } from './fund.js';
 import { CATCHES } from './catches.js';
 import { Underwater } from './underwater.js';
+import { Score } from './score.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -271,6 +272,17 @@ async function boot() {
   player.events.cast = () => { tut.fished = true; if (started && !interludeOn && !player.cameraMode && !phone.isOpen) fishing.click(); };
   let lastCatch = null;
   const underwater = new Underwater(renderer);
+  // the score: now and then a few bars of fingerpicked guitar; a loose G C D Em on the title screen; major or minor under the credits
+  const score = new Score(audio);
+  const titleMusic = () => {
+    removeEventListener('pointerdown', titleMusic, true); removeEventListener('keydown', titleMusic, true); removeEventListener('touchstart', titleMusic, true);
+    if (started || RUN.dev) return;
+    audio.init(); setTimeout(() => { if (!started && !ending) score.loop(['G', 'C', 'D', 'Em'], { bpm: 74, loose: true }); }, 60);
+  };
+  document.querySelectorAll('[data-music]').forEach((b) => {
+    const show = () => { b.textContent = `Score: ${score.on ? 'on' : 'off'}`; };
+    show(); b.addEventListener('click', (e) => { e.stopPropagation(); score.setOn(!score.on); show(); });
+  });
   const nearBoat = () => !player.boat && Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) < 3.8;
   let boatT = 99;
   const embark = () => {
@@ -443,6 +455,7 @@ async function boot() {
       card.classList.add('hidden');
       if (spawnFromDrone) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
+        score.stopLoop(6);                                   // the title music lets go as you land
         audio.init(); started = true; autoCard = false;
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
@@ -585,6 +598,7 @@ async function boot() {
   showSpeed(); window.__speed = SPEED;
   // ---- the endings
   let ending = false;
+  addEventListener('pointerdown', titleMusic, true); addEventListener('keydown', titleMusic, true); addEventListener('touchstart', titleMusic, true);
   const endStats = () => ({
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
@@ -593,6 +607,7 @@ async function boot() {
   });
   function beginEnding(kind) {
     if (ending) return; ending = true;
+    score.stopLoop(1.5); setTimeout(() => score.loop(kind === 'drained' ? ['Am', 'Dm', 'Fmaj7', 'E'] : ['G', 'Cadd9', 'Em7', 'Dsus2'], { bpm: 62, loose: false, pats: ['arpeggio', 'ballad'] }), 2500);   // major if the reservoir held, minor if it did not
     if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
     started = false; interludeOn = true; document.exitPointerLock?.();
     ui.els.paused.classList.add('hidden'); ui.els.hud.classList.remove('on'); document.getElementById('interlude')?.classList.add('hidden');
@@ -712,6 +727,7 @@ async function boot() {
     }
     const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
     PRESSURE.update(tdt); checkEndings(tdt);
+    score.update(dt, { live: started && player.locked && !interludeOn && !ending && !phoneOn, sitting: player.sitting, season: SEASON, harm: PRESSURE.harm });
     if (!RUN.dev && started && player.locked && !interludeOn) {
       RUN.s.played += tdt;
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
