@@ -1,6 +1,7 @@
 // The naturalist's Field Guide: what you have photographed and which songs you have heard.
 // Species are habitat-typical for a Massachusetts reservoir forest, NOT from a survey of the real park.
 import * as THREE from 'three';
+import { PLANTS } from './plants.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -51,6 +52,9 @@ export const ENTRIES = [
   { id: 'bullfrog', cat: 'Sounds', name: 'American Bullfrog', blurb: 'A low, slow “jug-o-rum” from the shallows on summer evenings.', song: 'bullfrog', songOnly: true },
   { id: 'cricket', cat: 'Sounds', name: 'Field Cricket', blurb: 'The ticking chorus of late summer and early autumn.', song: 'cricket', songOnly: true },
 ];
+// wild plants (plants.js): a hint of when and where for the ones you have not found yet
+const HAB = { wet: 'wet ground', shore: 'the water\u2019s edge', shallows: 'the shallows', water: 'on the water', forest: 'the forest floor', pine: 'dry pine woods', edge: 'sunny trail edges' };
+for (const p of PLANTS) ENTRIES.push({ id: p.id, cat: 'Plants', name: p.name, blurb: p.blurb, hint: `${p.seasons.length === 4 ? 'All year' : p.seasons.map((s) => s[0].toUpperCase() + s.slice(1)).join(', ')} \u00b7 ${HAB[p.hab]}` });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
 const SONG_TO_ID = {}; for (const e of ENTRIES) if (e.song) SONG_TO_ID[e.song] = e.id;
 
