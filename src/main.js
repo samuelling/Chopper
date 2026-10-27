@@ -277,7 +277,7 @@ async function boot() {
   const titleMusic = () => {
     removeEventListener('pointerdown', titleMusic, true); removeEventListener('keydown', titleMusic, true); removeEventListener('touchstart', titleMusic, true);
     if (started || RUN.dev) return;
-    audio.init(); setTimeout(() => { if (!started && !ending) score.loop(['G', 'C', 'D', 'Em'], { bpm: 74, loose: true }); }, 60);
+    audio.init(); setTimeout(() => { if (!started && !ending) score.space('light', 0.1); score.loop(['G', 'Cadd9', 'D', 'Em7'], { bpm: 96, loose: true, pats: ['travis', 'travis', 'folk'] }); }, 60);
   };
   document.querySelectorAll('[data-music]').forEach((b) => {
     const show = () => { b.textContent = `Score: ${score.on ? 'on' : 'off'}`; };
@@ -607,7 +607,7 @@ async function boot() {
   });
   function beginEnding(kind) {
     if (ending) return; ending = true;
-    score.stopLoop(1.5); setTimeout(() => score.loop(kind === 'drained' ? ['Am', 'Dm', 'Fmaj7', 'E'] : ['G', 'Cadd9', 'Em7', 'Dsus2'], { bpm: 62, loose: false, pats: ['arpeggio', 'ballad'] }), 2500);   // major if the reservoir held, minor if it did not
+    score.stopLoop(1.5); setTimeout(() => { score.space('vast', 4); score.loop(kind === 'drained' ? ['Am', 'Dm', 'Fmaj7', 'E'] : ['G', 'Cadd9', 'Em7', 'Dsus2'], { bpm: 62, loose: false, pats: ['classical', 'ballad'], lvl: 1.1 }); }, 2500);   // the long reverb is saved for the end   // major if the reservoir held, minor if it did not
     if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
     started = false; interludeOn = true; document.exitPointerLock?.();
     ui.els.paused.classList.add('hidden'); ui.els.hud.classList.remove('on'); document.getElementById('interlude')?.classList.add('hidden');
@@ -727,7 +727,7 @@ async function boot() {
     }
     const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
     PRESSURE.update(tdt); checkEndings(tdt);
-    score.update(dt, { live: started && player.locked && !interludeOn && !ending && !phoneOn, sitting: player.sitting, season: SEASON, harm: PRESSURE.harm });
+    score.update(dt, { live: started && player.locked && !interludeOn && !ending && !phoneOn, sitting: player.sitting, season: SEASON, harm: PRESSURE.harm, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1) });
     if (!RUN.dev && started && player.locked && !interludeOn) {
       RUN.s.played += tdt;
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
