@@ -23,6 +23,15 @@
   .place { opacity:.8; font-style:italic; margin-bottom:28px; }
   .go { padding:14px 38px; border:3px solid var(--paper); border-radius:4px; font-size:20px; letter-spacing:.2em; text-transform:uppercase; background:rgba(217,87,43,.9); color:#fff; }
   .controls { margin-top:28px; font-size:14px; line-height:1.9; opacity:.85; }
+  /* the key list: four groups in order of need, each a two-column table (keys right-aligned against a common edge, words left) */
+  .ctl { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px 30px; max-width:1180px; margin:26px auto 0; text-align:left; line-height:1.35; font-size:13px; }
+  .ctl .cg h4 { margin:0 0 6px; padding-bottom:4px; border-bottom:1px solid rgba(244,230,200,.3); font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  .ctl .r { display:grid; grid-template-columns:100px 1fr; gap:10px; align-items:baseline; padding:3px 0; }
+  .ctl .k { text-align:right; white-space:nowrap; } .ctl .k kbd { margin:0 0 0 3px; min-width:1.6em; padding:0 .3em; font-size:.8em; border-width:1.5px; border-bottom-width:3px; text-align:center; }
+  .ctl .wasd { display:inline-grid; grid-template-columns:repeat(3, auto); gap:3px; vertical-align:middle; } .ctl .wasd kbd { margin:0; } .ctl .wasd .w { grid-area:1/2; } .ctl .wasd .a { grid-area:2/1; } .ctl .wasd .s { grid-area:2/2; } .ctl .wasd .d { grid-area:2/3; }
+  .ctl .r:has(.wasd) { align-items:center; }
+  .ctl .t { opacity:.92; } .ctl { text-shadow:0 1px 4px rgba(0,0,0,.55); }
+  @media (max-width: 900px) { .ctl { grid-template-columns:repeat(2, minmax(0, 1fr)); row-gap:14px; } }
   kbd { display:inline-block; min-width:1.4em; padding:0 .45em; margin:0 .1em; border:2px solid var(--paper); border-bottom-width:4px; border-radius:4px; font:inherit; font-size:.85em; }
   .note { margin-top:20px; max-width:560px; font-size:12px; opacity:.55; line-height:1.5; }
   #loading { z-index:9; cursor:default; background:#1c1517; }
@@ -321,12 +330,36 @@
     <div data-log-panel class="usage"></div>
   </details>
   <div class="desk-note only-mobile">Best played on a desktop computer with a keyboard and mouse. This phone version runs at reduced quality.</div>
-  <div class="controls only-desktop">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop (hold to dive in deep water) &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
-    <kbd>P</kbd> raise the phone &nbsp; <kbd>Q</kbd> phone / axe / fishing rod / empty hands &nbsp; <kbd>Click</kbd> swing the axe, or cast and reel the rod<br>
-    <kbd>V</kbd> camera (click to photograph) &nbsp; <kbd>B</kbd> sit and wait &nbsp; <kbd>E</kbd> pick up litter (at the dam gatehouse: work the gate; at the boat: get in or out) &nbsp; <kbd>G</kbd> plant a seed &nbsp; <kbd>W</kbd><kbd>S</kbd> row <kbd>A</kbd><kbd>D</kbd> turn (in the boat)<br>
-    <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>1</kbd>-<kbd>4</kbd> hold a light (4 is night), <kbd>0</kbd> follow the day &nbsp; <kbd>F</kbd> fullscreen<span data-phase2> &nbsp; <kbd>C</kbd> make choices</span>
-  </div>
+  <div class="controls ctl only-desktop">
+    <div class="cg"><h4>Moving</h4>
+    <div class="r"><span class="k"><kbd>Mouse</kbd></span><span class="t">look around</span></div>
+    <div class="r"><span class="k"><span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span></span><span class="t">walk</span></div>
+    <div class="r"><span class="k"><kbd>Shift</kbd></span><span class="t">hurry</span></div>
+    <div class="r"><span class="k"><kbd>Space</kbd></span><span class="t">hop (hold to dive)</span></div>
+    <div class="r"><span class="k"><kbd>B</kbd></span><span class="t">sit and wait</span></div>
+    </div>
+    <div class="cg"><h4>Doing</h4>
+    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">switch tools: phone, axe, rod</span></div>
+    <div class="r"><span class="k"><kbd>Click</kbd></span><span class="t">swing, cast, reel</span></div>
+    <div class="r"><span class="k"><kbd>V</kbd></span><span class="t">camera (click to shoot)</span></div>
+    <div class="r"><span class="k"><kbd>E</kbd></span><span class="t">litter, the dam gate, the boat</span></div>
+    <div class="r"><span class="k"><kbd>G</kbd></span><span class="t">plant a seed or sapling</span></div>
+    </div>
+    <div class="cg"><h4>Phone and park</h4>
+    <div class="r"><span class="k"><kbd>P</kbd></span><span class="t">phone: map, guide, fund</span></div>
+    <div class="r"><span class="k"><kbd>M</kbd></span><span class="t">corner map</span></div>
+    <div class="r" data-phase2><span class="k"><kbd>C</kbd></span><span class="t">make choices</span></div>
+    <div class="r"><span class="k"><kbd>H</kbd></span><span class="t">hide the dashboard</span></div>
+    <div class="r"><span class="k"><kbd>Esc</kbd></span><span class="t">menu</span></div>
+    </div>
+    <div class="cg"><h4>Boat and light</h4>
+    <div class="r"><span class="k"><kbd>W</kbd><kbd>S</kbd></span><span class="t">row the boat</span></div>
+    <div class="r"><span class="k"><kbd>A</kbd><kbd>D</kbd></span><span class="t">steer it</span></div>
+    <div class="r"><span class="k"><kbd>1</kbd>&ndash;<kbd>4</kbd></span><span class="t">hold a light (4 is night)</span></div>
+    <div class="r"><span class="k"><kbd>0</kbd></span><span class="t">follow the day</span></div>
+    <div class="r"><span class="k"><kbd>F</kbd></span><span class="t">fullscreen</span></div>
+    </div>
+    </div>
   <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone: Share &rarr; Add to Home Screen, then open Ashland from there.</div>
   <div class="controls only-mobile">Left thumb: walk (push to the edge to hurry)<br>Drag the right side: look around<br>Big button: swing, cast and reel, or shoot in camera mode &middot; HOP jumps (hold to dive)<br>USE: boat, gate &middot; PHONE: map, camera, Tools (rod, sit, litter, seeds, map)<br>&#9776; this menu &middot; the sun button holds a light (keep tapping to return to the day)</div>
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
@@ -337,12 +370,36 @@
 <div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>
 <div id="phone" class="overlay hidden"></div>
-<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="controls only-desktop" style="margin-top:18px">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop (hold to dive in deep water) &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
-    <kbd>P</kbd> raise the phone &nbsp; <kbd>Q</kbd> phone / axe / fishing rod / empty hands &nbsp; <kbd>Click</kbd> swing the axe, or cast and reel the rod<br>
-    <kbd>V</kbd> camera (click to photograph) &nbsp; <kbd>B</kbd> sit and wait &nbsp; <kbd>E</kbd> pick up litter (at the dam gatehouse: work the gate; at the boat: get in or out) &nbsp; <kbd>G</kbd> plant a seed &nbsp; <kbd>W</kbd><kbd>S</kbd> row <kbd>A</kbd><kbd>D</kbd> turn (in the boat)<br>
-    <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>1</kbd>-<kbd>4</kbd> hold a light (4 is night), <kbd>0</kbd> follow the day &nbsp; <kbd>F</kbd> fullscreen<span data-phase2> &nbsp; <kbd>C</kbd> make choices</span>
-  </div></div>
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="controls ctl only-desktop" style="margin-top:18px">
+    <div class="cg"><h4>Moving</h4>
+    <div class="r"><span class="k"><kbd>Mouse</kbd></span><span class="t">look around</span></div>
+    <div class="r"><span class="k"><span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span></span><span class="t">walk</span></div>
+    <div class="r"><span class="k"><kbd>Shift</kbd></span><span class="t">hurry</span></div>
+    <div class="r"><span class="k"><kbd>Space</kbd></span><span class="t">hop (hold to dive)</span></div>
+    <div class="r"><span class="k"><kbd>B</kbd></span><span class="t">sit and wait</span></div>
+    </div>
+    <div class="cg"><h4>Doing</h4>
+    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">switch tools: phone, axe, rod</span></div>
+    <div class="r"><span class="k"><kbd>Click</kbd></span><span class="t">swing, cast, reel</span></div>
+    <div class="r"><span class="k"><kbd>V</kbd></span><span class="t">camera (click to shoot)</span></div>
+    <div class="r"><span class="k"><kbd>E</kbd></span><span class="t">litter, the dam gate, the boat</span></div>
+    <div class="r"><span class="k"><kbd>G</kbd></span><span class="t">plant a seed or sapling</span></div>
+    </div>
+    <div class="cg"><h4>Phone and park</h4>
+    <div class="r"><span class="k"><kbd>P</kbd></span><span class="t">phone: map, guide, fund</span></div>
+    <div class="r"><span class="k"><kbd>M</kbd></span><span class="t">corner map</span></div>
+    <div class="r" data-phase2><span class="k"><kbd>C</kbd></span><span class="t">make choices</span></div>
+    <div class="r"><span class="k"><kbd>H</kbd></span><span class="t">hide the dashboard</span></div>
+    <div class="r"><span class="k"><kbd>Esc</kbd></span><span class="t">menu</span></div>
+    </div>
+    <div class="cg"><h4>Boat and light</h4>
+    <div class="r"><span class="k"><kbd>W</kbd><kbd>S</kbd></span><span class="t">row the boat</span></div>
+    <div class="r"><span class="k"><kbd>A</kbd><kbd>D</kbd></span><span class="t">steer it</span></div>
+    <div class="r"><span class="k"><kbd>1</kbd>&ndash;<kbd>4</kbd></span><span class="t">hold a light (4 is night)</span></div>
+    <div class="r"><span class="k"><kbd>0</kbd></span><span class="t">follow the day</span></div>
+    <div class="r"><span class="k"><kbd>F</kbd></span><span class="t">fullscreen</span></div>
+    </div>
+    </div></div>
 
 <div id="hud">
   <div class="card"><b>Trees felled</b><div class="v" id="felled">0</div>
