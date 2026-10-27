@@ -1,4 +1,4 @@
-// The two ways the game ends: your years run out (the park goes on without you), or the reservoir empties and the park does not come back.
+// The two ways the game ends: your years run out (someone else walks it next), or the reservoir empties and stays empty.
 // Both roll credits over the drone flight.  Figures are invented where they say so; the rest are counts of what you actually did.
 import { RUN } from './run.js';
 
@@ -10,12 +10,12 @@ export function creditsHTML(kind, st) {
   const span = st.age0 == null ? '' : ` from age ${st.age0} to ${st.ageEnd}`;
   const blocks = [];
   if (kind === 'life') {
-    blocks.push(['', 'All things pass.'], ['', `You walked here for ${plural(st.years, 'year')}${span}.`],
-      ['', st.harm < 0.2 ? 'The park is still green. The birds will be loud in May.' : st.harm < 0.6 ? 'The park is thinner than you found it, but it is still a place.' : 'The park is carrying more than it should, and it keeps going anyway.'],
-      ['', 'It goes on without you.']);
+    blocks.push(['', `You walked here for ${plural(st.years, 'year')}${span}.`],
+      ['', st.harm < 0.2 ? 'The park is in good shape. The birds will be loud in May.' : st.harm < 0.6 ? "The park is thinner than when you first came. It's still a good place to walk." : "The park is worn. It's still here."],
+      ['', 'Someone else will walk it next.']);
   } else {
-    blocks.push(['', 'The reservoir is empty.'], ['', 'The herons, the turtles and the cold deep water where the bass wait are gone, and nothing you do next brings them back.'],
-      ['', 'This is not a forecast for any real place. It is what the game does when the cost is never paid.']);
+    blocks.push(['', 'The reservoir is empty.'], ['', 'The herons and turtles have moved on, and the bass with them.'],
+      ['', "This isn't a forecast for any real place. It's what this game does when the cost keeps going unpaid."]);
   }
   const mine = [];
   const add = (n, a, b) => { if (n > 0) mine.push(plural(n, a, b)); };
@@ -32,7 +32,7 @@ export function creditsHTML(kind, st) {
     '<div class="gap"></div>', '<h2>The invented part</h2>',
     '<p>The trees, rocks and benches, every animal and its habits, the harm and care figures, and the end of the lake.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
-    '<div class="gap"></div>', '<p class="big">Thank you for walking it.</p>', '<div class="gap"></div>',
+    '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
   ];
   return parts.join('');
 }

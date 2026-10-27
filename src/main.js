@@ -270,7 +270,7 @@ async function boot() {
     if (landmarks.nearGate(player.pos)) {
       lake.gateOpen = !lake.gateOpen;
       audio.toggle();
-      ui.toast(lake.gateOpen ? (RUN.dev ? 'The drawdown gate groans open.' : 'The drawdown gate groans open. If the reservoir runs dry, the park does not come back.') : 'You crank the gate shut.', lake.gateOpen && !RUN.dev ? 5 : undefined);
+      ui.toast(lake.gateOpen ? (RUN.dev ? 'The drawdown gate groans open.' : 'The drawdown gate groans open. If the reservoir runs dry, it stays dry.') : 'You crank the gate shut.', lake.gateOpen && !RUN.dev ? 5 : undefined);
     }
   };
   player.onLockChange = (locked) => {
@@ -588,9 +588,9 @@ async function boot() {
     if (ending || RUN.dev || !started) return;
     // the reservoir gives out: harm held at its limit for a minute, and it empties for good
     if (PRESSURE.damage >= 0.995) maxT += dt; else maxT = 0;
-    if (!warned && PRESSURE.damage >= 0.9) { warned = true; ui.toast('The reservoir is failing. Turn your use down now, or it will not come back.', 6); }
+    if (!warned && PRESSURE.damage >= 0.9) { warned = true; ui.toast("The reservoir is getting low. If use stays this high, it won't refill.", 6); }
     if (PRESSURE.damage < 0.8) warned = false;
-    if (!RUN.s.collapse && maxT > 60) { RUN.s.collapse = true; RUN.save(); ui.toast('The reservoir gives out.', 6); }
+    if (!RUN.s.collapse && maxT > 60) { RUN.s.collapse = true; RUN.save(); ui.toast('The reservoir is draining for good.', 6); }
     if (RUN.s.collapse) lake.level = Math.max(lake.floor + 0.02, lake.level - 0.1 * dt);
     if (lake.level <= lake.floor + 0.05 && (lake.drained || RUN.s.collapse)) { lake._endT = (lake._endT || 0) + dt; if (lake._endT > 5) beginEnding('drained'); } else lake._endT = 0;
   }
