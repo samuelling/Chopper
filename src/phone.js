@@ -138,7 +138,7 @@ export class Phone {
           const pic = d.thumb ? `<img src="${d.thumb}" style="width:72px;height:48px;border-radius:6px;object-fit:cover;flex:none">` : `<div style="width:72px;height:48px;border-radius:6px;background:#1d1b22;flex:none;display:grid;place-items:center;opacity:.5">${e.songOnly ? '\u266a' : '?'}</div>`;
           const known = GUIDE.found(e.id);
           row.dataset.id = e.id;
-          row.innerHTML = `${pic}<div style="flex:1"><b>${known || e.cat === 'Moments' ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}${(RUN.phaseTwo || RUN.dev) && !e.songOnly && e.cat !== 'Sounds' ? (FUND.paid(e.id) ? ` <small style="color:#9fd07a">on the park\u2019s page</small>` : ` <small style="color:#e8c26a">worth $${FUND.rate(e.id, e.cat)} to the park</small>`) : ''}<br><small style="opacity:.8">${known ? e.blurb : e.cat === 'Moments' ? `Not caught yet. ${e.hint}.` : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
+          row.innerHTML = `${pic}<div style="flex:1"><b>${known || e.cat === 'Moments' ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}${(RUN.phaseTwo || RUN.dev) && !e.songOnly && e.cat !== 'Sounds' ? (FUND.paid(e.id) ? ` <small style="color:#9fd07a">on the park\u2019s page: +$${FUND.paid(e.id).toLocaleString('en-US')} to the park</small>` : ` <small style="color:#e8c26a">worth $${FUND.rate(e.id, e.cat)} to the park</small>`) : ''}<br><small style="opacity:.8">${known ? e.blurb : e.cat === 'Moments' ? `Not caught yet. ${e.hint}.` : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
           if (e.song && d.heard) { const b = document.createElement('button'); b.textContent = '\u25b6'; b.title = 'Play its song'; b.style.cssText = 'font:inherit;background:#3a3646;color:inherit;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;cursor:pointer'; b.addEventListener('click', (ev) => { ev.stopPropagation(); this.audio?.replay(e.song); }); row.appendChild(b); }
           if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelector('[data-ph-name]').textContent = 'Photos'; this._photos(body, i, e.id); } }); }
           body.appendChild(row);
@@ -306,7 +306,7 @@ export class Phone {
       for (const pl of named) {
         const d = Math.round(Math.hypot(pl.x - p.pos.x, pl.z - p.pos.z));
         const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;line-height:1.45';
-        r.innerHTML = `<b>${pl.name}</b> <small style="opacity:.65">${d} m${pl.real ? '' : ' \u00b7 invented name'}</small><br><small style="opacity:.8">${(ex.note(pl.kind) || '').replace(/</g, '&lt;')}</small>`;
+        r.innerHTML = `<b>${pl.name}</b> <small style="opacity:.65">${d} m${pl.real ? '' : ' \u00b7 invented name'}</small>${FUND.paid('place-' + pl.id) ? ` <small style="color:#9fd07a">+$${FUND.paid('place-' + pl.id).toLocaleString('en-US')} to the park</small>` : ''}<br><small style="opacity:.8">${(ex.note(pl.kind) || '').replace(/</g, '&lt;')}</small>`;
         r.prepend(mkMark(pl.x, pl.z, pl.name)); body.appendChild(r);
       }
       if (named.length < all) { const m = document.createElement('div'); m.style.cssText = 'font-size:12px;opacity:.55;margin:4px 2px'; m.textContent = `${all - named.length} more to find. Some only from the water, and some only under it (hold Space to dive).`; body.appendChild(m); }
@@ -315,7 +315,7 @@ export class Phone {
     const h = document.createElement('h4'); h.textContent = `Found in the woods (${found.length} of ${total})`; h.style.cssText = 'margin:16px 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.7'; body.appendChild(h);
     for (const f of found) {
       const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;line-height:1.45';
-      r.innerHTML = `<b>${f.kind === 'cellar' ? 'A cellar hole' : f.kind === 'well' ? 'A stone well' : 'A boundary stone'}</b>`;
+      r.innerHTML = `<b>${f.kind === 'cellar' ? 'A cellar hole' : f.kind === 'well' ? 'A stone well' : 'A boundary stone'}</b>${FUND.paid(f.id) ? ` <small style="color:#9fd07a">+$${FUND.paid(f.id).toLocaleString('en-US')} to the park</small>` : ''}`;
       const mk = document.createElement('button'); mk.className = 'choice sm'; mk.textContent = 'Mark'; mk.style.cssText = 'float:right;padding:3px 9px;font-size:12px'; mk.addEventListener('click', (e) => { e.stopPropagation(); this.setWaypoint?.(f.x, f.z, 'Found'); }); r.prepend(mk);
       body.appendChild(r);
     }
