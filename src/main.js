@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
-import { woodsDead } from './woods.js';
+import { woodsDead, totalTrees } from './woods.js';
 import { initUsageUI } from './usageui.js';
 import { creditsHTML, rollCredits } from './ending.js';
 import { Minimap } from './minimap.js';
@@ -767,7 +767,7 @@ async function boot() {
       if (woodsHold > 60) beginEnding('silent');
     }
   }
-  let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0, woodsHudT = 0, woodsAlive = 1;
+  let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0, woodsHudT = 0, woodsAlive = 1, woodsDeadNow = 0;
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
@@ -933,8 +933,10 @@ async function boot() {
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
-    if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsAlive = 1 - woodsDead(); }
-    ui.hud(woodsAlive, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
+    if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
+    const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
+    woodsAlive = Math.max(0, 1 - woodsDeadNow - cut / totalTrees());                       // a tree cut down shows at once
+    ui.hud(woodsAlive, cut, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
   const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };

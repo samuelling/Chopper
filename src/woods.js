@@ -14,6 +14,9 @@ const sample = () => {
     pts.push(s, treeLuck(x, z), w); total += w;
   }
 };
+/** about how many trees the walkable park holds (the chunk generator puts at most one per 4.6 m cell, kept with
+ *  probability ~0.9 x density x ~0.6 thicket factor), for turning trees cut down into a share of the woods */
+export function totalTrees() { if (!pts) sample(); return Math.max(1, Math.round(total * 144 * 0.9 * 0.6 / (4.6 * 4.6))); }
 /** share of the woods standing dead (0..1) at `harm` (default: the park's harm now) */
 export function woodsDead(harm = PRESSURE.harm) {
   if (!pts) sample();

@@ -19,11 +19,15 @@ export const ui = {
     if (this._toastT > 0) { this._toastT -= dt; if (this._toastT <= 0) this.els.toast.classList.remove('on'); }
   },
   /** alive: share of the park's trees still alive (0..1) */
-  hud(alive, frac, drained, name) {
-    const ap = Math.round(alive * 100), low = alive < 0.35;
-    this.set(this.els.felled, 'felled', ap >= 99 ? 'All standing' : `${ap}% alive`);
+  hud(alive, felled, frac, drained, name) {
+    // the moment one tree is down it stops being 'all standing': near the top the share shows decimals, and the count of
+    // trees cut down sits beside it
+    const wp = alive * 100, ap = Math.round(wp), low = alive < 0.35;
+    const txt = alive >= 0.99995 && !felled ? 'All standing' : `${wp >= 99.95 ? Math.min(99.99, Math.floor(wp * 100) / 100).toFixed(2) : wp >= 99 ? (Math.floor(wp * 10) / 10).toFixed(1) : ap}% alive`;
+    const html = `${txt}${felled ? `<small> \u00b7 ${felled} cut down</small>` : ''}`;
+    if (this._last.felled !== html) { this._last.felled = html; this.els.felled.innerHTML = html; }
     if (this._last.woodLow !== low) { this._last.woodLow = low; this.els.felled.classList.toggle('low', low); this.els.woodbar.parentElement.classList.toggle('low', low); }
-    this.els.woodbar.style.width = `${ap}%`;
+    this.els.woodbar.style.width = `${wp.toFixed(2)}%`;
     const pct = Math.round(frac * 100);
     this.set(this.els.pct, 'pct', drained ? 'Drained. A lot of mud.' : pct >= 99 ? 'Full' : `${pct}% full`);
     this.els.bar.style.width = `${pct}%`;
