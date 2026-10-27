@@ -15,6 +15,15 @@ export class Structures {
   }
   _box(b, x, y, z, w, h, d, color, ry = 0, rx = 0) { b.add(new THREE.BoxGeometry(w, h, d), matrix(x, y + h / 2, z, rx, ry, 0), { tint: 0, color: new THREE.Color(color) }); }
   // local (u: right, v: forward) -> world, for a structure at (x,z) turned by yaw
+  /** places to sit on what has been built: a bench (facing the way it was built), both sides of a picnic table */
+  get seats() {
+    const out = [];
+    for (const it of this.items) {
+      if (it.type === 'bench') { const [x, z] = this._w(it.x, it.z, it.yaw, 0, 0.05), [fx, fz] = this._w(it.x, it.z, it.yaw, 0, 3); out.push({ x, z, fx, fz, kind: 'bench' }); }
+      if (it.type === 'table') for (const s of [-0.72, 0.72]) { const [x, z] = this._w(it.x, it.z, it.yaw, 0, s); out.push({ x, z, fx: it.x, fz: it.z, kind: 'table' }); }
+    }
+    return out;
+  }
   _w(x, z, yaw, u, v) { const c = Math.cos(yaw), s = Math.sin(yaw); return [x + u * c + v * s, z - u * s + v * c]; }
 
   _build(type, x, z, yaw) {

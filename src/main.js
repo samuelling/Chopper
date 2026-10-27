@@ -260,6 +260,7 @@ async function boot() {
       const pb = prevBest && inches > prevBest.inches;
       JOURNAL.add(ex.trophy ? `A trophy ${f.name}: ${inches} inches, about ${wt}, ${player.boat ? 'from the rowboat' : 'from the shore'}. Let it go.` : `Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.${clean ? ' A clean fight.' : ''}`, player.pos.x, player.pos.z);
       ui.toast(ex.trophy ? `A trophy. A ${inches}-inch ${f.name}, about ${wt}. You hold it up, then let it go.` : `A ${inches}-inch ${f.name}, ${wt}${clean ? ', a clean catch' : ''}. You let it go.${first ? ' New in your Field Guide.' : pb ? ' Your biggest yet.' : ''}`, ex.trophy ? 6 : 4.5);
+      { const paid = FUND.bounty(f.id, 'Fish'); if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You file the catch by hand: +$${paid} for the park fund.` : `Clyde files the catch with the biodiversity survey: +$${paid} for the park fund.`, 3.4), 5000); }
       audio.landSplash?.(ex.trophy ? 1.4 : 1); fx.splash(x, lake.level + 0.03, z, ex.trophy ? 20 : 12);
     },
     // a photo of the fish held up, for the catch log in the Journal
@@ -352,7 +353,9 @@ async function boot() {
     bg.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 320);
     const had = GUIDE.photographed(id);
     GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON, bg.toDataURL('image/jpeg', 0.72));
-    if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
+    const paid = FUND.bounty(id, BY_ID[id].cat);
+    if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You file the record by hand. It takes weeks, and most of the survey money lapses: +$${paid} for the park fund.` : `Clyde files your photo with the biodiversity survey: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
+    else if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
   };
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
   const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
@@ -406,7 +409,14 @@ async function boot() {
   deer.onSnort = () => audio.snort?.();
   critters.onSplash = (x, z, slap) => { fx.splash(x, lake.level + 0.05, z, slap ? 24 : 8); if (slap) audio.splash?.(); };
   deer.onMoment = () => { ui.toast('A deer grazes close by. You are very still.', 4); JOURNAL.add('A deer grazed close by while I sat still.', player.pos.x, player.pos.z); };
-  addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(() => ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2), 0); });
+  // benches and picnic tables: sitting near one puts you on it, at seat height, facing the view (or the table)
+  const nearSeat = () => { let best = null, bd = 1.9; for (const s of [...(landmarks.seats || []), ...structures.seats]) { const d = Math.hypot(s.x - player.pos.x, s.z - player.pos.z); if (d < bd) { bd = d; best = s; } } return best; };
+  const sitDown = () => {
+    const s = player.sitting ? nearSeat() : null; player.seatLift = s ? 0.47 : 0;
+    if (s) { const prev = camera.position.clone(); player.teleport(s.x, s.z, Math.atan2(-(s.fx - s.x), -(s.fz - s.z)), -0.08); player.sitting = true; player.blendFrom(prev); }
+    ui.toast(!player.sitting ? 'You stand.' : s ? (s.kind === 'table' ? 'You sit at the picnic table. Wait, and watch.' : 'You sit on the bench. Wait, and watch.') : 'You sit. Wait, and watch. Any step stands you up.', 2.2);
+  };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(sitDown, 0); });
   const stepSit = () => {};                                   // sitting now lets the day itself pass faster (see the season clock)
   const touch = new TouchControls(player, {
     onUse: () => player.events.interact?.(), onMood: () => { if (manual && mood === PRESETS.length - 1 && !RUN.dev) followDay(); else handLight(manual ? (mood + 1) % PRESETS.length : 0); },
@@ -478,7 +488,9 @@ async function boot() {
   document.getElementById('birthgo').addEventListener('click', finishBirth);
   document.getElementById('birthskip').addEventListener('click', () => { birthIn.value = ''; finishBirth(); });
   birthIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') finishBirth(); });
-  ui.els.title.addEventListener('click', () => { if (!RUN.dev && RUN.s.born == null) { birthEl.hidden = false; birthIn.focus(); return; } enter(); });
+  ui.els.title.addEventListener('click', () => {
+    if (!RUN.dev && RUN.s.end) { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const q = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => q.delete(k)); location.search = q.toString(); return; }   // after an ending, Begin starts a new life
+    if (!RUN.dev && RUN.s.born == null) { birthEl.hidden = false; birthIn.focus(); return; } enter(); });
   ui.els.paused.addEventListener('click', begin);
   // the pause menu by hand (Esc does it on desktop by releasing the mouse); on a touch screen the game's touch layer steps aside so the menu takes taps and scrolls
   function openMenu() {
@@ -543,7 +555,7 @@ async function boot() {
   discoveries.onFound = (it, k) => ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5);
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
-      sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
+      sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
     onOpen: () => { phoneOn = true; tut.phoned = true; phone._upright = matchMedia('(orientation: portrait)').matches; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
@@ -588,7 +600,7 @@ async function boot() {
     ui.els.hud.classList.add('on');
     if (params.has('hide')) ui.els.hud.style.display = 'none';
   } else {
-    if (params.get('end')) { setTimeout(() => beginEnding(params.get('end')), 800); } else if (!RUN.dev && RUN.s.end) { setTimeout(() => beginEnding(RUN.s.end), 800); } else if (!RUN.dev && !RUN.fresh && inPlay()) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
+    if (params.get('end')) { setTimeout(() => beginEnding(params.get('end')), 800); } else if (!RUN.dev && RUN.s.end) { showFinishedMenu(); } else if (!RUN.dev && !RUN.fresh && inPlay()) { showCard(); if (!params.has('noflyover')) autoSeason(); } else ui.els.title.classList.remove('hidden');
     if (!params.has('noflyover')) flyover.start();
   }
   if (!RUN.dev) {
@@ -627,6 +639,13 @@ async function boot() {
     fish: RUN.s.fish || 0, species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
     harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours, measures: Object.keys(RUN.s.measures || {}).length, lake: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1),
   });
+  // a finished life: reloading lands on the start menu (not the credits again); Begin starts a new life
+  function showFinishedMenu() {
+    ui.els.title.classList.remove('hidden');
+    const go = ui.els.title.querySelector('.go'); if (go) go.innerHTML = MOBILE ? 'Tap to begin a new life' : 'Begin a new life';
+  }
+  const stayBtn = document.createElement('button'); stayBtn.className = 'crskip staymenu'; stayBtn.textContent = 'Start menu'; stayBtn.hidden = true; document.body.appendChild(stayBtn);
+  stayBtn.addEventListener('click', (e) => { e.stopPropagation(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
   function beginEnding(kind) {
     if (ending) return; ending = true; endingKind = kind;
     // the wild keeps going under the credits: if the park lived, the light comes up to morning and the birds sing; if the reservoir died, dusk and wind
@@ -640,7 +659,8 @@ async function boot() {
     const stats = endStats();
     rollCredits(document.getElementById('credits'), creditsHTML(kind, stats), {
       onRestart: () => { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => p.delete(k)); location.search = p.toString(); },
-      onStay: () => {},
+      onStay: () => { stayBtn.hidden = false; },   // watching the drone: a way back to the menu whenever you want it
+      onMenu: () => { showFinishedMenu(); ui.els.hud.classList.remove('on'); },   // back to the start menu, the drone still flying behind it
     });
   }
   window.__end = beginEnding;
@@ -817,7 +837,7 @@ async function boot() {
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
-    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
+    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 

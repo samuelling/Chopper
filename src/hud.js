@@ -14,6 +14,8 @@ const KEY = 'ashland.hud';
 let hidden = {}; try { hidden = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
 // the game starts with a clean screen (the phone is the dashboard); H or the pause menu brings the HUD back, and that choice is then remembered
 try { if (!RUN.dev && !localStorage.getItem(KEY + '2')) { hidden = { all: true }; localStorage.setItem(KEY + '2', '1'); } } catch {}
+// from Year Two the status card shows by default (once; the player's own show/hide choices after that are kept)
+try { if (!RUN.dev && RUN.phaseTwo && !localStorage.getItem(KEY + '3')) { const was = hidden.all; for (const i of ITEMS) hidden[i.id] = i.id === 'card' ? false : !!(was || hidden[i.id]); hidden.all = false; localStorage.setItem(KEY + '3', '1'); } } catch {}
 const style = document.createElement('style'); document.head.appendChild(style);
 function apply() {
   style.textContent = ITEMS.filter((i) => hidden[i.id] || hidden.all).map((i) => `${i.sel.split(',').map((s) => s.trim()).join(', ')} { display:none !important; }`).join('\n');

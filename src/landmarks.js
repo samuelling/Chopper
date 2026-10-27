@@ -285,6 +285,7 @@ export class Landmarks {
         this._box(b, tx + Math.cos(yaw + Math.PI / 2) * 0.62 * s * -1, ty + 0.42, tz + Math.sin(yaw + Math.PI / 2) * 0.62 * s * 1, 2.0, 0.06, 0.28, '#8a6840', { ry: yaw });
       }
       this.colliders.add(tx, tz, 1.1, { tag: 'table' });
+      for (const s of [-1, 1]) (this.seats ??= []).push({ x: tx - Math.cos(yaw + Math.PI / 2) * 0.62 * s * 1.15, z: tz + Math.sin(yaw + Math.PI / 2) * 0.62 * s * 1.15, fx: tx, fz: tz, kind: 'table' });
       layout.addCircle(tx, tz, 3);
     }
 
@@ -387,6 +388,7 @@ export class Landmarks {
       if (sdfAt(sx, sz) < 4 || groundY(sx, sz) < LEVEL + 0.8) continue;
       const rot = Math.atan2(gx, gz);
       this._box(b, sx, sy + 0.42, sz, 1.7, 0.07, 0.5, '#8a6840', { ry: rot });
+      (this.seats ??= []).push({ x: sx, z: sz, fx: sx - Math.sin(rot) * 3, fz: sz - Math.cos(rot) * 3, kind: 'bench' });   // sit here, facing the water
       this._box(b, sx + Math.sin(rot) * 0.25, sy + 0.8, sz + Math.cos(rot) * 0.25, 1.7, 0.4, 0.06, '#8a6840', { ry: rot });
       for (const s of [-0.7, 0.7]) this._box(b, sx + Math.cos(rot) * s, sy - 0.02, sz - Math.sin(rot) * s, 0.08, 0.45, 0.4, '#4b3a2a', { ry: rot });
       placed.push([px, pz]);

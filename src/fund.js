@@ -38,7 +38,23 @@ export const MEASURES = [
     real: 'Los Angeles claimed 85–90% less evaporation in drought; an MIT-led study found making its 96 million balls took 66–766 million gallons of water, one to two and a half years to pay back.' },
 ];
 
+// bounties (Year Two on): the first record of each species you file pays into the fund.  Clyde files your photo or catch
+// with a biodiversity survey.  The survey and its rates are invented; rarer finds pay more.
+const RARE = { fox: 600, beaver: 600, woodduck: 500, hawk: 500, heron: 400, ladyslipper: 600, cardinalflower: 450, columbine: 400, deer: 350, turtle: 300, troutlily: 300, eel: 400, brook: 400, carp: 300 };
+const BY_CAT = { Trees: 100, Plants: 200, Birds: 250, Animals: 250, Fish: 150 };
+for (const k of ['bounties']) if (S()[k] === undefined) S()[k] = {};
+
 export const FUND = {
+  /** pays the first record of a species from Year Two on; returns what it paid (0 if nothing) */
+  rate(id, cat) { const l = Usage.level(); return Math.round((RARE[id] ?? BY_CAT[cat] ?? 150) * [0.2, 0.6, 1, 1.1, 1.2][l === null ? 0 : Math.round(l)] / 10) * 10; },
+  paid(id) { return S().bounties[id] || 0; },
+  /** how much of a bounty reaches the fund: Clyde files records in minutes; by hand it takes weeks and most lapse */
+  byHand() { const l = Usage.level(); return l === null || Math.round(l) === 0; },
+  bounty(id, cat) {
+    if (!(RUN.phaseTwo || RUN.dev) || S().bounties[id]) return 0;
+    const l = Usage.level(), k = [0.2, 0.6, 1, 1.1, 1.2][l === null ? 0 : Math.round(l)];
+    const amt = Math.round((RARE[id] ?? BY_CAT[cat] ?? 150) * k / 10) * 10; S().bounties[id] = amt; S().fund += amt; RUN.save?.(); return amt;
+  },
   get balance() { return S().fund; },
   has(id) { return !!S().measures[id]; },
   /** total lake protection from what is installed (shade balls count from the season after they go in) */

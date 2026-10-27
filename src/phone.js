@@ -8,6 +8,8 @@ import { mountHudPanel } from './hud.js';
 import { PLACES, JOURNAL } from './places.js';
 import { FUND, SUPPLIES, MEASURES } from './fund.js';
 import { CATCHES } from './catches.js';
+import { WRITING } from './writing.js';
+import { SEASON } from './season.js';
 import { Usage, LEVELS } from './usage.js';
 
 const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
@@ -81,6 +83,7 @@ export class Phone {
       this._places(body);
     } else if (tab === 'journal') {
       this._key = null; this._catchStrip(body);
+      this._writing(body);
       const n = document.createElement('div'); n.className = 'bubble'; n.textContent = JOURNAL.list.length ? 'Your notes, newest first.' : 'Nothing yet. Walk, look, listen. What you find and name goes here.'; body.appendChild(n);
       for (const j of [...JOURNAL.list].reverse()) {
         const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:7px;font-size:13px;line-height:1.45';
@@ -135,7 +138,7 @@ export class Phone {
           const pic = d.thumb ? `<img src="${d.thumb}" style="width:72px;height:48px;border-radius:6px;object-fit:cover;flex:none">` : `<div style="width:72px;height:48px;border-radius:6px;background:#1d1b22;flex:none;display:grid;place-items:center;opacity:.5">${e.songOnly ? '\u266a' : '?'}</div>`;
           const known = GUIDE.found(e.id);
           row.dataset.id = e.id;
-          row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}<br><small style="opacity:.8">${known ? e.blurb : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
+          row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}${(RUN.phaseTwo || RUN.dev) && !e.songOnly && e.cat !== 'Sounds' ? (FUND.paid(e.id) ? ` <small style="color:#9fd07a">survey: paid</small>` : ` <small style="color:#e8c26a">survey bounty $${FUND.rate(e.id, e.cat)}</small>`) : ''}<br><small style="opacity:.8">${known ? e.blurb : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
           if (e.song && d.heard) { const b = document.createElement('button'); b.textContent = '\u25b6'; b.title = 'Play its song'; b.style.cssText = 'font:inherit;background:#3a3646;color:inherit;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;cursor:pointer'; b.addEventListener('click', (ev) => { ev.stopPropagation(); this.audio?.replay(e.song); }); row.appendChild(b); }
           if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelector('[data-ph-name]').textContent = 'Photos'; this._photos(body, i, e.id); } }); }
           body.appendChild(row);
@@ -158,6 +161,43 @@ export class Phone {
       body.appendChild(n);
     }
     this.update();
+  }
+  /** your own pages, by year: a button to write, then each year's pages (this year's open) */
+  _writing(body) {
+    const wrap = document.createElement('div'); wrap.className = 'wrsec';
+    const esc = (t) => t.replace(/[&<]/g, (c) => ({ '&': '&amp;', '<': '&lt;' }[c]));
+    wrap.innerHTML = `<div class="uh">Your pages</div>`;
+    const btn = document.createElement('button'); btn.className = 'cgo wrnew'; btn.textContent = 'Write something'; wrap.appendChild(btn);
+    btn.addEventListener('click', (e) => { e.stopPropagation(); this._write(body, null); });
+    const mine = WRITING.list.filter((p) => p.life === WRITING.life), older = WRITING.list.filter((p) => p.life !== WRITING.life);
+    const years = [...new Set(mine.map((p) => p.year))].sort((a, b) => b - a);
+    for (const y of years) {
+      const d = document.createElement('details'); d.className = 'wryear'; if (y === WRITING.year()) d.open = true;
+      const pages = mine.filter((p) => p.year === y).reverse();
+      d.innerHTML = `<summary>Year ${y} <small>${pages.length} page${pages.length === 1 ? '' : 's'}</small></summary>`;
+      for (const p of pages) {
+        const pg = document.createElement('div'); pg.className = 'wrpage';
+        pg.innerHTML = `<small>${p.season[0].toUpperCase() + p.season.slice(1)} \u00b7 ${new Date(p.at).toLocaleDateString()}</small><div class="wrtext">${esc(p.text)}</div>`;
+        pg.addEventListener('click', (e) => { e.stopPropagation(); this._write(body, p); });
+        d.appendChild(pg);
+      }
+      wrap.appendChild(d);
+    }
+    if (older.length) { const d = document.createElement('details'); d.className = 'wryear'; d.innerHTML = `<summary>Earlier lives <small>${older.length} page${older.length === 1 ? '' : 's'}</small></summary>`; for (const p of [...older].reverse()) { const pg = document.createElement('div'); pg.className = 'wrpage'; pg.innerHTML = `<small>Year ${p.year}, ${p.season} \u00b7 ${new Date(p.at).toLocaleDateString()}</small><div class="wrtext">${esc(p.text)}</div>`; d.appendChild(pg); } wrap.appendChild(d); }
+    body.appendChild(wrap);
+  }
+  /** the page itself: a quiet place to write.  p = null for a new page */
+  _write(body, p) {
+    body.innerHTML = ''; body.scrollTop = 0; this._key = null;
+    const head = document.createElement('div'); head.className = 'wrhead';
+    head.textContent = p ? `Year ${p.year}, ${p.season}` : `Year ${WRITING.year()}, ${SEASON}`;
+    const ta = document.createElement('textarea'); ta.className = 'wrarea'; ta.value = p?.text || ''; ta.placeholder = 'Field notes, a poem, what you saw, what you thought. Anything.';
+    for (const ev of ['keydown', 'keyup', 'keypress']) ta.addEventListener(ev, (e) => { e.stopPropagation(); if (e.code === 'Escape' && ev === 'keydown') ta.blur(); });   // typing is for the page, not the game
+    const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:8px;margin-top:10px';
+    const mk = (t, f, cls = 'choice') => { const b = document.createElement('button'); b.className = cls; b.textContent = t; b.style.cssText = 'flex:1;padding:10px 6px;font-size:14px'; b.addEventListener('click', (e) => { e.stopPropagation(); f(); }); return b; };
+    const done = () => { const t = ta.value.trim(); if (p) { if (t) WRITING.edit(p, t); else WRITING.remove(p); } else if (t) WRITING.add(t, SEASON); this.show('journal'); };
+    bar.append(mk('Keep it', done, 'cgo'), mk(p ? 'Delete' : 'Discard', () => { if (p && confirm('Delete this page?')) WRITING.remove(p); if (p || !ta.value.trim() || confirm('Discard what you wrote?')) this.show('journal'); }));
+    body.append(head, ta, bar); ta.focus(); setTimeout(() => ta.focus(), 60);
   }
   /** the catch log at the top of the Journal: a strip of cards to swipe through, newest first */
   _catchStrip(body) {
@@ -202,7 +242,7 @@ export class Phone {
     body.innerHTML = '';
     const live = RUN.phaseTwo || RUN.dev, fmt = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
     const top = document.createElement('div'); top.className = 'fundtop';
-    top.innerHTML = `<div class="fbal">${fmt(FUND.balance)}</div><small>Money the park keeps because of the help you asked for: grants written, hours saved, timber sold, and each season's dividend from your AI use. Figures are invented.</small>`;
+    top.innerHTML = `<div class="fbal">${fmt(FUND.balance)}</div><small>Money the park keeps because of the help you asked for: grants written, hours saved, timber sold, and each season's dividend from your AI use. Figures are invented.${FUND.byHand() && (RUN.phaseTwo || RUN.dev) ? ' <b>Without AI it fills slowly:</b> no seasonal dividend, and survey records filed by hand pay a fifth.' : ''}</small>`;
     body.appendChild(top);
     if (!live) { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'The fund opens when Clyde does, after your first year here.'; body.appendChild(n); return; }
     const W = FUND.water(), holds = FUND.holds(), lv = Usage.level(), lvName = lv === null ? 'not set' : LEVELS[Math.round(lv)].name;

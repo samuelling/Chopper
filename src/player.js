@@ -159,6 +159,7 @@ export class Player {
     if (this.locked && (this.touch.x || this.touch.y)) { fx += this.touch.x; fz -= this.touch.y; }
     if (this.inputLock) { fx = 0; fz = 0; }
     if (this.sitting && (fx || fz)) this.sitting = false;          // any step stands you up
+    if (!this.sitting && this.sit < 0.04) this.seatLift = 0;         // off the bench once fully up (no jump in the eye height)
     this.sit += ((this.sitting ? 1 : 0) - this.sit) * Math.min(1, dt * 3.2);
     if (this.sit > 0.05) { fx = 0; fz = 0; }
     const sprint = k.ShiftLeft || k.ShiftRight || Math.hypot(this.touch.x, this.touch.y) > 0.92;
@@ -193,7 +194,7 @@ export class Player {
     if (this._blockedAt(nx, this.pos.z)) nx = this.pos.x;
     if (this._blockedAt(nx, nz)) nz = this.pos.z;
     // circle colliders
-    for (let it = 0; it < 2; it++) {
+    for (let it = 0; it < 2 && !(this.sitting && this.seatLift); it++) {             // seated at a table: stay on the bench
       this.colliders.query(nx, nz, RADIUS + 3, (c) => {
         if (this.pos.y > groundY(c.x, c.z) + c.h - 0.05) return;
         const dx = nx - c.x, dz = nz - c.z, d = Math.hypot(dx, dz), min = c.r + RADIUS;
@@ -265,7 +266,7 @@ export class Player {
     if (dt > 0) this.camOff.multiplyScalar(Math.exp(-dt * 6));
     const bobY = Math.sin(this.bob) * 0.035 * Math.min(1, this.speed / 3.6);
     const bobX = Math.cos(this.bob * 0.5) * 0.02 * Math.min(1, this.speed / 3.6);
-    c.position.set(this.pos.x, this.pos.y + EYE - this.sit * 0.95 + bobY, this.pos.z);
+    c.position.set(this.pos.x, this.pos.y + EYE - this.sit * (0.95 - (this.seatLift || 0)) + bobY, this.pos.z);   // on a bench the eye stays higher
     c.position.add(this.camOff); c.rotation.set(this.pitch, this.yaw, this.swim * Math.sin(this.strokeT * Math.PI * 2) * 0.014 * Math.min(1, this.speed / 1.2), 'YXZ');
     // axe pose: rest -> windup -> strike
     const s = this.swing;

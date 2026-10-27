@@ -40,9 +40,9 @@ export function creditsHTML(kind, st) {
 }
 
 /** scrolls the credits, then shows the end buttons.  Returns a stop function. */
-export function rollCredits(root, html, { onRestart, onStay }) {
+export function rollCredits(root, html, { onRestart, onStay, onMenu }) {
   root.classList.remove('hidden');
-  root.innerHTML = `<div class="crscroll">${html}</div><div class="crend" hidden><button data-cr-stay>Stay and watch</button><button data-cr-restart>Begin again</button></div>`;
+  root.innerHTML = `<div class="crscroll">${html}</div><button class="crskip" data-cr-menu>Skip to the start menu</button><div class="crend" hidden><button data-cr-stay>Stay and watch</button><button data-cr-restart>Begin again</button></div>`;
   const sc = root.querySelector('.crscroll'), end = root.querySelector('.crend');
   let y = innerHeight, raf = 0, last = performance.now(), done = false;
   const tick = (now) => {
@@ -54,5 +54,6 @@ export function rollCredits(root, html, { onRestart, onStay }) {
   raf = requestAnimationFrame(tick);
   root.querySelector('[data-cr-restart]').addEventListener('click', () => { if (confirm('Begin again from Year One? Everything resets.')) onRestart(); });
   root.querySelector('[data-cr-stay]').addEventListener('click', () => { root.classList.add('hidden'); onStay?.(); });
+  root.querySelector('[data-cr-menu]').addEventListener('click', (e) => { e.stopPropagation(); cancelAnimationFrame(raf); root.classList.add('hidden'); onMenu?.(); });
   return () => cancelAnimationFrame(raf);
 }
