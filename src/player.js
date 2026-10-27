@@ -144,7 +144,7 @@ export class Player {
     this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0; this.swim = 0; this.dive = 0; this.underwater = false; this.swimming = false;
     this.sit += (0.55 - this.sit) * Math.min(1, dt * 3);
     this.stillT = this.speed < 0.3 ? this.stillT + dt : 0;
-    this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
+    this.raise += Math.max(-dt / 0.45, Math.min(dt / 0.6, this.raiseTo - this.raise));
     this._applyCamera(dt);
   }
 
@@ -247,7 +247,7 @@ export class Player {
     } else this.bob *= 0.9;
 
     this.stillT = this.speed < 0.4 ? this.stillT + dt : 0;
-    this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
+    this.raise += Math.max(-dt / 0.45, Math.min(dt / 0.6, this.raiseTo - this.raise));   // a steady lift (eased below), not a snap
     // axe swing
     if (this.swing > 0) {
       this.swing += dt / 0.52;
@@ -283,7 +283,8 @@ export class Player {
     this.axe.rotation.set(rx, ry, rz);
     // phone: low in the right corner, screen tipped toward you; raised, it fills the middle of the view
     const k = this.raise, e = k * k * (3 - 2 * k), sway = Math.sin(this.bob * 0.5) * 0.003 * Math.min(1, this.speed / 3.6);
-    this.phone.position.set(0.25 * (1 - e) + sway, -0.23 * (1 - e) - 0.01 * e, -0.46 + 0.2 * e);
-    this.phone.rotation.set(-0.55 * (1 - e) + 0.0 * e, -0.38 * (1 - e), 0.18 * (1 - e));
+    const arc = Math.sin(e * Math.PI);                      // the hand swings out a little on the way up
+    this.phone.position.set(0.25 * (1 - e) + sway - 0.04 * arc, -0.23 * (1 - e) - 0.01 * e + 0.03 * arc, -0.46 + 0.2 * e);
+    this.phone.rotation.set(-0.55 * (1 - e) + 0.08 * arc, -0.38 * (1 - e), 0.18 * (1 - e));
   }
 }

@@ -36,7 +36,9 @@ export class Phone {
     this.isOpen = true; this.tab = tab; this.onOpen?.();
     this.el.innerHTML = `<div class="phone"><div class="pbar"><button class="pback" data-home>\u2039</button><span class="pname" data-ph-name>Home</span><small data-ph-sub></small></div>
       <div class="pscroll" data-ph-body></div><div class="phomebar"><i data-home></i></div></div>`;
-    this.el.classList.remove('hidden');
+    this._finish();                                         // a close still fading out is cut short
+    this.el.classList.remove('hidden', 'closing'); this.el.classList.add('enter'); void this.el.offsetWidth;   // starts as the small raised phone, then swells to fill the view
+    requestAnimationFrame(() => this.el.classList.remove('enter'));
     this.el.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.show('home'); }));
     this.show(tab);
   }
@@ -215,6 +217,12 @@ export class Phone {
   }
   close() {
     if (!this.isOpen) return;
-    this._release(); this.isOpen = false; this.el.classList.add('hidden'); this.el.innerHTML = ''; this.onClose?.();
+    this.isOpen = false; this.el.classList.add('closing');   // shrinks back toward the hand while the 3D phone lowers
+    this._ct = setTimeout(() => this._finish(), 320);
+    this.onClose?.();
+  }
+  _finish() {
+    if (this._ct == null) return; clearTimeout(this._ct); this._ct = null;
+    this._release(); this.el.classList.add('hidden'); this.el.classList.remove('closing'); this.el.innerHTML = '';
   }
 }

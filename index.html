@@ -130,6 +130,10 @@
   .go.inactive { opacity:.35; pointer-events:none; filter:grayscale(.6); }
   #seasonbar { position:absolute; left:0; right:0; top:0; height:3px; background:rgba(244,230,200,.12); } #seasonbar i { display:block; height:100%; width:0; background:rgba(244,230,200,.55); }
   .phone { height:min(90vh,800px); aspect-ratio:9/18.6; max-width:94vw; position:relative; display:flex; flex-direction:column; text-align:left; background:#1d1b22; border:9px solid #0f0e12; border-radius:40px; box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06); overflow:hidden; cursor:default; }
+  .phone { transform-origin:50% 56%; transition:transform .5s cubic-bezier(.16,.84,.24,1), opacity .2s ease-out; }
+  #phone.enter, #phone.closing { background:rgba(14,10,12,0); pointer-events:none; }
+  #phone.enter .phone, #phone.closing .phone { transform:scale(.46) translateY(4%); opacity:0; }
+  #phone.closing .phone { transition:transform .3s cubic-bezier(.5,0,.8,.4), opacity .22s ease-in .08s; }
   .phone::before { content:''; position:absolute; top:7px; left:50%; width:84px; height:22px; margin-left:-42px; border-radius:12px; background:#0b0a0d; z-index:2; }
   .phone .pbar { padding-top:38px; } .phone.onhome::before { background:#0b0a0d; }
   .ptabs button { font-size:10.5px !important; letter-spacing:.04em !important; }
@@ -150,7 +154,7 @@
   .pscroll { overflow-y:auto; padding:14px 16px 20px; flex:1; }
   .bubble { background:#2d2a36; border-radius:16px 16px 16px 4px; padding:11px 14px; font-size:14px; line-height:1.5; margin-bottom:12px; }
   .phone .usage { max-width:none; margin-top:10px; } .phone .go { margin:14px auto 0; text-align:center; font-size:15px; padding:11px 18px; }
-  #phone { z-index:6; background:rgba(14,10,12,.55); } #phone .pscroll canvas { position:static !important; display:block; margin:6px auto; }
+  #phone { z-index:6; background:rgba(14,10,12,.55); transition:background .4s ease-out; } #phone .pscroll canvas { position:static !important; display:block; margin:6px auto; }
   .phone .choice.sm { width:auto !important; display:inline-block !important; flex:none; }
   .phone .choice { font:inherit; color:var(--paper); background:rgba(40,36,48,.9); border:2px solid rgba(244,230,200,.35); border-radius:10px; cursor:pointer; } .phone .choice:hover:not(:disabled) { border-color:rgba(255,226,170,.9); }
   .compass { text-align:center; font-size:13px; letter-spacing:.14em; margin:2px 0 6px; opacity:.85; }
