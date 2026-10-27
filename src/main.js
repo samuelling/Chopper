@@ -335,9 +335,9 @@ async function boot() {
     setTimeout(() => { b.textContent = was; }, 1600);
   }));
   document.querySelectorAll('.logtut').forEach((d) => d.addEventListener('click', (e) => e.stopPropagation()));
-  const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
+  const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); sessionStorage.removeItem('ashland.fadein'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
-  document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = b.closest('#paused') ? false : RUN.fresh; b.addEventListener('click', restart); });
+  document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.dev; b.addEventListener('click', restart); });
   // testing aid: land at the end of summer, a few seconds before Clyde first appears and Year Two begins
   document.querySelectorAll('[data-skip2]').forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation(); if (RUN.dev) return;
