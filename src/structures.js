@@ -59,9 +59,21 @@ export class Structures {
     const dist = type === 'boardwalk' ? 2 : 3;
     const x = player.pos.x + f.x * dist, z = player.pos.z + f.z * dist;
     const yaw = type === 'boardwalk' ? Math.atan2(f.x, f.z) : Math.atan2(f.x, f.z);
-    const probe = type === 'boardwalk' ? [0, 4, 8, 12].map((v) => [x + f.x * v, z + f.z * v]) : [[x, z]];
-    for (const [px, pz] of probe) if (sdfAt(px, pz) < 3 || groundY(px, pz) < LEVEL + 0.25) return { ok: false, msg: 'Too close to the water to build there. Face solid ground and try again.' };
-    const rec = this.add(type, x, z, yaw, { flatten: type === 'kiosk' || type === 'table' });
+    const dry = (px, pz) => sdfAt(px, pz) >= 3 && groundY(px, pz) >= LEVEL + 0.25 && !this.items.some((it) => Math.hypot(it.x - px, it.z - pz) < 3.5);   // and not on top of something already built
+    const fits = (x0, z0, fx, fz) => (type === 'boardwalk' ? [0, 4, 8, 12, 14] : [0, 1.2, -1.2]).every((v) => dry(x0 + fx * v, z0 + fz * v));
+    let at = fits(x, z, f.x, f.z) ? { x, z, yaw, moved: 0 } : null;
+    // the spot in front of you is wet: find the nearest ground that works, facing away from you, and build there instead
+    for (let r = 4; !at && r <= 120; r += 2) for (let a = 0; a < 36 && !at; a++) {
+      const an = a / 36 * Math.PI * 2 + Math.atan2(f.z, f.x), cx = player.pos.x + Math.cos(an) * r, cz = player.pos.z + Math.sin(an) * r, fx = Math.cos(an), fz = Math.sin(an);
+      if (fits(cx, cz, fx, fz)) at = { x: cx, z: cz, yaw: Math.atan2(fx, fz), moved: r };
+    }
+    if (!at) return { ok: false, msg: 'There is no dry ground near enough to build on. Walk inland and ask again.' };
+    const rec = this.add(type, at.x, at.z, at.yaw, { flatten: type === 'kiosk' || type === 'table' });
+    if (at.moved) {
+      const dirs = ['east', 'southeast', 'south', 'southwest', 'west', 'northwest', 'north', 'northeast'], ang = Math.atan2(at.z - player.pos.z, at.x - player.pos.x);
+      const dir = dirs[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8], name = { bench: 'bench', boardwalk: 'boardwalk', kiosk: 'trail kiosk', table: 'picnic table' }[type];
+      return { ok: true, rec, at, msg: `It is too wet where you are facing, so the ${name} went on the nearest dry ground, about ${Math.round(at.moved)} m to the ${dir}. It is marked on your map.` };
+    }
     return { ok: true, rec, msg: { bench: 'A bench is up, facing the way you were looking.', boardwalk: 'A boardwalk now runs ahead of you.', kiosk: 'A trail kiosk with a map stands here.', table: 'A picnic table is set.' }[type] };
   }
 }

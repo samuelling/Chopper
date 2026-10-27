@@ -101,6 +101,10 @@ export function showInterlude(el, ctx, onContinue) {
   var skip = document.createElement('button'); skip.className = 'cskip'; skip.innerHTML = '<b>Make no choice</b><span>That is a choice too. Nothing changes, nothing is given.</span>';
   skip.addEventListener('click', (e) => { e.stopPropagation(); if (skip.disabled) return; chose = true; ch.querySelectorAll('[data-choice]').forEach((o) => { o.disabled = true; o.style.opacity = '.35'; }); ch.querySelector('[data-choice-note]').textContent = 'You let the season pass.'; ready(); });
   ch.insertBefore(skip, ch.querySelector('[data-choice-note]'));
+  // only a few of Clyde's options come up each season; say where the rest are, so a missing one is not mistaken for a bug
+  const more = document.createElement('small'); more.className = 'chmore';
+  more.textContent = `These are this season's picks. Every option, the bench and the boardwalk included, is always in the menu under Choices (${document.body.classList.contains('mobile') ? '\u2630, or Phone \u2192 Tools \u2192 Choices' : 'press C'}). Anything that needs dry ground goes on the nearest dry ground if you are facing water.`;
+  ch.insertBefore(more, ch.querySelector('[data-choice-note]'));
   ready();
   go.addEventListener('click', (e) => {
     e.stopPropagation();

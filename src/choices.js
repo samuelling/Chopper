@@ -10,7 +10,11 @@ import { WILDLIFE } from './season.js';
 
 export const phaseTwo = () => RUN.dev && (new URLSearchParams(location.search).get('phase') === '2' || Usage.tier !== null || Object.keys(Usage.days).length > 0 || PRESSURE.target > 0);
 const smooth = (edge0, x) => { const t = Math.min(1, Math.max(0, (x - edge0) / 0.3)); return t * t * (3 - 2 * t); };
-const build = (type) => ({ player, structures }) => { const r = structures.place(type, player); return r.ok ? { msg: r.msg, rec: r.rec } : { ok: false, msg: r.msg }; };
+const build = (type) => ({ player, structures, setWaypoint }) => {
+  const r = structures.place(type, player);
+  if (r.ok && r.at?.moved) setWaypoint?.(r.at.x, r.at.z, { bench: 'Your bench', boardwalk: 'The boardwalk', kiosk: 'The kiosk', table: 'The picnic table' }[type]);   // built elsewhere: show where
+  return r.ok ? { msg: r.msg, rec: r.rec } : { ok: false, msg: r.msg };
+};
 
 export const CHOICES = [
   { id: 'bench', kind: 'AI', title: 'Build a bench here', gain: 'A bench in front of you. AI drafts the design and the volunteer schedule, saving about 6 staff hours', care: 0.05, cost: 0.008, buffer: 0.02, hours: 6, saved: 400, run: build('bench') },
