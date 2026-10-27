@@ -80,6 +80,8 @@ export class Fishing {
     this.fishObj = g; this.fishT = 0; this.camera.add(g);
   }
 
+  /** for the reel's sound */
+  audioState() { const f = this.state === 'fight'; return { on: f ? !!this.hold && !this.dragging : this.state === 'reel', speed: f ? Math.max(0.15, this.reelSpeed || 0.4) : 0.5, drag: f && !!this.dragging }; }
   get busy() { return this.state !== 'idle'; }
   reset() { this.state = 'idle'; this.bobber.visible = false; this.line.visible = false; this.hud.style.display = 'none'; }
 
@@ -185,7 +187,7 @@ export class Fishing {
           break;
         }
         case 'fight': {
-          const D = this.D, hold = !!ctx.hold, lean = ctx.lean || 0, clamp = THREE.MathUtils.clamp;
+          const D = this.D, hold = !!ctx.hold, _h = (this.hold = hold), lean = ctx.lean || 0, clamp = THREE.MathUtils.clamp;
           // the fish decides when to run, and which way; a short warning first
           if (this.run <= 0 && this.tele <= 0) { this.nextRun -= dt; if (this.nextRun <= 0) { this.tele = 0.5; this.runDir = this.rng() < 0.5 ? -1 : 1; this.hooks.pull?.(); } }
           if (this.tele > 0) { this.tele -= dt; if (this.tele <= 0) this.run = 0.9 + this.rng() * 0.8; }
@@ -199,7 +201,7 @@ export class Fishing {
           // line comes in only while you reel; a running fish takes it back
           let v = hold ? 2.4 * (1 - 0.75 * D * this.stam) : 0;
           if (running) { v = hold ? v * (counter ? 0.6 : 0.2) : 0; this.d += (hold && !counter ? 0.9 : 1.4) * power * dt; }
-          this.d = clamp(this.d - v * dt, 0, this.d0 * 1.5);
+          this.d = clamp(this.d - v * dt, 0, this.d0 * 1.5); this.reelSpeed = v / 2.4; this.dragging = running && !hold;
           // it tires while the line is in the green, and fastest when you answer a run correctly
           this.stam = clamp(this.stam - dt * ((green && hold ? 0.05 * (1.1 - 0.3 * D) : 0) + (counter ? 0.13 : 0)), 0, 1);
           // snap or spit

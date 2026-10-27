@@ -1,5 +1,6 @@
 // Everything synthesised with WebAudio: no asset files.
 import { SEASON } from './season.js';
+import { installWaterSounds } from './watersound.js';
 
 export class Audio {
   constructor() { this.ctx = null; this.ready = false; }
@@ -8,7 +9,7 @@ export class Audio {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
     const ctx = this.ctx = new C();
-    this.master = ctx.createGain(); this.master.gain.value = 0; this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 1.2); this.master.connect(ctx.destination);   // fades in rather than starting at full
+    this.master = ctx.createGain(); this.master.gain.value = 0; this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 1.2); const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.22; this.master.connect(comp); comp.connect(ctx.destination);   // fades in rather than starting at full
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -216,3 +217,5 @@ for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker'
 }
 Audio.prototype.shutter = function () { if (!this.ready) return; this._burst(3000, 1.2, 0.05, 0.25, 'bandpass'); setTimeout(() => this._burst(1800, 1.2, 0.07, 0.2, 'bandpass'), 70); };
 Audio.prototype.replay = function (v) { if (this.ready) RAW_VOICES[v]?.call(this); };
+
+installWaterSounds(Audio);

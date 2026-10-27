@@ -71,7 +71,7 @@ export class Boat {
   /** one oar's stroke: returns thrust (positive pushes the boat forward).  want: +1 pull, -1 back water, 0 rest */
   _oar(o, dt, want) {
     const T = 1.5, DRIVE = 0.45, REACH = 0.3, A = 0.55, ease = (u) => u * u * (3 - 2 * u);
-    if (!o.active && want) { o.active = true; o.ph = -REACH; o.a0 = o.a; o.dir = want; o.splashed = false; this.hooks.creak?.(); }
+    if (!o.active && want) { o.active = true; o.ph = -REACH; o.a0 = o.a; o.dir = want; o.splashed = false; this.hooks.creak?.(o.s); }
     let thrust = 0, thT = -0.06;
     if (o.active) {
       o.ph += dt / T; const p = o.ph;
@@ -83,16 +83,16 @@ export class Boat {
         if (!o.splashed) { o.splashed = true; this._splash(o, 1); }
       } else {                                               // lifted clear and carried back to the catch
         const u = ease((p - DRIVE) / (1 - DRIVE)); o.a = o.dir * (-A + 2 * A * u); thT = -0.16;
-        if (o.splashed) { o.splashed = false; this._splash(o, 0.5); }
+        if (o.splashed) { o.splashed = false; this._splash(o, 0.5); this.hooks.out?.(o.s); }
       }
-      if (o.ph >= 1) { if (want === o.dir) { o.ph -= 1; this.hooks.creak?.(); } else { o.active = false; o.ph = 0; } }
+      if (o.ph >= 1) { if (want === o.dir) { o.ph -= 1; this.hooks.creak?.(o.s); } else { o.active = false; o.ph = 0; } }
     } else o.a *= Math.exp(-2.2 * dt);
     o.th += (thT - o.th) * (1 - Math.exp(-dt * 9));
     return thrust;
   }
   _splash(o, k) {
     const f = this.fwd(), x = this.x + (Math.cos(this.h) * o.s) * 1.55 + f.x * -0.1, z = this.z + (-Math.sin(this.h) * o.s) * 1.55 + f.z * -0.1;
-    this.hooks.splash?.(x, lake.level + 0.03, z, k);
+    this.hooks.splash?.(x, lake.level + 0.03, z, k, o.s);
     const r = this.rings.find((m) => m.userData.age >= 1) || this.rings[0]; r.userData.age = 0; r.userData.k = k; r.position.set(x, lake.level + 0.03, z); r.scale.setScalar(0.3); r.visible = true;
   }
 
