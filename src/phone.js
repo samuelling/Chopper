@@ -98,9 +98,9 @@ export class Phone {
       } else { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Nothing to measure yet. The park is just the park.'; body.appendChild(n); }
     } else if (tab === 'guide') {
       const n = document.createElement('div'); n.className = 'bubble';
-      n.innerHTML = `<b>Field Guide</b> &middot; ${GUIDE.count()} of ${ENTRIES.length} found.<br>Press V for the camera and photograph trees, birds and animals. Songs you hear go in too. These are species typical of a Massachusetts reservoir forest, not a survey of the real park.`;
+      n.innerHTML = `<b>Field Guide</b> &middot; ${GUIDE.count()} of ${ENTRIES.length} found.<br>Press V for the camera and photograph trees, birds and animals. Fish go in when you catch them (Q for the rod). Songs you hear go in too. These are species typical of a Massachusetts reservoir forest, not a survey of the real park.`;
       body.appendChild(n);
-      for (const cat of ['Trees', 'Birds', 'Animals', 'Sounds']) {
+      for (const cat of ['Trees', 'Birds', 'Animals', 'Fish', 'Sounds']) {
         const h = document.createElement('h4'); h.textContent = cat; h.style.cssText = 'margin:14px 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.7'; body.appendChild(h);
         for (const e of ENTRIES.filter((x) => x.cat === cat)) {
           const d = GUIDE.d[e.id] || {}, row = document.createElement('div');
@@ -108,7 +108,7 @@ export class Phone {
           const pic = d.thumb ? `<img src="${d.thumb}" style="width:72px;height:48px;border-radius:6px;object-fit:cover;flex:none">` : `<div style="width:72px;height:48px;border-radius:6px;background:#1d1b22;flex:none;display:grid;place-items:center;opacity:.5">${e.songOnly ? '\u266a' : '?'}</div>`;
           const known = GUIDE.found(e.id);
           row.dataset.id = e.id;
-          row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}<br><small style="opacity:.8">${known ? e.blurb : (e.songOnly ? 'Listen for it.' : 'Photograph it.')}</small></div>`;
+          row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}<br><small style="opacity:.8">${known ? e.blurb : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
           if (e.song && d.heard) { const b = document.createElement('button'); b.textContent = '\u25b6'; b.title = 'Play its song'; b.style.cssText = 'font:inherit;background:#3a3646;color:inherit;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;cursor:pointer'; b.addEventListener('click', (ev) => { ev.stopPropagation(); this.audio?.replay(e.song); }); row.appendChild(b); }
           if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelector('[data-ph-name]').textContent = 'Photos'; this._photos(body, i, e.id); } }); }
           body.appendChild(row);

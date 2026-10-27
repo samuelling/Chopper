@@ -16,7 +16,7 @@ import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
 import {
-  buildGrid, makeHeightTexture, gravelAt, trailDistAt, flattenArea, editTerrain, buildTerrain, groundY, sdfAt, lake, TRAIL,
+  buildGrid, makeHeightTexture, gravelAt, trailDistAt, flattenArea, editTerrain, buildTerrain, groundY, sdfAt, lake, TRAIL, waterDepthAt,
 } from './world.js';
 import { Atmosphere, PRESETS } from './atmosphere.js';
 import { Water } from './water.js';
@@ -43,6 +43,8 @@ import { Discoveries } from './discoveries.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
+import { Boat } from './boat.js';
+import { Fishing } from './fishing.js';
 import { ui } from './ui.js';
 import { TouchControls } from './touch.js';
 import { initFullscreen } from './fullscreen.js';
@@ -120,7 +122,7 @@ async function boot() {
   const squirrels = new Squirrels(scene, chunks, { mobile: MOBILE });
   const careActs = new CareActs(scene);
   careActs.onToast = (t) => ui.toast(t, 3);
-  addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (e.code === 'KeyE' && !landmarks.nearGate(player.pos)) careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
+  addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (player.boat) return; if (e.code === 'KeyE' && !landmarks.nearGate(player.pos) && !nearBoat()) careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
   const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
   const flyers = new Flyers(scene, { mobile: MOBILE });
@@ -196,7 +198,54 @@ async function boot() {
   };
   let shake = 0;
 
+  // ---- the rowboat at the ramp, and the rod
+  const boat = new Boat(scene, {
+    splash: (x, y, z, k) => { fx.splash(x, y, z, Math.round(8 * k)); audio.dip?.(k); },
+    creak: () => audio.oarlock?.(), bump: () => audio.thud?.(),
+  });
+  {
+    const sv = RUN.s.boat, B = { x: 0, z: 0, h: 0 };
+    if (sv && boat._wet(sv.x, sv.z)) Object.assign(B, sv);
+    else {                                                // float it just off the ramp, bow to the open water
+      let d = 0; while (d < 60 && waterDepthAt(RAMP.x + RAMP.dx * d, RAMP.z + RAMP.dz * d) < 0.8) d += 0.5;
+      B.h = Math.atan2(-RAMP.dx, -RAMP.dz);
+      for (d += 1.5; d < 90; d += 1) { B.x = RAMP.x + RAMP.dx * d; B.z = RAMP.z + RAMP.dz * d; if (boat._clear(B.x, B.z, B.h)) break; }
+    }
+    boat.place(B.x, B.z, B.h);
+    if (params.has('ramp')) player.teleport(B.x - RAMP.dx * 5, B.z - RAMP.dz * 5, Math.atan2(-RAMP.dx, -RAMP.dz), -0.12);   // ?ramp=1 starts you at the boat ramp, facing the lake
+  }
+  const fishing = new Fishing(scene, camera, {
+    cast: () => { audio.castSwish?.(); }, plop: (x, y, z) => { audio.plop?.(); fx.splash(x, y, z, 5); }, bite: () => { audio.plop?.(); setTimeout(() => audio.plop?.(), 140); },
+    reel: () => audio.reelTick?.(), toast: (t, d) => ui.toast(t, d),
+    caught: (f, inches, x, z) => {
+      const first = !GUIDE.found(f.id); GUIDE.addCaught(f.id, inches); RUN.s.fish = (RUN.s.fish || 0) + 1; RUN.save?.();
+      JOURNAL.add(`Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.`, player.pos.x, player.pos.z);
+      ui.toast(`A ${inches}-inch ${f.name}. You let it go.${first ? ' New in your Field Guide.' : ''}`, 4.5); audio.dip?.(1.5); fx.splash(x, lake.level + 0.03, z, 12);
+    },
+  });
+  player.events.cast = () => { tut.fished = true; if (started && !interludeOn && !player.cameraMode && !phone.isOpen) fishing.click(); };
+  const nearBoat = () => !player.boat && Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) < 3.8;
+  let boatT = 99;
+  const embark = () => {
+    if (!boat._wet(boat.x, boat.z)) { ui.toast('The boat is sitting on dry mud. The reservoir is too low to row.', 3.8); return; }
+    fishing.reset(); player.boat = boat; player.setCarry('none'); player.yaw = boat.h; player.pitch = -0.12; boatT = 0;
+    RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You climb into the rowboat.', 2);
+  };
+  const disembark = () => {
+    let best = null, bs = 1e9;
+    for (let r = 1.5; r <= 6.5; r += 0.75) for (let a = 0; a < 24; a++) {
+      const an = (a / 24) * Math.PI * 2, x = boat.x + Math.cos(an) * r, z = boat.z + Math.sin(an) * r;
+      if (waterDepthAt(x, z) > 0.55 || player._blockedAt(x, z)) continue;
+      const fx0 = -Math.sin(player.yaw), fz0 = -Math.cos(player.yaw), score = r - 0.8 * ((x - boat.x) * fx0 + (z - boat.z) * fz0) / r;
+      if (score < bs) { bs = score; best = { x, z }; }
+    }
+    if (!best) { ui.toast('Row closer to the shore to climb out.', 2.4); return; }
+    fishing.reset(); player.boat = null; player.teleport(best.x, best.z, player.yaw, player.pitch);
+    RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You step out onto the shore.', 2);
+  };
   player.events.interact = () => {
+    if (player.boat) { disembark(); return; }
+    if (nearBoat()) { embark(); return; }
     if (landmarks.nearGate(player.pos)) {
       lake.gateOpen = !lake.gateOpen;
       audio.toggle();
@@ -229,7 +278,7 @@ async function boot() {
   };
   addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && started && player.locked && !interludeOn) setCameraMode(!player.cameraMode); });
   audio.onHeard = (v) => GUIDE.addHeard(v);
-  GUIDE.onNew = (kind, en) => { JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
+  GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen];
     const pick = pickSubject(camera, cands);
@@ -259,6 +308,8 @@ async function boot() {
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
       { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer', ok: () => tut.sat, max: 20 },
+      { text: '<kbd>Q</kbd> again brings out a fishing rod: click to cast into open water, and click when the bobber dips', ok: () => tut.fished, max: 25 },
+      { text: 'At the boat ramp, <kbd>E</kbd> gets you into the rowboat. <kbd>W</kbd> <kbd>S</kbd> row, <kbd>A</kbd> <kbd>D</kbd> turn', ok: () => false, max: 14 },
       { text: '<kbd>E</kbd> picks up litter (at the dam gatehouse, it works the gate) &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
     moved: 0, turned: 0, sat: false, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
@@ -355,7 +406,7 @@ async function boot() {
     const y = parseInt(birthIn.value), now = new Date().getFullYear();
     if (y >= 1900 && y <= now) RUN.setBorn(y, false); else RUN.setBorn(now - 40, true);
   };
-  const enter = () => { try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!params.has('x')); };
+  const enter = () => { try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!(params.has('x') || params.has('ramp'))); };
   // the first time you press begin, ask for the birth year (a reset keeps it)
   const finishBirth = () => { birthEl.hidden = true; ensureBorn(); enter(); };
   document.getElementById('birthgo').addEventListener('click', finishBirth);
@@ -387,7 +438,7 @@ async function boot() {
   const phone = new Phone({ discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     onOpen: () => { phoneOn = true; player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { player.setCarry({ phone: 'axe', axe: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.4); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) {
       if (phone.isOpen) phone.close();
       else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 380); }
@@ -461,7 +512,7 @@ async function boot() {
   const endStats = () => ({
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
-    species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
+    fish: RUN.s.fish || 0, species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
     harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours,
   });
   function beginEnding(kind) {
@@ -592,7 +643,9 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    player.update(dt);
+    boat.update(dt, player.boat === boat); player.update(dt);
+    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter' }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
+    if (player.boat) boatT += dt;
     flyover.update(dt); tut.update(dt);
     // camera shake from big falls
     if (shake > 0.001) {
@@ -622,14 +675,14 @@ async function boot() {
     const wx = weather.update(dt, atmosphere, () => audio.thunder?.());
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
-    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : careActs.update(dt, player));
+    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : player.boat ? (boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
   const render = () => renderer.render(scene, camera);
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

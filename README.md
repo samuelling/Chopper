@@ -13,8 +13,8 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | | |
 |---|---|
 | WASD / Shift / Space | walk / hurry / hop |
-| Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe and empty hands, and click swings the axe (a big tree takes several swings) |
-| E | pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
+| Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe, fishing rod and empty hands, and click swings the axe (a big tree takes several swings) |
+| E | get in or out of the rowboat when you are next to it; pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
 | Pause menu | Spring / Summer / Autumn / Winter buttons jump to a season (`?season=winter` does too; **T** cycles seasons in dev mode only) |
 | B | sit and wait: stay still and the woods come closer |
@@ -117,3 +117,9 @@ Debug: add `?auto=1` to skip the title screen, `&preset=1`, `&x=&z=&yaw=` to pla
 ## Terrain editing (for future building)
 
 The ground is editable at runtime. `flattenArea(x, z, r, {y, blend})` in `src/world.js` levels a circular site and blends it into the surrounding slope, updating `groundY`, the shader height texture, the mesh normals and the slope-based colouring together (`editTerrain(x0, z0, x1, z1, fn)` is the general version). `ChunkManager.clearArea(x, z, r)` keeps trees, props, walls and their colliders out of the site and regenerates the affected chunks. `window.chopper.buildSite(x, z, r)` does both. The lake basin itself is left alone, so don't plan sites on the shoreline.
+
+## The rowboat and fishing
+
+A rowboat floats just off the boat ramp (`?ramp=1` starts you beside it). Walk up and press **E** to get in; you sit facing the bow. **W** pulls both oars, **S** backs water, **A** / **D** pull one oar to turn. There are no hands: the oars swing in the rowlocks by themselves. The shore stops the hull, you climb out with **E** where the water is shallow, and the boat stays where you left it. If the reservoir is drained the boat sits on dry mud.
+
+Press **Q** until the rod is in hand (from the boat or from the shore), click to cast toward open water, wait for the bobber to dip, and click again to set the hook. Every fish is let go. Bites follow how much wildlife the park still has and how full the reservoir is, so a harmed or drained park gives you "Nothing. The water is quiet." The species (bluegill, pumpkinseed, yellow perch, black crappie, largemouth bass, chain pickerel, brown bullhead) are typical of a Massachusetts reservoir, not a survey of the real one; the sizes are random. Each new species is added to the Field Guide (a Fish section) and every catch goes in the journal and the end credits.

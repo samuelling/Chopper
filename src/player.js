@@ -25,15 +25,15 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.sitting = false; this.sit = 0; this.stillT = 0;
+    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null;
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys[e.code] = true;
-      if (e.code === 'Space' && this.locked) { this.sitting = false; this._jump(); }
+      if (e.code === 'Space' && this.locked && !this.boat) { this.sitting = false; this._jump(); }
       if (e.code === 'KeyE' && this.locked) this.events.interact?.();
-      if (e.code === 'KeyB' && this.locked && !this.cameraMode) this.sitting = !this.sitting && waterDepthAt(this.pos.x, this.pos.z) < 0.2;
+      if (e.code === 'KeyB' && this.locked && !this.cameraMode && !this.boat) this.sitting = !this.sitting && waterDepthAt(this.pos.x, this.pos.z) < 0.2;
     });
     addEventListener('keyup', (e) => { this.keys[e.code] = false; });
     addEventListener('mousemove', (e) => {
@@ -42,7 +42,7 @@ export class Player {
       this.pitch = clamp(this.pitch - e.movementY * 0.0022, -1.45, 1.45);
     });
     addEventListener('mousedown', (e) => {
-      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'axe') this.startSwing(); }
+      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === dom;
@@ -131,7 +131,22 @@ export class Player {
     return false;
   }
 
+  /** rowing: the boat carries you; the camera sits low in it, and the view turns with the bow */
+  _ride(dt) {
+    const k = this.keys, b = this.boat, on = this.locked;
+    b.input.row = on ? (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) : 0;
+    b.input.turn = on ? (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) : 0;
+    const seat = b.seatWorld();
+    this.pos.set(seat.x, b.root.position.y - 0.08, seat.z);
+    this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0;
+    this.sit += (0.55 - this.sit) * Math.min(1, dt * 3);
+    this.stillT = this.speed < 0.3 ? this.stillT + dt : 0;
+    this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
+    this._applyCamera(dt);
+  }
+
   update(dt) {
+    if (this.boat) { this._ride(dt); return; }
     const k = this.keys;
     let fx = 0, fz = 0;
     if (this.locked) {

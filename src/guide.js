@@ -19,8 +19,13 @@ export const ENTRIES = [
   { id: 'vireo', cat: 'Birds', name: 'Red-eyed Vireo', blurb: 'Sings all summer long from the canopy, question and answer.', song: 'vireo', songOnly: true },
   { id: 'woodpecker', cat: 'Birds', name: 'Downy Woodpecker', blurb: 'A quick rattle of drumming on a dead branch.', song: 'woodpecker', songOnly: true },
   { id: 'crow', cat: 'Birds', name: 'American Crow', blurb: 'Hoarse and sociable. Crows remember faces.', song: 'crow', songOnly: true },
-  { id: 'sunfish', cat: 'Animals', name: 'Bluegill Sunfish', blurb: 'Hovers near the shore in the warm months, guarding a nest.' },
-  { id: 'bass', cat: 'Animals', name: 'Largemouth Bass', blurb: 'The reservoir’s ambush hunter, patrolling the deeper edges.' },
+  { id: 'sunfish', cat: 'Fish', name: 'Bluegill Sunfish', blurb: 'Hovers near the shore in the warm months, guarding a nest.', fish: true },
+  { id: 'bass', cat: 'Fish', name: 'Largemouth Bass', blurb: 'The reservoir’s ambush hunter, patrolling the deeper edges.', fish: true },
+  { id: 'pumpkinseed', cat: 'Fish', name: 'Pumpkinseed', blurb: 'A small, jewel-coloured sunfish that hangs in the weeds, with an orange-red spot on its gill cover.', fish: true },
+  { id: 'perch', cat: 'Fish', name: 'Yellow Perch', blurb: 'Gold and barred, in loose schools over the weed edges. It is the one that bites when nothing else will.', fish: true },
+  { id: 'crappie', cat: 'Fish', name: 'Black Crappie', blurb: 'Silver and speckled, it holds in cooler, deeper water and comes up to feed at dusk.', fish: true },
+  { id: 'pickerel', cat: 'Fish', name: 'Chain Pickerel', blurb: 'Long and green with a chain-link pattern. It lies motionless in the weeds, then strikes like a pike.', fish: true },
+  { id: 'bullhead', cat: 'Fish', name: 'Brown Bullhead', blurb: 'A whiskered catfish of the muddy bottom, mostly a night feeder.', fish: true },
   { id: 'turtle', cat: 'Animals', name: 'Painted Turtle', blurb: 'Stacks up on logs to bask, and drops into the water at any footstep.' },
   { id: 'deer', cat: 'Animals', name: 'White-tailed Deer', blurb: 'Watches you with its whole body before it decides. The white flag of the tail is a signal to every other deer.' },
   { id: 'beaver', cat: 'Animals', name: 'North American Beaver', blurb: 'Engineers the water. The gnawed stumps along the shore are its handiwork.' },
@@ -57,13 +62,19 @@ export const GUIDE = {
   reset() { this.d = {}; this.photos = []; try { localStorage.removeItem(KEY); localStorage.removeItem(PKEY); } catch {} },
   photographed(id) { return !!this.d[id]?.photos; },
   heard(id) { return !!this.d[id]?.heard; },
-  found(id) { return this.photographed(id) || this.heard(id); },
+  caught(id) { return !!this.d[id]?.caught; },
+  found(id) { return this.photographed(id) || this.heard(id) || this.caught(id); },
   count() { return ENTRIES.filter((e) => this.found(e.id)).length; },
   addPhoto(id, thumb, season, big) {
     if (big) { this.photos.push({ id, season, at: Date.now(), data: big, thumb }); if (this.photos.length > MAXPHOTOS) this.photos.shift(); this.savePhotos(); }
     const r = (this.d[id] ||= {}), first = !r.photos;
     r.photos = (r.photos || 0) + 1; r.thumb = thumb; r.season ||= season; this.save();
     if (first) this.onNew?.('photo', BY_ID[id]);
+  },
+  addCaught(id, inches) {
+    const r = (this.d[id] ||= {}), first = !r.caught;
+    r.caught = (r.caught || 0) + 1; r.best = Math.max(r.best || 0, inches); this.save();
+    if (first) this.onNew?.('caught', BY_ID[id]);
   },
   addHeard(voice) {
     const id = SONG_TO_ID[voice]; if (!id) return;

@@ -130,6 +130,12 @@ export class Audio {
   coyote() { if (!this.ready) return; const n = 5 + ((Math.random() * 5) | 0); for (let i = 0; i < n; i++) setTimeout(() => this._tone(700 + Math.random() * 500, 0.22, 0.03, 'sawtooth', 900 + Math.random() * 400), i * 190 + Math.random() * 80); setTimeout(() => this._tone(620, 1.4, 0.04, 'sine', 980), n * 190); }
   thunder() { if (!this.ready) return; this._burst(110, 0.7, 2.6, 0.35, 'lowpass', 0.4); setTimeout(() => this._burst(70, 0.6, 2.2, 0.25, 'lowpass', 0.5), 600); }
   snort() { if (!this.ready) return; this._burst(900, 1.2, 0.18, 0.16, 'bandpass', 0.6); setTimeout(() => this._burst(700, 1.2, 0.22, 0.14, 'bandpass', 0.5), 260); }
+  oarlock() { if (!this.ready) return; this._tone(150 + Math.random() * 60, 0.16, 0.022, 'square', 110); this._burst(900, 3, 0.1, 0.03, 'bandpass'); }
+  dip(k = 1) { if (!this.ready) return; this._burst(1500, 1.1, 0.22, 0.1 * k, 'bandpass'); this._burst(500, 1, 0.3, 0.05 * k, 'lowpass'); }
+  thud() { if (!this.ready) return; this._burst(180, 1, 0.22, 0.2, 'lowpass'); }
+  castSwish() { if (!this.ready) return; this._burst(2600, 1.5, 0.28, 0.07, 'bandpass', 0.4); }
+  plop() { if (!this.ready) return; this._tone(420, 0.1, 0.07, 'sine', 180); this._burst(1200, 1.5, 0.15, 0.07, 'bandpass'); }
+  reelTick() { if (!this.ready) return; for (let i = 0; i < 9; i++) setTimeout(() => this._burst(3400, 3, 0.02, 0.05, 'bandpass'), i * 120); }
   creak() { this._tone(110 + Math.random() * 60, 0.9, 0.025, 'sawtooth', 70 + Math.random() * 30); }
   bird() { this._song(SEASON); }
   _song(season) {
