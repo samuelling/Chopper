@@ -60,6 +60,15 @@ const MOBILE = params.has('desktop') ? false : params.has('mobile')
   || (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches)
   || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
 if (MOBILE) document.body.classList.add('mobile');
+// testing aid: ?skip2=1 lands you at the end of summer in Year One, a few seconds before Clyde first appears and Year Two begins
+if (params.has('skip2') && !RUN.dev) {
+  if (RUN.s.born == null) RUN.setBorn(new Date().getFullYear() - 40, true);
+  RUN.s.n = 3; RUN.s.played = Math.max(0, RUN.len - 12); RUN.s.end = null; RUN.save();
+  try { sessionStorage.setItem('ashland.inplay', '1'); } catch {}
+  const q = new URLSearchParams(location.search); ['skip2', 'x', 'z', 'yaw', 'season'].forEach((k) => q.delete(k));
+  location.replace(location.pathname + (q.toString() ? `?${q}` : ''));
+  await new Promise(() => {});                    // stop here; the page is reloading
+}
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 window.addEventListener('error', (e) => { document.getElementById('err').textContent += `${e.message} (${e.filename?.split('/').pop()}:${e.lineno})\n`; });
@@ -452,14 +461,6 @@ async function boot() {
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); sessionStorage.removeItem('ashland.fadein'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.dev; b.addEventListener('click', restart); });
-  // testing aid: land at the end of summer, a few seconds before Clyde first appears and Year Two begins
-  document.querySelectorAll('[data-skip2]').forEach((b) => b.addEventListener('click', (e) => {
-    e.stopPropagation(); if (RUN.dev) return;
-    if (RUN.s.born == null) RUN.setBorn(new Date().getFullYear() - 40, true);
-    RUN.s.n = 3; RUN.s.played = Math.max(0, RUN.len - 12); RUN.s.end = null; RUN.save();
-    try { sessionStorage.setItem('ashland.inplay', '1'); } catch {}
-    const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'season'].forEach((k) => p.delete(k)); location.search = p.toString();
-  }));
   // the life clock: ask for a birth year once (optional); it only sets how many game years you get
   const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
   
