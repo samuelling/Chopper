@@ -15,6 +15,7 @@ const APPS = [
   { id: 'status', name: 'Park', bg: 'linear-gradient(#e0884a,#b24a34)', svg: ic('<path d="M8 33a16 16 0 0132 0"/><path d="M24 33l8-11"/>', '<circle cx="24" cy="33" r="2.5" fill="#fff"/>') },
   { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>') },
   { id: 'jobs', name: 'Park Jobs', bg: 'linear-gradient(#7a8ea8,#455a78)', svg: ic('<rect x="8" y="16" width="32" height="22" rx="4"/><path d="M18 16v-4a3 3 0 013-3h6a3 3 0 013 3v4M8 26h32"/>') },
+  { id: 'tools', name: 'Tools', bg: 'linear-gradient(#6fa3b8,#3b6f8a)', svg: ic('<path d="M30 9a9 9 0 00-8 12L9 34a3.5 3.5 0 005 5l13-13a9 9 0 0012-8l-6 6-5-1-1-5z"/>') },
   { id: 'settings', name: 'Settings', bg: 'linear-gradient(#9a9aa3,#5d5d68)', svg: ic('<circle cx="24" cy="24" r="6"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4"/>') },
 ];
 const DOCK = [
@@ -26,8 +27,8 @@ const DOCK = [
 const ALL = [...APPS, ...DOCK];
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
-  constructor({ discoveries, setWaypoint, onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
-    Object.assign(this, { discoveries, setWaypoint, onCamera, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
+  constructor({ discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
+    Object.assign(this, { discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
   }
@@ -81,6 +82,22 @@ export class Phone {
       const w = document.createElement('div'); w.style.cssText = 'text-align:center;padding-top:10px';
       w.innerHTML = `<div data-compass style="font-size:30px;font-weight:700;margin-bottom:14px"></div><div style="position:relative;width:240px;height:240px;margin:0 auto"><div data-dial style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(244,230,200,.6);background:#25222c"><b style="position:absolute;left:50%;top:6px;transform:translateX(-50%);color:#e0412e">N</b><b style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%)">S</b><b style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">W</b><b style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">E</b></div><div style="position:absolute;left:50%;top:-12px;width:0;height:0;border:9px solid transparent;border-bottom:16px solid #ffd9a0;transform:translateX(-50%)"></div></div><div class="bubble" style="margin-top:22px">North is on the dial. The dam is south of the lake, the beach is on the east shore.</div>`;
       body.appendChild(w);
+    } else if (tab === 'tools') {
+      // everything the keyboard does that a touch screen has no key for (also handy with a keyboard)
+      const A = this.actions, p = this.player;
+      const mk = (label, sub, fn, keep) => { const b = document.createElement('div'); b.className = 'fsbtn'; b.style.cssText = 'margin:8px 0;text-align:left;padding:12px 16px'; b.innerHTML = `${label}<small style="display:block;opacity:.7;margin-top:3px;letter-spacing:0;text-transform:none">${sub}</small>`; b.addEventListener('click', (e) => { e.stopPropagation(); if (keep) { fn(); this.show('tools'); } else { this.close(); setTimeout(fn, 60); } }); body.appendChild(b); };
+      const h = (t) => { const d = document.createElement('div'); d.className = 'bubble'; d.style.cssText = 'margin:14px 0 2px;opacity:.8'; d.textContent = t; body.appendChild(d); };
+      h('In your hands');
+      mk(p.carry === 'axe' ? '\u2713 Axe' : 'Axe', 'Chop. Swing with the big button.', () => A.carry('axe'));
+      mk(p.carry === 'rod' ? '\u2713 Fishing rod' : 'Fishing rod', 'Cast with the big button, hold it to reel, steer the joystick to counter a run.', () => A.carry('rod'));
+      mk(p.carry === 'none' ? '\u2713 Hands free' : 'Hands free', 'Put everything away.', () => A.carry('none'));
+      h('Out in the park');
+      mk(p.sitting ? 'Stand up' : 'Sit and wait', 'Stay still and the park carries on around you. Any step stands you up.', () => A.sit());
+      mk('Pick up litter', 'Whatever is within reach.', () => A.pickUp());
+      mk('Plant a seed', 'Where you stand, if the ground will take it.', () => A.plant());
+      mk('On-screen map', 'Cycles: off, corner, bigger.', () => A.map(), true);
+      if (A.phaseTwo()) mk('Choices', 'The harm-and-care choices, the check-in.', () => A.choices());
+      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Camera and Map are on the home screen. Use climbs in and out of the boat and works the gate.'; body.appendChild(n);
     } else if (tab === 'settings') {
       const hp = document.createElement('div'); hp.className = 'usage'; hp.style.maxWidth = 'none'; body.appendChild(hp); mountHudPanel(hp);
       const c = document.querySelector('#paused .controls'); if (c) { const k = document.createElement('div'); k.className = 'controls'; k.style.cssText = 'margin-top:16px;font-size:12px;line-height:2'; k.innerHTML = c.innerHTML; body.appendChild(k); }
@@ -88,7 +105,7 @@ export class Phone {
       const comp = document.createElement('div'); comp.className = 'compass'; comp.dataset.compass = ''; body.appendChild(comp);
       this._prevMap = this.minimap.mode; this.minimap.set('full');
       const cv = this._borrow(this.minimap); cv.style.display = 'block'; cv.style.border = '3px solid rgba(244,230,200,.6)'; body.appendChild(cv);
-      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Gold dot: the gate. Yellow ring: a marker from Clyde, if you have one. Press M for the on-screen map.'; body.appendChild(n);
+      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Gold dot: the gate. Yellow ring: a marker from Clyde, if you have one. The Tools app turns the corner map on and off.'; body.appendChild(n);
     } else if (tab === 'status') {
       if (RUN.phaseTwo || RUN.dev) {
         const cv = this._borrow(this.gauge); cv.style.display = 'block'; cv.style.width = '300px'; cv.style.height = '190px'; body.appendChild(cv);
@@ -168,7 +185,7 @@ export class Phone {
     const all = GUIDE.photos.filter((p) => !only || p.id === only);
     if (startIdx != null && all.length) return this._viewer(body, all, Math.max(0, Math.min(all.length - 1, startIdx)), only);
     const n = document.createElement('div'); n.className = 'bubble';
-    n.textContent = all.length ? `${GUIDE.photos.length} photo${GUIDE.photos.length === 1 ? '' : 's'}. Tap one to look closer.` : 'No photos yet. Press V to raise the camera and click to photograph what is in the frame.';
+    n.textContent = all.length ? `${GUIDE.photos.length} photo${GUIDE.photos.length === 1 ? '' : 's'}. Tap one to look closer.` : 'No photos yet. Open the Camera app (or press V) and photograph what is in the frame.';
     body.appendChild(n);
     const grid = document.createElement('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px';
     [...all].reverse().forEach((p) => {

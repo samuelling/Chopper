@@ -12,7 +12,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 
 | | |
 |---|---|
-| WASD / Shift / Space | walk / hurry / hop (walk into deep water to swim; in winter it is too cold) |
+| WASD / Shift / Space | walk / hurry / hop (walk into deep water to swim, hold Space there to dive; in winter it is too cold) |
 | Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe, fishing rod and empty hands, and click swings the axe (a big tree takes several swings) |
 | E | get in or out of the rowboat when you are next to it; pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |
@@ -123,3 +123,7 @@ The ground is editable at runtime. `flattenArea(x, z, r, {y, blend})` in `src/wo
 A rowboat floats just off the boat ramp (`?ramp=1` starts you beside it). Walk up and press **E** to get in; you sit facing the bow. **W** pulls both oars, **S** backs water, **A** / **D** pull one oar to turn. There are no hands: the oars swing in the rowlocks by themselves. The shore stops the hull, you climb out with **E** where the water is shallow, and the boat stays where you left it. If the reservoir is drained the boat sits on dry mud.
 
 Press **Q** until the rod is in hand (from the boat or from the shore), click to cast toward open water, wait for the bobber to dip, and click again to set the hook. Every fish is let go. Bites follow how much wildlife the park still has and how full the reservoir is, so a harmed or drained park gives you "Nothing. The water is quiet." Sixteen species turn up (sunfish, perch, crappie, both bass, pickerel, bullhead, shiner, sucker, carp, eel, and rainbow and brook trout in the cool seasons; some prefer dusk or certain depths), all typical of a Massachusetts reservoir, not a survey of the real one; the sizes are random. Each new species is added to the Field Guide (a Fish section) and every catch goes in the journal and the end credits.
+
+
+### Touch
+The phone button (top right) raises the in-game phone. Its **Tools** app holds what a keyboard does with keys: axe, rod or hands free, sit, pick up litter, plant a seed, the corner map, the choices. The big button swings, casts and reels (hold) or takes the photograph in camera mode; the joystick rows the boat and counters a fish's run; Hop held dives when swimming.

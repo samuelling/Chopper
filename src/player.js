@@ -25,7 +25,7 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.swim = 0; this.swimming = false; this.swimOK = true; this.strokeT = 0; this.swimT = 0; this.coldCool = 0; this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false; this.camOff = new THREE.Vector3();
+    this.swim = 0; this.dive = 0; this.breath = 1; this.underwater = false; this.swimming = false; this.swimOK = true; this.strokeT = 0; this.swimT = 0; this.coldCool = 0; this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false; this.camOff = new THREE.Vector3();
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
@@ -136,11 +136,12 @@ export class Player {
   /** rowing: the boat carries you; the camera sits low in it, and the view turns with the bow */
   _ride(dt) {
     const k = this.keys, b = this.boat, on = this.locked && !this.inputLock;
-    b.input.row = on ? (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) : 0;
-    b.input.turn = on ? (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) : 0;
+    const ty = Math.abs(this.touch.y) > 0.25 ? -this.touch.y : 0, tx = Math.abs(this.touch.x) > 0.25 ? this.touch.x : 0;   // joystick rows and turns too
+    b.input.row = on ? clamp((k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) + ty, -1, 1) : 0;
+    b.input.turn = on ? clamp((k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) + tx, -1, 1) : 0;
     const seat = b.seatWorld();
     this.pos.set(seat.x, b.root.position.y - 0.08, seat.z);
-    this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0; this.swim = 0; this.swimming = false;
+    this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0; this.swim = 0; this.dive = 0; this.underwater = false; this.swimming = false;
     this.sit += (0.55 - this.sit) * Math.min(1, dt * 3);
     this.stillT = this.speed < 0.3 ? this.stillT + dt : 0;
     this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
@@ -166,6 +167,7 @@ export class Player {
     this.swimming = this.swimOK && !this.sitting && (this.swimming ? depth > 0.85 : depth > 1.05);
     this.swim += ((this.swimming ? 1 : 0) - this.swim) * Math.min(1, dt * 4);
     this.coldCool -= dt;
+    if (!this.swimming) { this.dive = 0; this.underwater = false; this.breath = Math.min(1, this.breath + dt / 4); }
     if (!this.swimOK && depth > 0.85 && (fx || fz) && this.coldCool <= 0) { this.coldCool = 7; this.events.cold?.(); }
     let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
     if (this.swimming) {
@@ -205,7 +207,13 @@ export class Player {
     // vertical
     const gy = groundY(nx, nz);
     if (this.swimming) {
-      const tgt = lake.level - EYE + 0.3 + Math.sin(this.swimT * 1.7) * 0.025;
+      // hold Space (the Hop button) to dive; let go to float back up. Breath runs out in about 20 s.
+      const want = (k.Space && this.locked && this.breath > 0.02 && !this.inputLock) ? Math.max(0, depth - 0.7) : 0;
+      this.dive += (Math.min(want, 4.5) - this.dive) * Math.min(1, dt * (want > this.dive ? 1.6 : 2.4));
+      this.underwater = this.dive > 0.4;
+      this.breath = clamp(this.breath + (this.underwater ? -dt / 20 : dt / 5), 0, 1);
+      if (this.breath <= 0) { k.Space = false; this.events.breath?.(); }
+      const tgt = lake.level - EYE + 0.3 - this.dive + Math.sin(this.swimT * 1.7) * 0.025 * (1 - Math.min(1, this.dive));
       this.pos.y += (tgt - this.pos.y) * Math.min(1, dt * 4.5); this.vy = 0; this.onGround = true; this.sitting = false;
     } else if (!this.onGround || this.pos.y > gy + 0.02) {
       this.vy -= 14 * dt;

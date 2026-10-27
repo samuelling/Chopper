@@ -178,6 +178,7 @@ async function boot() {
   player.swimOK = SEASON !== 'winter';
   player.events.cold = () => ui.toast('Far too cold to swim. The water is just above freezing.', 3.6);
   player.events.stroke = (side) => { audio.dip?.(0.55, side); fx.splash(player.pos.x - Math.sin(player.yaw) * 0.7, lake.level + 0.03, player.pos.z - Math.cos(player.yaw) * 0.7, 3); };
+  player.events.breath = () => ui.toast('Out of breath. You kick for the surface.', 2.2);
   player.events.splash = () => { audio.splash(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z); };
   player.events.strike = () => {
     player.forward(tmpDir);
@@ -280,7 +281,7 @@ async function boot() {
   };
   // ---- camera mode (V): a narrow view, click to photograph what is centred in the frame
   const vf = document.createElement('div'); vf.id = 'viewfinder'; vf.className = 'hidden';
-  vf.innerHTML = '<div class="vfframe"><i></i><i></i><i></i><i></i></div><div class="vfhint">click to photograph &middot; V to put the camera away</div><div class="vfflash"></div>';
+  vf.innerHTML = '<div class="vfframe"><i></i><i></i><i></i><i></i></div><div class="vfhint">' + (MOBILE ? 'tap SHOOT to photograph &middot; tap PHONE to put the camera away' : 'click to photograph &middot; V to put the camera away') + '</div><div class="vfflash"></div>';
   document.body.appendChild(vf);
   const setCameraMode = (on) => {
     player.cameraMode = on; camera.fov = on ? 26 : 68; camera.updateProjectionMatrix();
@@ -353,7 +354,15 @@ async function boot() {
     sitClock += dt;
     if (sitClock > 22) { sitClock = 0; const i = ORDER.indexOf(mood); if (i < ORDER.length - 1 && PRESETS.length > 3) { setMood(ORDER[i + 1]); ui.toast(['The mist lifts.', 'The light turns gold.', 'Dusk comes on.', 'Night.'][i] ?? '', 2.6); } }
   };
-  const touch = new TouchControls(player, { onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length) });
+  const touch = new TouchControls(player, {
+    onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length),
+    onPhone: () => { if (!started || interludeOn) return; if (player.cameraMode) setCameraMode(false); else togglePhone(); },
+    onSwing: (down) => {                                                    // the one big button: swing, cast and reel, or shutter
+      if (!started || interludeOn || phone.isOpen) return;
+      if (player.cameraMode) { if (down) player.events.photo?.(); }
+      else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
+      else if (down && !player.boat) player.startSwing();
+    } });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
   // the first season of each year opens with "Year One", which dissolves into the season's name
   const WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
@@ -446,13 +455,18 @@ async function boot() {
   const discoveries = new Discoveries(scene, chunks);
   discoveries.onFound = (it, k) => ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5);
   const phone = new Phone({ discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
-    onOpen: () => { phoneOn = true; player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
+      sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
+      pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
+      map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } },
+    onOpen: () => { phoneOn = true; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } player.carryHidden = true; player.refreshCarry(); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
+  const togglePhone = () => {
+    if (phone.isOpen) phone.close();
+    else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 380); }
+  };
   addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
-    if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) {
-      if (phone.isOpen) phone.close();
-      else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 380); }
-    } if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
+    if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) togglePhone(); if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
   minimap.set(minimap.mode);
@@ -654,7 +668,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
-    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: ((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
+    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
     { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
       const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
@@ -687,6 +701,8 @@ async function boot() {
     const wx = weather.update(dt, atmosphere, () => audio.thunder?.());
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
+    { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
+    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }

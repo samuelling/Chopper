@@ -68,6 +68,10 @@
   #bSwing { right:max(30px, env(safe-area-inset-right)); bottom:max(34px, env(safe-area-inset-bottom)); width:92px; height:92px; background:rgba(217,87,43,.6); font-size:15px; }
   #bHop { right:max(140px, calc(env(safe-area-inset-right) + 110px)); bottom:max(30px, env(safe-area-inset-bottom)); width:62px; height:62px; }
   #bUse { right:max(44px, env(safe-area-inset-right)); bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); width:66px; height:66px; }
+  #bPhone { right:max(18px, env(safe-area-inset-right)); top:calc(max(14px, env(safe-area-inset-top)) + 54px); width:56px; height:56px; font-size:11px; letter-spacing:.06em; }
+  #underwater { position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(40,120,130,.38) 0%, rgba(14,62,82,.72) 100%); transition:opacity .25s; }
+  #underwater.on { opacity:1; }
+  #underwater i { position:absolute; left:50%; bottom:9%; width:min(220px,40vw); height:6px; margin-left:calc(min(220px,40vw) / -2); background:rgba(255,255,255,.18); border-radius:3px; overflow:hidden; } #underwater i::after { content:''; display:block; height:100%; width:var(--breath,100%); background:#cfeff0; }
   #bFull { right:max(70px, calc(env(safe-area-inset-right) + 62px)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:20px; }
   body.fs #bFull { background:rgba(217,87,43,.6); }
   .seasons { margin-top:16px; display:flex; gap:8px; justify-content:center; pointer-events:auto; }
@@ -185,7 +189,7 @@
   </details>
   <div class="desk-note only-mobile">Best played on a desktop computer with a keyboard and mouse. This phone version runs at reduced quality.</div>
   <div class="controls only-desktop">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop (hold to dive in deep water) &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
     <kbd>P</kbd> raise the phone &nbsp; <kbd>Q</kbd> phone / axe / fishing rod / empty hands &nbsp; <kbd>Click</kbd> swing the axe, or cast and reel the rod<br>
     <kbd>V</kbd> camera (click to photograph) &nbsp; <kbd>B</kbd> sit and wait &nbsp; <kbd>E</kbd> pick up litter (at the dam gatehouse: work the gate; at the boat: get in or out) &nbsp; <kbd>G</kbd> plant a seed &nbsp; <kbd>W</kbd><kbd>S</kbd> row <kbd>A</kbd><kbd>D</kbd> turn (in the boat)<br>
     <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> time of day &nbsp; <kbd>F</kbd> fullscreen<span data-phase2> &nbsp; <kbd>C</kbd> make choices</span>
@@ -201,7 +205,7 @@
 <div id="interlude" class="overlay hidden"></div>
 <div id="phone" class="overlay hidden"></div>
 <div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="fsbtn" data-skip2>Testing: jump to just before Year Two</div><div class="controls only-desktop" style="margin-top:18px">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop (hold to dive in deep water) &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
     <kbd>P</kbd> raise the phone &nbsp; <kbd>Q</kbd> phone / axe / fishing rod / empty hands &nbsp; <kbd>Click</kbd> swing the axe, or cast and reel the rod<br>
     <kbd>V</kbd> camera (click to photograph) &nbsp; <kbd>B</kbd> sit and wait &nbsp; <kbd>E</kbd> pick up litter (at the dam gatehouse: work the gate; at the boat: get in or out) &nbsp; <kbd>G</kbd> plant a seed &nbsp; <kbd>W</kbd><kbd>S</kbd> row <kbd>A</kbd><kbd>D</kbd> turn (in the boat)<br>
     <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> time of day &nbsp; <kbd>F</kbd> fullscreen<span data-phase2> &nbsp; <kbd>C</kbd> make choices</span>
@@ -219,8 +223,9 @@
   <div id="toast"></div>
   <div id="hint">P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1 2 3 light · Esc menu</div>
 </div>
+<div id="underwater"><i></i></div>
 <div id="touch"><div id="stick"><i></i></div>
-  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
+  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>
 

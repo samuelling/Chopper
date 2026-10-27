@@ -1,13 +1,13 @@
 // On-screen controls: left-thumb joystick, drag the rest of the screen to look, buttons.
 export class TouchControls {
-  constructor(player, { onUse, onMood }) {
+  constructor(player, { onUse, onMood, onPhone, onSwing }) {
     this.player = player;
     this.root = document.getElementById('touch');
     this.stick = document.getElementById('stick');
     this.knob = this.stick.querySelector('i');
     this.look = null;           // {id, x, y}
     this.joy = null;            // {id, cx, cy}
-    this.onUse = onUse; this.onMood = onMood;
+    this.onUse = onUse; this.onMood = onMood; this.onPhone = onPhone; this.onSwing = onSwing;
     const opts = { passive: false };
     const find = (e, id) => [...e.changedTouches].find((t) => t.identifier === id);
     addEventListener('touchstart', (e) => {
@@ -47,7 +47,7 @@ export class TouchControls {
         if (this.joy && t.identifier === this.joy.id) { this.joy = null; this.player.touch.x = this.player.touch.y = 0; this.knob.style.transform = ''; }
         if (this.look && t.identifier === this.look.id) this.look = null;
       }
-      for (const b of this.root.querySelectorAll('.tbtn.on')) b.classList.remove('on');
+      for (const b of this.root.querySelectorAll('.tbtn.on')) { b.classList.remove('on'); if (b.id === 'bSwing') this.onSwing?.(false); if (b.id === 'bHop') this.player.keys.Space = false; }
     };
     addEventListener('touchend', end, opts);
     addEventListener('touchcancel', end, opts);
@@ -66,8 +66,9 @@ export class TouchControls {
   }
   _button(btn, down) {
     btn.classList.add('on');
-    if (btn.id === 'bSwing') this.player.startSwing();
-    else if (btn.id === 'bHop') this.player._jump();
+    if (btn.id === 'bSwing') this.onSwing ? this.onSwing(true) : this.player.startSwing();
+    else if (btn.id === 'bPhone') this.onPhone?.();
+    else if (btn.id === 'bHop') { this.player._jump(); this.player.keys.Space = true; }
     else if (btn.id === 'bUse') this.onUse?.();
     else if (btn.id === 'bMood') this.onMood?.();
   }

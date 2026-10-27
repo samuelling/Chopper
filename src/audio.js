@@ -9,7 +9,7 @@ export class Audio {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
     const ctx = this.ctx = new C();
-    this.master = ctx.createGain(); this.master.gain.value = 0; this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 1.2); const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.22; this.master.connect(comp); comp.connect(ctx.destination);   // fades in rather than starting at full
+    this.master = ctx.createGain(); this.master.gain.value = 0; this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 1.2); const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.22; this.master.connect(comp); this.muff = ctx.createBiquadFilter(); this.muff.type = 'lowpass'; this.muff.frequency.value = 22000; this.muff.Q.value = 0.5; comp.connect(this.muff); this.muff.connect(ctx.destination);   // fades in rather than starting at full
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -37,6 +37,8 @@ export class Audio {
     this.birdT = 3; this.insectT = 1; this.frogT = 4; this.creakT = 12; this.hawkT = 30;
   }
   /** let everything sink away over `sec` seconds (the season turning through black) */
+  /** head under the surface: the world goes dull and far away */
+  setUnder(on) { if (!this.ready) return; this.muff.frequency.setTargetAtTime(on ? 520 : 22000, this.ctx.currentTime, on ? 0.12 : 0.18); }
   fadeOut(sec = 1.5) { if (!this.ready) return; const t = this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(this.master.gain.value, t); this.master.gain.linearRampToValueAtTime(0, t + sec); }
   _loop(freq, q, gain) {
     const ctx = this.ctx;
