@@ -39,6 +39,7 @@ import { Squirrels } from './squirrels.js';
 import { Deer } from './deer.js';
 import { Flyers } from './flyers.js';
 import { Critters } from './critters.js';
+import { Fox } from './fox.js';
 import { Weather } from './weather.js';
 import { CareActs } from './careacts.js';
 import { PLACES, JOURNAL } from './places.js';
@@ -137,6 +138,7 @@ async function boot() {
   addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (player.boat) return; if (e.code === 'KeyE' && !landmarks.nearGate(player.pos) && !nearBoat()) careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
   const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
+  const fox = new Fox(scene, chunks, { mobile: MOBILE });
   const flyers = new Flyers(scene, { mobile: MOBILE });
   const deer = new Deer(scene, chunks, { mobile: MOBILE });
 
@@ -333,7 +335,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -795,7 +797,7 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
-    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); stepSit(dt); stepDay(dt);
+    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); fox.update(dt, player, mood); stepSit(dt); stepDay(dt);
     birds.update(dt, player.pos);
     // a regular: the same heron, season after season
     if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {
@@ -820,7 +822,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

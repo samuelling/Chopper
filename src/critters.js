@@ -1,4 +1,4 @@
-// Small and shy: red fox (dawn, dusk, night), eastern chipmunks (day), frogs on the shore (warm months, evening), a beaver
+// Small and shy: eastern chipmunks (day), frogs on the shore (warm months, evening), a beaver
 // swimming at dusk, and a pair of wood ducks on the water by day.  Each is a few toon parts moved by simple procedural gaits.
 import * as THREE from 'three';
 import { GeoBuilder, matrix } from './builder.js';
@@ -14,18 +14,6 @@ const ball = new THREE.SphereGeometry(1, 8, 6), cyl = new THREE.CylinderGeometry
 const ease = (c, t, k, dt) => c + (t - c) * Math.min(1, dt * k);
 const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
-function foxGeo() {
-  const b = new GeoBuilder(), fur = '#c8632c';
-  b.add(ball, matrix(0, 0.36, 0, 0, 0, 0, 0.11, 0.12, 0.28), { faceColorFn: (c, n) => (n.y < -0.35 ? _c.copy(C('#efe3cf')) : _c.copy(C(fur))) });
-  b.add(ball, matrix(0, 0.43, 0.3, 0.3, 0, 0, 0.07, 0.07, 0.1), { color: C(fur) });
-  b.add(ball, matrix(0, 0.4, 0.4, 0.2, 0, 0, 0.03, 0.028, 0.07), { color: C('#efe3cf') });
-  b.add(ball, matrix(0, 0.405, 0.47, 0, 0, 0, 0.018, 0.016, 0.018), { color: C('#15110d') });
-  for (const s of [-1, 1]) { b.add(ball, matrix(s * 0.045, 0.52, 0.28, 0, 0, s * 0.2, 0.025, 0.06, 0.012), { color: C('#2a1d16') }); b.add(ball, matrix(s * 0.04, 0.455, 0.37, 0, 0, 0, 0.012, 0.012, 0.012), { color: C('#15110d') }); }
-  b.add(ball, matrix(0, 0.37, -0.42, -0.25, 0, 0, 0.065, 0.065, 0.25), { color: C(fur) });
-  b.add(ball, matrix(0, 0.33, -0.63, -0.25, 0, 0, 0.05, 0.05, 0.08), { color: C('#f6efe2') });
-  return b.build();
-}
-function foxLeg() { const b = new GeoBuilder(); b.add(cyl, matrix(0, -0.16, 0, 0, 0, 0, 0.024, 0.32, 0.024), { color: C('#2a1d16') }); return b.build(); }
 function chipGeo() {
   const b = new GeoBuilder();
   b.add(ball, matrix(0, 0.07, 0, 0, 0, 0, 0.035, 0.035, 0.08), { faceColorFn: (c, n) => (Math.abs(n.x) < 0.3 && n.y > 0.4 ? _c.copy(C('#35261a')) : n.y < -0.3 ? _c.copy(C('#efe3cf')) : _c.copy(C('#a06f40'))) });
@@ -64,9 +52,9 @@ export class Critters {
   constructor(scene, chunks, { mobile = false } = {}) {
     this.chunks = chunks; this.rng = mulberry32(777); this.t = 0; this.seen = []; this.onSplash = null; this.onFirst = null;
     const mk = (geo, cap) => { const o = makeInstanced(geo, cap); scene.add(o.fill); scene.add(o.line); return o; };
-    this.P = { fox: mk(foxGeo(), 1), foxLeg: mk(foxLeg(), 4), chip: mk(chipGeo(), 2), frog: mk(frogGeo(), 2), beaver: mk(beaverGeo(), 1), wake: mk(wakeGeo(), 1), drake: mk(duckGeo(true), 1), hen: mk(duckGeo(false), 1) };
+    this.P = { chip: mk(chipGeo(), 2), frog: mk(frogGeo(), 2), beaver: mk(beaverGeo(), 1), wake: mk(wakeGeo(), 1), drake: mk(duckGeo(true), 1), hen: mk(duckGeo(false), 1) };
     const base = () => ({ active: false, wait: 0, x: 0, z: 0, h: 0, v: 0, st: 'idle', timer: 0, tx: 0, tz: 0, ph: this.rng() * 6, gp: 0, hop: 0 });
-    this.fox = [{ ...base(), wait: 50 }]; this.chips = [{ ...base(), wait: 12 }, { ...base(), wait: 40 }]; this.frogs = [{ ...base(), wait: 8 }, { ...base(), wait: 30 }];
+    this.chips = [{ ...base(), wait: 12 }, { ...base(), wait: 40 }]; this.frogs = [{ ...base(), wait: 8 }, { ...base(), wait: 30 }];
     this.beaver = [{ ...base(), wait: 25 }]; this.ducks = [{ ...base(), wait: 15 }, { ...base(), wait: 15 }];
     this._r = new THREE.Matrix4(); this._a = new THREE.Matrix4(); this._b = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3(1, 1, 1); this._o = new THREE.Vector3();
   }
@@ -102,28 +90,9 @@ export class Critters {
   update(dt, player, mood) {
     this.t += dt; this.seen.length = 0; const t = this.t, px = player.x, pz = player.z, P = this.P, life = PRESSURE.life, spd = player.speed || 0;
     const dim = mood >= 2 || mood === 1, still = player.stillT > 3 || player.sitting;
-    // ---- fox: dawn, dusk and night; trots along, stops to look, slips away
-    let n = 0, nl = 0;
-    for (const f of this.fox) {
-      if (!f.active) { f.wait -= dt; if (f.wait > 0 || !dim || life < 0.5) continue; if (!this._land(f, px, pz, 28, 55, false)) { f.wait = 6; continue; } f.active = true; f.st = 'trot'; f.timer = 6; f.v = 0; f.tx = f.x + Math.sin(f.h) * 10; f.tz = f.z + Math.cos(f.h) * 10; }
-      const dp = Math.hypot(f.x - px, f.z - pz); if (dp > 120) { f.active = false; f.wait = 60; continue; }
-      let v = 0; f.timer -= dt;
-      const aware = dp < (still ? 14 : 24) || (spd > 4.5 && dp < 35);
-      if (f.st === 'flee') { f.tx = f.x + (f.x - px) / (dp || 1) * 20; f.tz = f.z + (f.z - pz) / (dp || 1) * 20; v = 5; this._walk(f, v, dt, 8); if (f.timer <= 0) { f.active = false; f.wait = 90 + this.rng() * 90; continue; } }
-      else if (aware && f.st !== 'stare') { f.st = 'stare'; f.timer = still ? 6 : 2.5; }
-      else if (f.st === 'stare') { f.h += angDiff(f.h, Math.atan2(px - f.x, pz - f.z)) * Math.min(1, dt * 4); if (f.timer <= 0) { if (still && dp > 8) { f.st = 'trot'; f.timer = 4; f.tx = f.x + Math.sin(f.h + 0.7) * 8; f.tz = f.z + Math.cos(f.h + 0.7) * 8; } else { f.st = 'flee'; f.timer = 6; } } }
-      else if (f.st === 'trot') { v = 1.8; this._walk(f, v, dt); if (f.timer <= 0) { f.st = 'sniff'; f.timer = 2 + this.rng() * 3; } }
-      else if (f.st === 'sniff') { if (f.timer <= 0) { f.st = 'trot'; f.timer = 5 + this.rng() * 6; const a = f.h + (this.rng() - 0.5) * 2; f.tx = f.x + Math.sin(a) * 12; f.tz = f.z + Math.cos(a) * 12; } }
-      f.v = ease(f.v, v, 5, dt); f.gp += dt * (3 + f.v * 3.2);
-      const y = groundY(f.x, f.z), fy = groundY(f.x + Math.sin(f.h) * 0.4, f.z + Math.cos(f.h) * 0.4), by = groundY(f.x - Math.sin(f.h) * 0.4, f.z - Math.cos(f.h) * 0.4), mv = Math.min(1, f.v / 1.5);
-      const root = this._root(f.x, y + Math.abs(Math.sin(f.gp)) * 0.025 * mv, f.z, f.h, -Math.atan2(fy - by, 0.8) + (f.st === 'sniff' ? 0.22 : 0)).clone();
-      this._put(P.fox, n, root);
-      for (let k = 0; k < 4; k++) { const sw = Math.sin(f.gp + (k === 0 || k === 3 ? 0 : Math.PI)) * 0.6 * mv; this._e.set(sw, 0, 0, 'YXZ'); this._q.setFromEuler(this._e); this._a.compose(this._o.set(k % 2 ? 0.065 : -0.065, 0.32, k < 2 ? 0.2 : -0.2), this._q, this._s); this._b.multiplyMatrices(root, this._a); this._put(P.foxLeg, nl++, this._b); }
-      this.seen.push({ kind: 'fox', x: f.x, y: y + 0.4, z: f.z, r: 0.5 }); n++;
-    }
-    this._fin(P.fox, n); this._fin(P.foxLeg, nl);
+    // (the red fox lives in fox.js now, fully articulated)
+    let n = 0;
     // ---- chipmunks: dart, stop, sit up, tail flick
-    n = 0;
     for (const c of this.chips) {
       if (!c.active) { c.wait -= dt; if (c.wait > 0 || mood >= 2 || SEASON === 'winter' || life < 0.4) continue; if (!this._land(c, px, pz, 10, 28)) { c.wait = 5; continue; } c.active = true; c.st = 'sit'; c.timer = 1 + this.rng() * 2; c.v = 0; }
       const dp = Math.hypot(c.x - px, c.z - pz); if (dp > 60) { c.active = false; c.wait = 25; continue; }

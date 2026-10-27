@@ -34,6 +34,7 @@ export function creditsHTML(kind, st) {
     '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
+    '<h2>Part of MEGAzine</h2>', '<p>Between money and doom</p>', '<p><a href="https://megazine.org" target="_blank" rel="noopener" style="color:inherit;pointer-events:auto">megazine.org</a></p>', '<div class="gap"></div>',
   ];
   return parts.join('');
 }
