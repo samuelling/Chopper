@@ -124,7 +124,7 @@ export class Phone {
       if (RUN.phaseTwo || RUN.dev) {
         const cv = this._borrow(this.gauge); cv.style.display = 'block'; cv.style.width = '300px'; cv.style.height = '190px'; body.appendChild(cv);
         const n = document.createElement('div'); n.className = 'bubble';
-        n.innerHTML = `Harm <b>${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, ${Math.round(woodsDead() * 100)}% of the trees standing dead (at 80% for long, the woods are lost).<br>Care <b>${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative), ${CARE.built.length} built.`;
+        n.innerHTML = `Harm <b>${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, ${Math.round(woodsDead() * 100)}% of the trees standing dead (at 80% for long, the woods are lost). Woods\u2019 resilience <b>${Math.round(Math.min(0.55, RUN.s.buffer || 0) / 0.55 * 100)}%</b>: trees you plant, the shoreline buffer and upkeep soften the harm on the land (not on the lake).<br>Care <b>${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative), ${CARE.built.length} built.`;
         body.appendChild(n);
       } else { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Nothing to measure yet. The park is just the park.'; body.appendChild(n); }
     } else if (tab === 'guide') {

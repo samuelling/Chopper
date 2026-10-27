@@ -25,12 +25,16 @@ export const PRESSURE = {
   bump(x) { if (!this.live) return; this.damage = clamp01(this.damage + x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
   update(dt) {
     if (!this.live || RUN.s.end) return;
-    this.damage = clamp01(this.damage + (this.target * UP * (1 - this.shield) - (1 - this.target) * DOWN * (1 + (RUN.s.recover || 0))) * dt);
+    // harm builds steeply with use: Medium (0.4) builds at about a quarter of Very heavy's rate, not two-fifths, so a Medium
+    // park takes years to lose its woods while Heavy and Very heavy still do it in a season or two
+    this.damage = clamp01(this.damage + (Math.pow(this.target, 1.6) * UP * (1 - this.shield) - (1 - this.target) * DOWN * (1 + (RUN.s.recover || 0))) * dt);
     if ((this._save += dt) > 3) { this._save = 0; try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} }
   },
   heal(x) { this.damage = clamp01(this.damage - x); try { localStorage.setItem('ashland.damage', this.damage.toFixed(4)); } catch {} },
-  // what shows on the land: lasting damage, softened by the upkeep you have paid for (never below 60% of the damage)
-  get harm() { return this.damage * (1 - Math.min(0.4, RUN.s.buffer || 0)); },
+  // what shows on the land (trees, wildlife, colour): lasting damage, softened by the care you have put in (shoreline
+  // buffer, upkeep, trees planted), never below 45% of the damage.  The lake reads the damage itself, so the woods and the
+  // water can each be lost, or kept, on their own.
+  get harm() { return this.damage * (1 - Math.min(0.55, RUN.s.buffer || 0)); },
   // the effects (all exaggerated on purpose)
   get life() { return 1 - 0.9 * this.harm; },            // share of wildlife that still shows up
   // water measures bought from the park fund (fund.js keeps RUN.s.water up to date) protect the lake, fully up to Medium

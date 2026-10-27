@@ -16,8 +16,8 @@ for (const [k, v] of Object.entries({ fund: 0, measures: {}, saplingStock: 0, di
 export const DIVIDEND = [0, 1500, 4000, 7000, 9000];
 
 export const SUPPLIES = [
-  { id: 'seeds', title: 'A sack of seeds', price: 250, gain: '25 seeds of native trees and shrubs. G plants one where you stand.', give: () => { S().seeds = (S().seeds || 0) + 25; return '25 seeds in your pocket. G plants one.'; } },
-  { id: 'saplings', title: 'Nursery saplings', price: 900, gain: '8 young trees, already three seasons along. G plants these before seeds.', give: () => { S().saplingStock += 8; return '8 saplings ready to plant. G plants one.'; } },
+  { id: 'seeds', title: 'A sack of seeds', price: 250, gain: '25 seeds of native trees and shrubs. G plants one where you stand. Every tree planted helps the woods hold up against harm.', give: () => { S().seeds = (S().seeds || 0) + 25; return '25 seeds in your pocket. G plants one.'; } },
+  { id: 'saplings', title: 'Nursery saplings', price: 900, gain: '8 young trees, already three seasons along. G plants these before seeds. Every tree planted helps the woods hold up against harm.', give: () => { S().saplingStock += 8; return '8 saplings ready to plant. G plants one.'; } },
 ];
 
 // in price order, from things a park crew can do in a week to things that take the town and the data center
@@ -98,7 +98,7 @@ export const FUND = {
     if (S().fund < m.price) return { ok: false, msg: 'Not enough in the fund yet.' };
     S().fund -= m.price; S().measures[id] = { n: RUN.n };
     if (m.harm) PRESSURE.bump(m.harm);
-    if (id === 'buffer') { S().buffer = Math.min(0.4, (S().buffer || 0) + 0.1); ctx?.plantShore?.(); }
+    if (id === 'buffer') { S().buffer = Math.min(0.55, (S().buffer || 0) + 0.1); ctx?.plantShore?.(); }
     CARE.add(0.03); this.refresh(); RUN.save?.();
     return { ok: true, msg: m.delay ? 'The cover goes on. It starts to pay back next season.' : `${m.title}: done. The lake is a little better protected.` };
   },

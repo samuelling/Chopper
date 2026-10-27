@@ -101,7 +101,8 @@ export class CareActs {
     this.onToast?.(stock > 0 ? `Sapling planted. ${left} left to plant.` : `Seed planted. Trees do not hurry. ${left} left.`, 1.8);
   }
   // every tree planted adds a little care, and many of them speed the park's healing (a planted forest is a funded recovery)
-  _plantedCare() { CARE.add(0.004); RUN.s.recover = Math.min(2, (RUN.s.recover || 0) + 0.004); }
+  // every tree planted makes the woods a little more resilient (harm shows less on the land); a hundred trees is a lot
+  _plantedCare() { CARE.add(0.004); RUN.s.recover = Math.min(2, (RUN.s.recover || 0) + 0.004); RUN.s.buffer = Math.min(0.55, (RUN.s.buffer || 0) + 0.003); }
   /** the shoreline buffer: a strip of young trees along the banks near you */
   plantShore(player) {
     const now = RUN.n + RUN.s.played / Math.max(1, RUN.len), pts = [];
