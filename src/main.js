@@ -80,7 +80,8 @@ if ((params.has('skip2') || params.has('skipto')) && !RUN.dev) {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 window.addEventListener('error', (e) => { document.getElementById('err').textContent += `${e.message} (${e.filename?.split('/').pop()}:${e.lineno})\n`; });
-window.addEventListener('unhandledrejection', (e) => { document.getElementById('err').textContent += `${e.reason?.stack || e.reason}\n`; });
+// (a refused mouse capture is routine, not a bug: keep it off the overlay wherever it comes from)
+window.addEventListener('unhandledrejection', (e) => { const r = e.reason; if (/pointer ?lock/i.test(`${r?.name} ${r?.message} ${r?.stack}`)) { e.preventDefault(); return; } document.getElementById('err').textContent += `${r?.stack || r}\n`; });
 
 async function boot() {
   const renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance', preserveDrawingBuffer: AUTO });
@@ -321,6 +322,9 @@ async function boot() {
     ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn || phoneOn || knobOn);
     ui.els.hud.classList.toggle('on', locked || started);
   };
+  // capturing the mouse returns a promise in current browsers; when it is refused (no recent click, the tab not focused,
+  // the user just pressed Esc) that is expected, not an error, so it must not land on the error overlay
+  const grabMouse = () => { try { const r = renderer.domElement.requestPointerLock?.(); r?.catch?.(() => {}); } catch {} };
   let started = false, interludeOn = false, phoneOn = false, knobOn = false;
   // ---- the season's check-in (Year Two on, from the second season of it): the usage knob, alone in the middle of the
   // screen; turn it (or keep last season's answer) and you are straight back in the game
@@ -347,7 +351,7 @@ async function boot() {
   const intoPlay = () => {
     if (MOBILE) { player.locked = true; ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); touch.show(); }
     else {
-      renderer.domElement.requestPointerLock?.();
+      grabMouse();
       // if the browser would not capture the mouse from that turn, fall back to the soft 'click to look around' line
       setTimeout(() => { if (!player.locked && !tut.active) tut.start(); }, 700);
     }
@@ -361,7 +365,7 @@ async function boot() {
       ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden');
       ui.els.hud.classList.add('on');
       touch.show();
-    } else renderer.domElement.requestPointerLock?.();
+    } else grabMouse();
   };
   // ---- camera mode (V): a narrow view, click to photograph what is centred in the frame
   const vf = document.createElement('div'); vf.id = 'viewfinder'; vf.className = 'hidden';
@@ -667,7 +671,7 @@ async function boot() {
   addEventListener('keydown', (e) => { if (RUN.dev && e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
 
   // back in fullscreen after a season turn: if the click that restored it did not also capture the mouse, capture it now
-  initFullscreen({ mobile: MOBILE, onChange: (fs) => { if (fs && started && !MOBILE && !player.locked && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden')) renderer.domElement.requestPointerLock?.(); } });
+  initFullscreen({ mobile: MOBILE, onChange: (fs) => { if (fs && started && !MOBILE && !player.locked && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden')) grabMouse(); } });
   ui.els.loading.classList.add('hidden');
   if (AUTO) {
     started = true; player.locked = true;
