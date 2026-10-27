@@ -154,7 +154,7 @@ export class Audio {
   }
   update(dt, s) {
     if (!this.ready) return;
-    const t = this.ctx.currentTime, evening = s.mood >= 2 ? 1 : s.mood === 1 ? 0.3 : 0;
+    const t = this.ctx.currentTime, cr = s.credits, evening = cr === 'life' ? 0 : s.mood >= 2 ? 1 : s.mood === 1 ? 0.3 : 0;   // under the credits: a dawn chorus if the park lived
     // gentle gusts: a calm floor with a soft swell every few seconds, drawn at random
     this.gustT = (this.gustT ?? 0) - dt;
     if (this.gustT < 0) { this.gustT = 3 + Math.random() * 6; this.gustTo = Math.random() < 0.35 ? 0.6 + Math.random() * 0.4 : Math.random() * 0.3; }
@@ -167,7 +167,7 @@ export class Audio {
     this.rustle.g.gain.setTargetAtTime(w[1] * (0.15 + 1.2 * gust * gust), t, 0.5);
     this.rustle.f.frequency.setTargetAtTime(2200 + 800 * gust, t, 0.5);
     // lapping loudest at the water's edge
-    const near = Math.max(0, 1 - Math.max(0, s.sdf) / 45) * (s.lakeFrac);
+    const near = cr ? (cr === 'life' ? 0.55 : 0) : Math.max(0, 1 - Math.max(0, s.sdf) / 45) * (s.lakeFrac);   // the drone follows the shore
     this.lap.g.gain.setTargetAtTime((SEASON === 'winter' ? 0.025 : 0.045) * near, t, 0.5);
     const rn = s.rain || 0; this.rainHi.g.gain.setTargetAtTime(s.snow ? 0 : 0.05 * rn, t, 0.8); this.rainLo.g.gain.setTargetAtTime(s.snow ? 0 : 0.035 * rn, t, 0.8);
     this.gateSnd.g.gain.setTargetAtTime(s.gate ? 0.18 : 0, t, 0.3);
@@ -179,8 +179,8 @@ export class Audio {
     this.birdT -= dt;
     if (this.birdT < 0) {
       const iv = { spring: [1.5, 3.5], summer: [2.5, 6], autumn: [3, 8], winter: [18, 45] }[SEASON];
-      this.birdT = (iv[0] + Math.random() * (iv[1] - iv[0])) * (1 + evening * 1.5);
-      if (s.sdf > -5 && !(s.rain > 0.35)) this.bird();
+      this.birdT = (iv[0] + Math.random() * (iv[1] - iv[0])) * (1 + evening * 1.5) * (cr === 'life' ? 0.4 : cr ? 2.5 : 1);
+      if ((s.sdf > -5 || cr) && !(s.rain > 0.35)) this.bird();
     }
     // night-ish insects and frogs
     // the cricket chorus: loudest at dusk and night, and only while it is warm
