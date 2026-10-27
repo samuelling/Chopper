@@ -46,7 +46,7 @@ export function showInterlude(el, ctx, onContinue) {
   showChanges();
   const ch = el.querySelector('[data-i-choices]');
   renderChoices(ch, ctx, () => { chose = true; skip.disabled = true; skip.style.opacity = '.35'; ready(); showChanges(); }, pickChoices(RUN.n));
-  var skip = document.createElement('button'); skip.className = 'choice'; skip.innerHTML = '<b>Make no choice</b><span>That is a choice too. Nothing changes, nothing is given.</span>';
+  var skip = document.createElement('button'); skip.className = 'cskip'; skip.innerHTML = '<b>Make no choice</b><span>That is a choice too. Nothing changes, nothing is given.</span>';
   skip.addEventListener('click', (e) => { e.stopPropagation(); if (skip.disabled) return; chose = true; ch.querySelectorAll('[data-choice]').forEach((o) => { o.disabled = true; o.style.opacity = '.35'; }); ch.querySelector('[data-choice-note]').textContent = 'You let the season pass.'; ready(); });
   ch.insertBefore(skip, ch.querySelector('[data-choice-note]'));
   ready();

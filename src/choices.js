@@ -76,22 +76,46 @@ export function pickChoices(seed, n = 6) {
 
 const effects = (c) => [c.shield && `new harm ${pct(c.shield)} slower`, c.recover && `healing +${pct(c.recover)} faster`, c.heal && `heals ${pct(c.heal)} now`, c.buffer && `the land looks ${pct(c.buffer)} less harmed`].filter(Boolean).map((t) => ` · ${t}`).join('');
 const pct = (x) => `${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%`;
+const esc = (t) => String(t).replace(/</g, '&lt;');
+const lead = (t) => { const i = t.search(/[.!?](\s|$)/); return i < 0 ? [t, ''] : [t.slice(0, i + 1), t.slice(i + 1).trim()]; };
+const meter = (cls, label, v, max, txt) => `<div class="cm ${cls}"><em>${label}</em><i><u style="width:${Math.max(v ? 6 : 0, Math.min(100, v / max * 100))}%"></u></i><b>${txt}</b></div>`;
 export function renderChoices(el, ctx, onDone, list = CHOICES) {
-  el.innerHTML = `<div class="uh">Make a choice</div><small>Each shows what it gives and what it costs before you commit. AI choices cost a little lasting harm and give real benefits; the one park choice is to hold off.</small>
-  ${list.map((c) => `<button class="choice" data-choice="${c.id}"><b>${c.kind === 'AI' ? '◈' : '❖'} ${c.title}</b><span>Gives: ${c.gain}</span><span class="cost">${c.care ? `Care +${pct(c.care)}` : ''}${c.cost ? `${c.care ? ' · ' : ''}harm +${pct(c.cost)}` : ''}${effects(c)}${c.note ? `${c.care || c.cost ? ' · ' : ''}${c.note}` : ''}</span></button>`).join('')}
+  // each option is a card: the title, one plain line of what it does, and two bars you can compare at a glance (care gained, lasting harm).
+  // Tap a card to open it: the rest of the detail and the button that commits.
+  const mC = Math.max(0.01, ...list.map((c) => c.care || 0)), mH = Math.max(0.002, ...list.map((c) => c.cost || 0));   // bars compare the options shown, each metric on its own scale
+  el.innerHTML = `<div class="chhead"><div class="uh">Pick one</div><div class="chkey"><span class="g"></span>care gained <span class="r"></span>lasting harm</div></div>
+  ${list.map((c) => {
+    const [one, more] = lead(c.gain), fx = [c.shield && `new harm ${pct(c.shield)} slower`, c.recover && `healing ${pct(c.recover)} faster`, c.heal && `heals ${pct(c.heal)} now`, c.buffer && `land looks ${pct(c.buffer)} less harmed`].filter(Boolean);
+    const chips = [c.hours && `<span class="chip">saves ${c.hours} staff h</span>`, c.saved && `<span class="chip">&asymp; ${fmt$(c.saved)}</span>`, ...fx.map((t) => `<span class="chip fx">${t}</span>`)].filter(Boolean).join('');
+    return `<div class="ccard ${c.kind === 'AI' ? 'ai' : 'park'}" data-choice="${c.id}" role="button" tabindex="0">
+      <div class="ctop"><span class="ctag">${c.kind === 'AI' ? 'AI' : 'PARK'}</span><b>${c.title}</b><s></s></div>
+      <div class="cone">${esc(one)}</div>
+      <div class="cmeters">${meter('care', 'Care', c.care || 0, mC, c.care ? `+${pct(c.care)}` : '0')}${meter('harm', 'Harm', c.cost || 0, mH, c.cost ? `+${pct(c.cost)}` : 'none')}</div>
+      <div class="cmore">${more ? `<p>${esc(more)}</p>` : ''}${c.note ? `<p class="cn">${esc(c.note)}</p>` : ''}<div class="chips">${chips}</div><button class="cgo" data-go>${c.kind === 'AI' ? 'Ask Clyde' : 'Do this'}</button></div>
+    </div>`;
+  }).join('')}
   <small data-choice-note></small>`;
-  el.querySelectorAll('[data-choice]').forEach((b) => b.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (b.disabled) return;
-    const c = CHOICES.find((x) => x.id === b.dataset.choice);
-    const r = c.run(ctx) || {};
-    el.querySelector('[data-choice-note]').textContent = r.msg || '';
-    if (r.ok === false) return;                      // nothing happened (e.g. no room to build): try another
-    CARE.gain(c); if (c.cost) PRESSURE.bump(c.cost); if (c.heal) PRESSURE.heal(c.heal);
-    if (c.shield) PRESSURE.shield = CARE.shield;
-    if (r.rec) CARE.built.push(r.rec);
-    el.querySelectorAll('[data-choice]').forEach((o) => { o.disabled = true; o.style.opacity = o === b ? '1' : '.35'; });
-    onDone?.(c);
-  }));
+  const cards = [...el.querySelectorAll('[data-choice]')];
+  for (const card of cards) {
+    // the interlude and the menu switch cards off with `.disabled = true`
+    Object.defineProperty(card, 'disabled', { get() { return this.classList.contains('off'); }, set(v) { this.classList.toggle('off', !!v); if (v) this.classList.remove('open'); } });
+    const toggle = (e) => { if (e.target.closest('[data-go]') || card.disabled) return; e.stopPropagation(); const o = !card.classList.contains('open'); cards.forEach((x) => x.classList.remove('open')); card.classList.toggle('open', o); if (o) card.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); };
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', (e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); toggle(e); } });
+    card.querySelector('[data-go]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (card.disabled) return;
+      const c = CHOICES.find((x) => x.id === card.dataset.choice);
+      const r = c.run(ctx) || {};
+      el.querySelector('[data-choice-note]').textContent = r.msg || '';
+      if (r.ok === false) return;                      // nothing happened (e.g. no room to build): try another
+      CARE.gain(c); if (c.cost) PRESSURE.bump(c.cost); if (c.heal) PRESSURE.heal(c.heal);
+      if (c.shield) PRESSURE.shield = CARE.shield;
+      if (r.rec) CARE.built.push(r.rec);
+      cards.forEach((o) => { o.disabled = true; o.style.opacity = o === card ? '1' : '.3'; });
+      card.classList.add('done'); card.querySelector('s').textContent = 'chosen';
+      onDone?.(c);
+    });
+  }
 }
 export { fmt$ };

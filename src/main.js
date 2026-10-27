@@ -470,7 +470,7 @@ async function boot() {
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } },
-    onOpen: () => { phoneOn = true; tut.phoned = true; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    onOpen: () => { phoneOn = true; tut.phoned = true; phone._upright = matchMedia('(orientation: portrait)').matches; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   const togglePhone = () => {
     if (phone.isOpen) phone.close();
@@ -586,6 +586,28 @@ async function boot() {
       PRESSURE.bump(pulse || 0);           // consequences begin now (the run is live from the second year)
       reloadIntoNext();
     });
+  }
+  // ---- on a touch device the phone (and Clyde) wants to be held upright: sideways it asks to be turned, upright it fills the screen,
+  // and turning it back to play puts it away
+  {
+    const phEl = document.getElementById('phone'), inEl = document.getElementById('interlude'), tu = document.getElementById('turnup');
+    const portrait = matchMedia('(orientation: portrait)');
+    const sync = () => {
+      const inter = !inEl.classList.contains('hidden'), ph = !phEl.classList.contains('hidden') && !phEl.classList.contains('closing');
+      document.body.classList.toggle('phoneup', inter || ph);
+      tu.querySelector('[data-turn-msg]').textContent = inter ? 'Clyde has something for you. Turn your phone upright to read it.' : 'Turn your phone upright to use it';
+      tu.querySelector('[data-turn-sub]').hidden = inter; tu.querySelector('[data-turn-away]').hidden = inter;
+      if (MOBILE && inter) { touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; }   // the game's touch layer would otherwise swallow the scroll
+    };
+    new MutationObserver(sync).observe(phEl, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(sync).observe(inEl, { attributes: true, attributeFilter: ['class'] });
+    tu.querySelector('[data-turn-away]').addEventListener('click', (e) => { e.stopPropagation(); phone.close(); });
+    portrait.addEventListener?.('change', (e) => {
+      if (!MOBILE || !phone.isOpen) return;
+      if (e.matches) phone._upright = true;
+      else if (phone._upright) phone.close();              // turned back sideways: back to the park
+    });
+    sync();
   }
   // the season turns through black: fade out, reload, and the next season's card fades up out of black
   function reloadIntoNext() {

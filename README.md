@@ -126,4 +126,7 @@ Press **Q** until the rod is in hand (from the boat or from the shore), click to
 
 
 ### Touch
-The phone button (top right) raises the in-game phone. Its **Tools** app holds what a keyboard does with keys: axe, rod or hands free, sit, pick up litter, plant a seed, the corner map, the choices. The big button swings, casts and reels (hold) or takes the photograph in camera mode; the joystick rows the boat and counters a fish's run; Hop held dives when swimming.
+The phone button (top right) raises the in-game phone; turn the device upright and the phone (and Clyde, at the end of a season) fills the whole screen, turn it back sideways to put it away. Its **Tools** app holds what a keyboard does with keys: axe, rod or hands free, sit, pick up litter, plant a seed, the corner map, the choices. The big button swings, casts and reels (hold) or takes the photograph in camera mode; the joystick rows the boat and counters a fish's run; Hop held dives when swimming.
+
+### Choices
+Each of Clyde's options is a card: a one-line summary and two bars, care gained and lasting harm, each scaled across the options on screen so they compare at a glance (the exact figures sit beside the bars). Tap a card to see the detail (staff hours, illustrative dollars, side effects) and the button that commits.

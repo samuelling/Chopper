@@ -163,6 +163,40 @@
   }
 
   .bubble { background:#2d2a36; border-radius:16px 16px 16px 4px; padding:11px 14px; font-size:14px; line-height:1.5; margin-bottom:12px; }
+  /* the choices: cards with two bars (care gained, lasting harm), opened by a tap */
+  .chhead { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; } .chhead .uh { margin:0; }
+  .chkey { font-size:11px; opacity:.8; letter-spacing:.04em; white-space:nowrap; } .chkey span { display:inline-block; width:14px; height:5px; border-radius:3px; margin:0 5px 1px 8px; vertical-align:middle; } .chkey .g { background:#8fbf5a; } .chkey .r { background:#e0693e; }
+  .ccard { position:relative; margin:7px 0; padding:10px 12px 11px 15px; border-radius:12px; background:rgba(40,36,48,.92); border:1.5px solid rgba(244,230,200,.18); cursor:pointer; overflow:hidden; text-align:left; transition:border-color .15s, background .15s, opacity .3s, transform .15s; -webkit-tap-highlight-color:transparent; }
+  .ccard::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:#d9572b; } .ccard.park::before { background:#8fbf5a; }
+  .ccard:hover { border-color:rgba(255,226,170,.6); } .ccard.open { border-color:rgba(255,226,170,.95); background:rgba(52,46,62,.98); }
+  .ccard.off { pointer-events:none; } .ccard.done { border-color:#8fbf5a; }
+  .ctop { display:flex; align-items:center; gap:8px; } .ctop b { flex:1; font-size:14.5px; letter-spacing:.01em; line-height:1.25; } .ctop s { text-decoration:none; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#cfe8a8; }
+  .ctag { font-size:9.5px; letter-spacing:.14em; font-weight:800; padding:2px 6px; border-radius:5px; background:rgba(217,87,43,.85); color:#fff; } .park .ctag { background:rgba(111,160,70,.9); }
+  .cone { margin-top:5px; font-size:12.5px; line-height:1.4; opacity:.88; }
+  .cmeters { margin-top:8px; display:grid; gap:4px; }
+  .cm { display:grid; grid-template-columns:38px 1fr 54px; align-items:center; gap:8px; font-size:11px; } .cm em { font-style:normal; opacity:.7; letter-spacing:.06em; text-transform:uppercase; font-size:10px; } .cm b { text-align:right; font-weight:700; font-size:11.5px; }
+  .cm i { display:block; height:6px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; } .cm u { display:block; height:100%; border-radius:3px; text-decoration:none; transition:width .5s cubic-bezier(.2,.8,.2,1); }
+  .cm.care u { background:linear-gradient(90deg,#6fa046,#a9d26d); } .cm.harm u { background:linear-gradient(90deg,#d9572b,#f08a52); } .cm.harm b { color:#ffbf9a; } .cm.care b { color:#cfe8a8; }
+  .cmore { max-height:0; opacity:0; overflow:hidden; transition:max-height .35s ease, opacity .25s ease, margin .25s; } .ccard.open .cmore { max-height:340px; opacity:1; margin-top:9px; }
+  .cmore p { margin:0 0 7px; font-size:12px; line-height:1.45; opacity:.85; } .cmore p.cn { color:#ffd9a0; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:9px; } .chip { font-size:10.5px; padding:2px 8px; border-radius:20px; background:rgba(255,255,255,.1); } .chip.fx { background:rgba(143,191,90,.22); color:#dff0bf; }
+  .ccard .cgo, .usage .ccard .cgo { font:inherit; font-size:13px; letter-spacing:.06em; color:#fff; background:#d9572b; border:0; border-radius:9px; padding:9px 18px; cursor:pointer; width:100%; } .ccard.park .cgo { background:#5e8f3c; } .ccard .cgo:hover { filter:brightness(1.1); } .ccard .cgo:active { transform:scale(.98); }
+  .cm u { animation:cgrow .7s cubic-bezier(.2,.8,.2,1) both; } @keyframes cgrow { from { width:0; } }
+  .cskip { display:block; width:100%; font:inherit; color:var(--paper); text-align:left; margin:10px 0 4px; padding:9px 14px; border-radius:12px; background:transparent; border:1.5px dashed rgba(244,230,200,.3); cursor:pointer; } .cskip b { display:block; font-size:13.5px; } .cskip span { display:block; font-size:11.5px; opacity:.7; margin-top:2px; } .cskip:hover { border-color:rgba(255,226,170,.7); }
+  /* Clyde and the phone, upright on a touch device: the phone takes the whole screen; sideways it asks to be turned */
+  #turnup { display:none; position:fixed; inset:0; z-index:40; align-items:center; justify-content:center; flex-direction:column; gap:14px; text-align:center; color:var(--paper); font-size:18px; padding:24px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); background:rgba(0,0,0,.06); }
+  #turnup .tphone { width:34px; height:62px; border:3px solid var(--paper); border-radius:8px; animation:turnup 2.4s ease-in-out infinite; } #turnup small { opacity:.7; font-size:13px; } #turnup .tgo { font:inherit; font-size:14px; color:var(--paper); background:rgba(28,21,23,.6); border:2px solid rgba(244,230,200,.6); border-radius:8px; padding:7px 16px; cursor:pointer; pointer-events:auto; }
+  @keyframes turnup { 0%,15% { transform:rotate(90deg); } 55%,100% { transform:rotate(0deg); } }
+  @media (orientation:landscape) { body.mobile.phoneup #turnup { display:flex; } body.mobile.phoneup #phone, body.mobile.phoneup #interlude { visibility:hidden; } }
+  @media (orientation:portrait) {
+    body.mobile.phoneup #rotate { display:none; }
+    body.mobile.phoneup .phone { width:100vw; max-width:none; height:100vh; height:100dvh; max-height:none; min-height:0; aspect-ratio:auto; border:0; border-radius:0; box-shadow:none; }
+    body.mobile.phoneup .phone::before { display:none; } body.mobile.phoneup .phone .pbar { padding-top:calc(env(safe-area-inset-top) + 10px); }
+    body.mobile.phoneup .phone.onhome .pscroll { padding-top:calc(env(safe-area-inset-top) + 24px); } body.mobile.phoneup .appgrid { grid-template-columns:repeat(4,1fr); gap:22px 2px; }
+    body.mobile.phoneup .dock { bottom:calc(env(safe-area-inset-bottom) + 30px); } body.mobile.phoneup .phomebar { height:calc(env(safe-area-inset-bottom) + 22px); }
+    body.mobile.phoneup #phone .pscroll canvas { width:min(100%,420px) !important; }
+    body.mobile.phoneup #interlude, body.mobile.phoneup #phone { padding:0; }
+  }
   .phone .usage { max-width:none; margin-top:10px; } .phone .go { margin:14px auto 0; text-align:center; font-size:15px; padding:11px 18px; }
   #phone { z-index:6; background:transparent; -webkit-backdrop-filter:blur(7px) saturate(.92); backdrop-filter:blur(7px) saturate(.92); transition:backdrop-filter .45s ease-out, -webkit-backdrop-filter .45s ease-out; }   /* no dimming: the world just goes out of focus behind the phone */ #phone .pscroll canvas { position:static !important; display:block; margin:6px auto; }
   .phone .choice.sm { width:auto !important; display:inline-block !important; flex:none; }
@@ -240,6 +274,7 @@
 <div id="underwater"><i></i></div>
 <div id="touch"><div id="stick"><i></i></div>
   <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
+<div id="turnup"><div class="tphone"></div><div data-turn-msg>Turn your phone upright to use it</div><small data-turn-sub>Turn it back to put it away</small><button class="tgo" data-turn-away>Put it away</button></div>
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>
 
