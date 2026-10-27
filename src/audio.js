@@ -136,6 +136,9 @@ export class Audio {
   castSwish() { if (!this.ready) return; this._burst(2600, 1.5, 0.28, 0.07, 'bandpass', 0.4); }
   plop() { if (!this.ready) return; this._tone(420, 0.1, 0.07, 'sine', 180); this._burst(1200, 1.5, 0.15, 0.07, 'bandpass'); }
   reelTick() { if (!this.ready) return; for (let i = 0; i < 9; i++) setTimeout(() => this._burst(3400, 3, 0.02, 0.05, 'bandpass'), i * 120); }
+  strain(k = 1) { if (!this.ready) return; this._tone(700 + k * 500, 0.1, 0.018, 'sine', 900 + k * 500); }
+  pull() { if (!this.ready) return; this._burst(700, 1.2, 0.18, 0.1, 'bandpass'); }
+  snap() { if (!this.ready) return; this._burst(3800, 1, 0.1, 0.16, 'highpass'); this._tone(1800, 0.12, 0.05, 'sine', 400); }
   creak() { this._tone(110 + Math.random() * 60, 0.9, 0.025, 'sawtooth', 70 + Math.random() * 30); }
   bird() { this._song(SEASON); }
   _song(season) {

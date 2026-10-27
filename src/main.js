@@ -216,11 +216,13 @@ async function boot() {
   }
   const fishing = new Fishing(scene, camera, {
     cast: () => { audio.castSwish?.(); }, plop: (x, y, z) => { audio.plop?.(); fx.splash(x, y, z, 5); }, bite: () => { audio.plop?.(); setTimeout(() => audio.plop?.(), 140); },
-    reel: () => audio.reelTick?.(), toast: (t, d) => ui.toast(t, d),
-    caught: (f, inches, x, z) => {
+    reel: () => audio.reelTick?.(), toast: (t, d) => ui.toast(t, d), pull: () => audio.pull?.(), tick: () => audio._burst?.(3400, 3, 0.02, 0.04, 'bandpass'), strain: (k) => audio.strain?.(k),
+    hooked: () => { audio.plop?.(); ui.toast('Hooked!', 1.2); }, lost: (why) => { if (why === 'snap') audio.snap?.(); audio.dip?.(1); },
+    loadStats: () => RUN.s.angler || { landed: 0, lost: 0, clean: 0, best: 0 }, stats: (st) => { RUN.s.angler = { ...st }; RUN.save?.(); },
+    caught: (f, inches, x, z, clean) => {
       const first = !GUIDE.found(f.id); GUIDE.addCaught(f.id, inches); RUN.s.fish = (RUN.s.fish || 0) + 1; RUN.save?.();
-      JOURNAL.add(`Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.`, player.pos.x, player.pos.z);
-      ui.toast(`A ${inches}-inch ${f.name}. You let it go.${first ? ' New in your Field Guide.' : ''}`, 4.5); audio.dip?.(1.5); fx.splash(x, lake.level + 0.03, z, 12);
+      JOURNAL.add(`Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.${clean ? ' A clean fight.' : ''}`, player.pos.x, player.pos.z);
+      ui.toast(`A ${inches}-inch ${f.name}${clean ? ', a clean catch' : ''}. You let it go.${first ? ' New in your Field Guide.' : ''}`, 4.5); audio.dip?.(1.5); fx.splash(x, lake.level + 0.03, z, 12);
     },
   });
   player.events.cast = () => { tut.fished = true; if (started && !interludeOn && !player.cameraMode && !phone.isOpen) fishing.click(); };
@@ -643,8 +645,8 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    boat.update(dt, player.boat === boat); player.update(dt);
-    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
+    player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
+    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: ((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) boatT += dt;
     flyover.update(dt); tut.update(dt);
     // camera shake from big falls

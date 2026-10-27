@@ -24,6 +24,7 @@ export const FISH = [
   { id: 'brook', name: 'brook trout', min: 7, max: 14, depth: [2, 9], w: 1, seasons: ['spring', 'autumn', 'winter'] },
   { id: 'eel', name: 'American eel', min: 18, max: 34, depth: [2, 9], w: 1, dusk: true },
 ];
+const FIGHT = { sunfish: 0.25, pumpkinseed: 0.2, redbreast: 0.25, shiner: 0.15, perch: 0.35, whiteperch: 0.4, crappie: 0.35, bass: 0.65, smallmouth: 0.8, pickerel: 0.7, bullhead: 0.4, sucker: 0.5, carp: 0.9, trout: 0.7, brook: 0.5, eel: 0.85 };
 const LOOK = {   // [back, belly, height/length, marks]
   redbreast: ['#6e8a52', '#e8742a', 0.5, 'cheek'], shiner: ['#b5a24a', '#f0e4a8', 0.26, 'plain'], whiteperch: ['#9aa89a', '#e4e8de', 0.36, 'stripe'], smallmouth: ['#7a6a3a', '#d8d0a0', 0.3, 'bars'],
   sucker: ['#7a7a60', '#d8d5bd', 0.2, 'plain'], carp: ['#a88a4a', '#e0cc90', 0.36, 'plain'], trout: ['#9fb0a8', '#ece8e0', 0.24, 'spots'], brook: ['#5a6a4a', '#e8a04a', 0.22, 'spots'], eel: ['#4e5a3a', '#cfcf9a', 0.06, 'plain'],
@@ -35,7 +36,7 @@ const RANGE = [4, 22], TIP = new THREE.Vector3(0, 1.75, 0);
 export class Fishing {
   constructor(scene, camera, hooks) {
     this.scene = scene; this.camera = camera; this.hooks = hooks;
-    this.state = 'idle'; this.t = 0; this.rng = Math.random;
+    this.state = 'idle'; this.t = 0; this.rng = Math.random; this.stats = hooks.loadStats?.() || { landed: 0, lost: 0, clean: 0, best: 0 };
     // the rod: a cork grip, a reel, a long thin flexing blank
     const g = new THREE.Group(), m = (geo, col, p, r = [0, 0, 0]) => { const me = new THREE.Mesh(geo, simpleToon(col)); me.position.set(...p); me.rotation.set(...r); const o = new THREE.Mesh(geo, simpleToon('#2a1f24', { side: THREE.BackSide })); o.scale.setScalar(1.25); me.add(o); g.add(me); return me; };
     m(new THREE.CylinderGeometry(0.018, 0.02, 0.26, 7), '#b58a52', [0, 0.1, 0]);
@@ -50,6 +51,10 @@ export class Fishing {
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#f2f7f4', transparent: true, opacity: 0, depthWrite: false })); this.ring.visible = false; scene.add(this.ring); this.ringT = 9;
     const pts = Array.from({ length: 14 }, () => new THREE.Vector3());
     this.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#e8eef0', transparent: true, opacity: 0.85 })); this.line.frustumCulled = false; this.line.visible = false; scene.add(this.line);
+    // the fight meter: line tension (keep the needle in the green) and how far the fish still is
+    const h = document.createElement('div'); h.id = 'fight'; h.style.cssText = 'position:fixed;left:50%;bottom:11%;transform:translateX(-50%);width:min(420px,86vw);padding:12px 16px 14px;border:2px solid rgba(244,230,200,.65);border-radius:8px;background:rgba(28,21,23,.72);color:#f4e6c8;font:13px Georgia,serif;letter-spacing:.08em;text-transform:uppercase;z-index:30;display:none;pointer-events:none;text-align:center';
+    h.innerHTML = '<div data-fh style="min-height:30px;font-size:22px;letter-spacing:.2em;line-height:30px"></div><div style="text-align:left;margin-top:4px">Line</div><div style="position:relative;height:16px;background:#3b2a2a;border-radius:4px;overflow:hidden"><div style="position:absolute;left:22%;width:56%;top:0;bottom:0;background:rgba(98,170,98,.55)"></div><div data-ft style="position:absolute;top:-2px;bottom:-2px;width:5px;background:#fff;left:0;box-shadow:0 0 6px #fff"></div></div><div style="text-align:left;margin-top:8px">Fish <span data-fp style="opacity:.7"></span></div><div style="height:10px;background:#3b2a2a;border-radius:4px;overflow:hidden"><div data-fd style="height:100%;width:100%;background:#d9572b"></div></div><div data-fx style="margin-top:8px;font-size:11px;opacity:.85;letter-spacing:.06em;text-transform:none"></div>';
+    document.body.appendChild(h); this.hud = h; this.hudH = h.querySelector('[data-fh]'); this.hudT = h.querySelector('[data-ft]'); this.hudD = h.querySelector('[data-fd]'); this.hudP = h.querySelector('[data-fp]'); this.hudX = h.querySelector('[data-fx]');
     this.pos = new THREE.Vector3(); this.from = new THREE.Vector3(); this.tgt = new THREE.Vector3(); this.tip = new THREE.Vector3();
   }
 
@@ -76,7 +81,7 @@ export class Fishing {
   }
 
   get busy() { return this.state !== 'idle'; }
-  reset() { this.state = 'idle'; this.bobber.visible = false; this.line.visible = false; }
+  reset() { this.state = 'idle'; this.bobber.visible = false; this.line.visible = false; this.hud.style.display = 'none'; }
 
   /** where would a cast from here land?  null when there is no open water that way */
   _aim() {
@@ -96,9 +101,29 @@ export class Fishing {
       this.rod.updateMatrixWorld(true); this.from.copy(TIP).applyMatrix4(this.blank.matrixWorld);
       this.tgt.copy(t); this.state = 'cast'; this.t = 0; this.depth = waterDepthAt(t.x, t.z);
       this.bobber.visible = true; this.line.visible = true; this.pos.copy(this.from); this.hooks.cast?.();
-    } else if (this.state === 'wait' || this.state === 'nothing') { this._reel(false); }
-    else if (this.state === 'bite') { this._reel(true); }
+    } else if (this.state === 'wait' && !this.quiet && this.t > this.waitFor - 1.6) { this.hooks.toast?.('Too early. It spooked.', 2); this._reel(false); }
+    else if (this.state === 'wait' || this.state === 'nothing') { this._reel(false); }
+    else if (this.state === 'bite') { this._hook(); }
+    else if (this.state === 'fight') { /* hold the button to reel; this is just the first press */ }
     else if (this.state === 'reel') { /* already coming in */ }
+  }
+  /** the hook is set: start the fight */
+  _hook() {
+    const f = this.fish, inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)), sizeK = (inches - f.min) / Math.max(1, f.max - f.min);
+    const D = Math.min(1, (FIGHT[f.id] ?? 0.4) * (0.7 + 0.6 * sizeK));
+    const c = this.camera.position, dx = this.tgt.x - c.x, dz = this.tgt.z - c.z, d0 = Math.max(5, Math.hypot(dx, dz));
+    Object.assign(this, { state: 'fight', t: 0, inches, D, d: d0, d0, dir0: new THREE.Vector3(dx / d0, 0, dz / d0), T: 0.45, stam: 1, run: 0, runDir: 0, tele: 0, nextRun: 1.4, side: 0, red: 0, snapT: 0, slackT: 0, hold: false, lean: 0, tick: 0, firstFight: !(this.stats.landed + this.stats.lost) });
+    this.hooks.hooked?.(); this.hud.style.display = 'block';
+  }
+  _endFight() { this.hud.style.display = 'none'; this.bobber.visible = false; this.line.visible = false; this.state = 'idle'; }
+  _lose(why) {
+    this.stats.lost++; this.hooks.stats?.(this.stats);
+    const tip = why === 'snap' ? 'The line snapped. Ease off the reel when it runs, and lean the other way.' : 'It spat the hook. Keep some tension on the line.';
+    this._endFight(); this.hooks.lost?.(why); this.hooks.toast?.(tip, 4.5);
+  }
+  _land() {
+    const f = this.fish, inches = this.inches, clean = this.red < 0.6; this.stats.landed++; if (clean) this.stats.clean++; this.stats.best = Math.max(this.stats.best, inches); this.hooks.stats?.(this.stats);
+    const was = this.pos.clone(); this._endFight(); this.showCatch(f, inches); this.hooks.caught?.(f, inches, was.x, was.z, clean);
   }
   _reel(hooked) { this.state = 'reel'; this.t = 0; this.hooked = hooked; this.rev = this.pos.clone(); this.hooks.reel?.(); }
 
@@ -120,7 +145,9 @@ export class Fishing {
     if (this.state === 'cast') flick = Math.sin(Math.min(1, this.t / 0.5) * Math.PI);
     if (this.state === 'bite') bend = 0.06 + Math.sin(this.t * 38) * 0.02;
     if (this.state === 'reel') bend = this.hooked ? 0.12 + Math.sin(this.t * 22) * 0.04 : 0.03;
-    this.rod.position.set(0.3, -0.34, -0.42); this.rod.rotation.set(-1.3 - flick * 0.5, 0.0, -0.1);
+    let tilt = 0;
+    if (this.state === 'fight') { bend = 0.05 + this.T * 0.24 + (this.tele > 0 ? Math.sin(this.t * 50) * 0.03 : 0); tilt = (ctx.lean || 0) * 0.16; }
+    this.rod.position.set(0.3, -0.34, -0.42); this.rod.rotation.set(-1.3 - flick * 0.5, 0.0, -0.1 - tilt);
     this.blank.rotation.x = -bend; this.blank.rotation.z = Math.sin(this.t * 1.3) * 0.006;
     this.rod.updateMatrixWorld(true);
     this.tip.copy(TIP).applyMatrix4(this.blank.matrixWorld);
@@ -155,6 +182,43 @@ export class Fishing {
           if (this.t > 1.5) { this.hooks.toast?.('It got away.', 2.2); this._reel(false); }
           break;
         }
+        case 'fight': {
+          const D = this.D, hold = !!ctx.hold, lean = ctx.lean || 0, clamp = THREE.MathUtils.clamp;
+          // the fish decides when to run, and which way; a short warning first
+          if (this.run <= 0 && this.tele <= 0) { this.nextRun -= dt; if (this.nextRun <= 0) { this.tele = 0.5; this.runDir = this.rng() < 0.5 ? -1 : 1; this.hooks.pull?.(); } }
+          if (this.tele > 0) { this.tele -= dt; if (this.tele <= 0) this.run = 0.9 + this.rng() * 0.8; }
+          const running = this.run > 0; if (running) { this.run -= dt; if (this.run <= 0) this.nextRun = (1.2 + this.rng() * 1.8) * (1.3 - 0.5 * this.stam); }
+          const counter = running && lean * this.runDir < -0.3, wrong = running && lean * this.runDir > 0.3, power = D * (0.35 + 0.65 * this.stam);
+          let dT;
+          if (running) { dT = hold ? 0.95 * power : 0.3 * power; if (counter) dT *= 0.3; if (wrong) dT *= 1.5; } else dT = hold ? 0.2 : -0.55;
+          this.T = clamp(this.T + dT * dt, 0, 1.2);
+          const green = this.T > 0.22 && this.T < 0.78;
+          if (this.T > 0.85) this.red += dt;
+          // line comes in only while you reel; a running fish takes it back
+          let v = hold ? 2.4 * (1 - 0.75 * D * this.stam) : 0;
+          if (running) { v = hold ? v * (counter ? 0.6 : 0.2) : 0; this.d += (hold && !counter ? 0.9 : 1.4) * power * dt; }
+          this.d = clamp(this.d - v * dt, 0, this.d0 * 1.5);
+          // it tires while the line is in the green, and fastest when you answer a run correctly
+          this.stam = clamp(this.stam - dt * ((green && hold ? 0.05 * (1.1 - 0.3 * D) : 0) + (counter ? 0.13 : 0)), 0, 1);
+          // snap or spit
+          if (this.T >= 1) { this.snapT += dt; if (this.snapT > 0.25) return this._lose('snap'); } else this.snapT = Math.max(0, this.snapT - dt * 2);
+          this.slackT = (this.T < 0.03 && !running) ? this.slackT + dt : 0; if (this.slackT > 6) return this._lose('slack');
+          if (this.d <= 1.3) return this._land();
+          // where the fish is
+          const goal = running ? this.runDir * (counter ? 0.35 : 1) : 0; this.side += (goal - this.side) * Math.min(1, dt * 4);
+          const base = this.camera.position, d0 = this.dir0, off = Math.min(5, 0.35 * this.d + 1) * this.side;
+          this.pos.set(base.x + d0.x * this.d + (-d0.z) * off, lake.level - 0.02 - 0.03 * Math.abs(Math.sin(this.t * 11)), base.z + d0.z * this.d + d0.x * off);
+          if (running && ((this.t * 4) | 0) !== (((this.t - dt) * 4) | 0)) this._ripple(this.pos.x, this.pos.z, 1.2);
+          if (hold) { this.tick -= dt; if (this.tick <= 0) { this.tick = 0.11; this.hooks.tick?.(); } }
+          if (this.T > 0.8) { this.strainT = (this.strainT ?? 0) - dt; if (this.strainT <= 0) { this.strainT = 0.22; this.hooks.strain?.(this.T); } }
+          // the meter
+          this.hudT.style.left = `calc(${(clamp(this.T, 0, 1) * 100).toFixed(1)}% - 2px)`; this.hudD.style.width = `${(clamp((this.d - 1.3) / Math.max(1, this.d0 - 1.3), 0, 1) * 100).toFixed(1)}%`;
+          this.hudP.textContent = `\u00b7 ${D < 0.3 ? 'light' : D < 0.55 ? 'medium' : D < 0.8 ? 'strong' : 'heavy'}`;
+          const arrow = (this.tele > 0 || running) ? (this.runDir < 0 ? '\u25c0 \u25c0 \u25c0' : '\u25b6 \u25b6 \u25b6') : '';
+          this.hudH.textContent = arrow; this.hudH.style.color = counter ? '#8fd48f' : wrong ? '#ff6a4a' : '#ffb347';
+          this.hudX.textContent = this.firstFight ? (arrow ? 'It is running. Ease off the reel, and lean the other way (A / D).' : 'Hold the mouse button to reel. Let go before the needle reaches the red.') : (T => '')(0);
+          break;
+        }
         case 'reel': {
           const k = Math.min(1, this.t / (this.hooked ? 1.6 : 0.9)), e = k * k * (3 - 2 * k);
           this.pos.lerpVectors(this.rev, this.tip, e); this.pos.y = Math.max(this.pos.y, lake.level + 0.03) + Math.sin(k * Math.PI) * 0.4 * (this.hooked ? 1 : 0.2);
@@ -169,7 +233,7 @@ export class Fishing {
       if (this.state !== 'idle') {
         this.bobber.visible = true; this.bobber.position.copy(this.pos);
         // the line: from the rod tip to the bobber, slack when still, taut when something pulls
-        const A = this.tip, B = this.pos, slack = (this.state === 'cast' || this.state === 'reel') ? 0.05 : 0.18, n = 14, pa = this.line.geometry.attributes.position;
+        const A = this.tip, B = this.pos, slack = this.state === 'fight' ? 0.02 + (1 - this.T) * 0.1 : (this.state === 'cast' || this.state === 'reel') ? 0.05 : 0.18, n = 14, pa = this.line.geometry.attributes.position;
         for (let i = 0; i < n; i++) { const u = i / (n - 1); pa.setXYZ(i, A.x + (B.x - A.x) * u, A.y + (B.y - A.y) * u - Math.sin(u * Math.PI) * slack * A.distanceTo(B) * 0.5, A.z + (B.z - A.z) * u); }
         pa.needsUpdate = true; this.line.visible = true;
       }

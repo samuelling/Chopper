@@ -25,7 +25,7 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null;
+    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false;
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
@@ -41,11 +41,13 @@ export class Player {
       this.yaw -= e.movementX * 0.0022;
       this.pitch = clamp(this.pitch - e.movementY * 0.0022, -1.45, 1.45);
     });
+    addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     addEventListener('mousedown', (e) => {
+      if (e.button === 0 && this.locked) this.mouseDown = true;
       if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === dom;
+      this.locked = document.pointerLockElement === dom; if (!this.locked) this.mouseDown = false;
       this.onLockChange?.(this.locked);
     });
   }
@@ -133,7 +135,7 @@ export class Player {
 
   /** rowing: the boat carries you; the camera sits low in it, and the view turns with the bow */
   _ride(dt) {
-    const k = this.keys, b = this.boat, on = this.locked;
+    const k = this.keys, b = this.boat, on = this.locked && !this.inputLock;
     b.input.row = on ? (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) : 0;
     b.input.turn = on ? (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) : 0;
     const seat = b.seatWorld();
@@ -154,6 +156,7 @@ export class Player {
       fx = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
     }
     if (this.locked && (this.touch.x || this.touch.y)) { fx += this.touch.x; fz -= this.touch.y; }
+    if (this.inputLock) { fx = 0; fz = 0; }
     if (this.sitting && (fx || fz)) this.sitting = false;          // any step stands you up
     this.sit += ((this.sitting ? 1 : 0) - this.sit) * Math.min(1, dt * 3.2);
     if (this.sit > 0.05) { fx = 0; fz = 0; }
