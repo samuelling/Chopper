@@ -356,6 +356,15 @@ export class Atmosphere {
     for (const key in s) { if (s[key] && s[key].isColor) s[key].copy(a[key]).lerp(b[key], k); else s[key] = lerp(a[key], b[key], k); }
     this.presetIndex = k < 0.5 ? i0 : i1; this.target = null; this.applyState(s);
   }
+  /** between two points on the arc (each [i0, i1, k]), g 0..1: the drone's midday sliding into the day's own light */
+  setMix(a, b, g) {
+    this._ps ??= PRESETS.map((p) => this._stateFrom(p));
+    if (this.blend < 1) return;
+    const s = this.state, A = this._mixA ??= this._clone(this.state), B = this._mixB ??= this._clone(this.state);
+    for (const [o, [i0, i1, k]] of [[A, a], [B, b]]) for (const key in s) { const p = this._ps[i0][key], q = this._ps[i1][key]; if (p && p.isColor) o[key].copy(p).lerp(q, k); else o[key] = lerp(p, q, k); }
+    for (const key in s) { if (s[key] && s[key].isColor) s[key].copy(A[key]).lerp(B[key], g); else s[key] = lerp(A[key], B[key], g); }
+    this.target = null; this.applyState(s);
+  }
   setPreset(i) {
     if (i === this.presetIndex && this.blend >= 1) return;
     this.presetIndex = i;

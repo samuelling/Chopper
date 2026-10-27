@@ -353,7 +353,8 @@ async function boot() {
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
   const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
   const tut = {
-    i: -1, t: 0, done: (() => { try { return localStorage.getItem('ashland.tut') === '1'; } catch { return false; } })(),
+    // the tutorial belongs to your first season only; after that (or once finished) it never comes back
+    i: -1, t: 0, done: (() => { if ((RUN.s.n || 0) > 0) return true; try { return localStorage.getItem('ashland.tut') === '1'; } catch { return false; } })(),
     steps: MOBILE ? [
       { text: 'Touch to begin', ok: () => player.locked, max: 1e9, always: true },
       { text: 'Left thumb: <b>walk</b> (push to the edge to hurry) &nbsp; drag the right side of the screen to <b>look</b>', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
@@ -381,8 +382,10 @@ async function boot() {
       if (this.done && i >= 1) i = this.steps.length;
       this.i = i; this.t = 0; this.moved = 0; this.turned = 0; this._p = null;
       const s = this.steps[i];
-      if (!s) { tutEl.classList.remove('on'); this.active = false; try { localStorage.setItem('ashland.tut', '1'); } catch {} return; }
-      tutEl.innerHTML = s.text; tutEl.classList.add('on');
+      if (!s || (this.done && MOBILE)) { tutEl.classList.remove('on', 'quiet'); this.active = false; try { localStorage.setItem('ashland.tut', '1'); } catch {} return; }
+      // once you know the game, only the browser's need for a click remains, as a quiet line rather than a lesson
+      const quiet = this.done && i === 0; tutEl.classList.toggle('quiet', quiet);
+      tutEl.innerHTML = quiet ? 'Click to look around' : s.text; tutEl.classList.add('on');
     },
     update(dt) {
       if (!this.active || !started) return;
@@ -493,8 +496,16 @@ async function boot() {
   };
   let manual = RUN.dev, arcPhase = -1, arcT = 0;                        // test links (?season=) keep the old hand-set light
   const dayProgress = () => Math.min(1, Math.max(0, RUN.s.played / Math.max(1, RUN.len)));
+  // the drone flies at midday; as it drops to the ground the light slides into the day's own (morning, at a season's start)
+  let dropT = null;
   const stepDay = (dt) => {
     if (manual) return;
+    if (dropT === null && flyover.glide) dropT = 0;
+    if (!started && dropT === null) { atmosphere.setMix([ARC[1], ARC[1], 0], [ARC[1], ARC[1], 0], 0); mood = ARC[1]; return; }
+    if (dropT !== null && dropT < 4.2) {
+      dropT += dt; const g = Math.min(1, dropT / 4.2), e = g * g * (3 - 2 * g), now = arcAt(dayProgress());
+      atmosphere.setMix([ARC[1], ARC[1], 0], now, e); mood = e < 0.5 ? ARC[1] : now[0]; arcPhase = now[3]; return;
+    }
     const [i0, i1, k, ph] = arcAt(dayProgress());
     if (ph !== arcPhase) { if (arcPhase >= 0 && started && !interludeOn) ui.toast({ 1: 'The morning warms toward midday.', 2: 'The light turns low and gold.', 3: 'Night comes on.' }[ph] ?? '', 3); arcPhase = ph; }
     arcT -= dt; if (arcT > 0) return; arcT = 0.15;
@@ -581,7 +592,7 @@ async function boot() {
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-knob-panel]').forEach((e) => e.remove());   // the check-in knob waits for the AI phase
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1–4 light, 0 the day · Esc menu';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q tools · V camera · B sit · E litter · G plant · M map · 1–4 light, 0 the day · Esc menu';
     if (!RUN.phaseTwo) document.querySelectorAll('[data-phase2]').forEach((e) => e.remove());   // choices arrive with the AI phase
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -712,7 +723,7 @@ async function boot() {
       c.fillStyle = need >= 0 ? '#8fcf8a' : '#d9694a'; c.fillRect(W / 2, 372, (W - 60) / 2 * need, 12);
       c.fillStyle = '#f4e6c8'; c.font = '18px Georgia, serif'; c.fillText('harm \u2190   \u2192 care', W / 2, 410);
     }
-    c.globalAlpha = 0.55; c.font = '18px Georgia, serif'; c.fillText('P raise \u00b7 Q axe', W / 2, 462); c.globalAlpha = 1;
+    c.globalAlpha = 0.55; c.font = '18px Georgia, serif'; c.fillText('P raise \u00b7 Q tools', W / 2, 462); c.globalAlpha = 1;
     c.fillStyle = '#000'; c.beginPath(); c.roundRect(W / 2 - 34, 10, 68, 20, 10); c.fill(); c.restore();
     player.screenTex.needsUpdate = true;
   }
