@@ -12,7 +12,7 @@ import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
 import { showInterlude } from './interlude.js';
-import { FUND } from './fund.js';
+import { FUND, MEASURES, SUPPLIES } from './fund.js';
 import { CATCHES } from './catches.js';
 import { Underwater } from './underwater.js';
 import { mulberry32, clamp } from './noise.js';
@@ -573,6 +573,25 @@ async function boot() {
   };
   explore.onLead = (l) => ui.toast(`A lead: ${l.text} Circled on your map.`, 6);
   let leadT = 0;
+  // Year Two: the fund on the status card, and a nudge when there is money to spend (once a season, and when a lake
+  // measure first comes within reach), so the Park Fund app is not forgotten
+  const fundEl = document.getElementById('fundline'), howTo = MOBILE ? 'Phone \u2192 Park Fund' : 'P \u2192 Park Fund';
+  let fundT = 0, seasonNudge = 0;
+  const fundNudge = () => {
+    const live = RUN.phaseTwo || RUN.dev; fundEl.hidden = !live || !!RUN.s.end; if (!live) return;
+    const bal = FUND.balance, fmt = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
+    ui.set(fundEl, 'fundline', `Park Fund ${fmt(bal)} \u00b7 ${howTo}`);
+    if (!started || !player.locked || interludeOn || ui._toastT > 0 || player.cameraMode) return;
+    const st = RUN.s; st.afford ||= {};
+    // a lake measure the fund has just come to afford
+    const m = MEASURES.find((x) => !FUND.has(x.id) && x.price <= bal && !st.afford[x.id]);
+    if (m) { for (const x of MEASURES) if (x.price <= bal) st.afford[x.id] = 1; st.nudgeN = st.n; RUN.save?.(); ui.toast(`The Park Fund has ${fmt(bal)}: enough for ${m.title.replace(/^./, (c) => c.toLowerCase())}. ${howTo}.`, 5.5); return; }
+    // once a season, a little way in, if there is anything at all to buy
+    if (st.nudgeN !== st.n && (seasonNudge += 1) > 40 && bal >= Math.min(...SUPPLIES.map((x) => x.price))) {
+      st.nudgeN = st.n; RUN.save?.();
+      ui.toast(`The Park Fund has ${fmt(bal)} to spend on seeds, saplings and the lake. ${howTo}.`, 5);
+    }
+  };
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
@@ -805,6 +824,7 @@ async function boot() {
       while (jobQueue.length && jobQueue[0].at <= 0) { const j = jobQueue.shift(); if (j.tree.alive && !j.tree.gone) chunks.fell(j.tree, j.from[0], j.from[1]); }
     }
     gauge.setVisible(RUN.dev ? phaseTwo() : RUN.phaseTwo); gauge.update(dt);
+    if ((fundT += dt) > 1) { fundT = 0; fundNudge(); }
     if (waypoint) {
       const dx = waypoint.x - player.pos.x, dz = waypoint.z - player.pos.z, d = Math.hypot(dx, dz);
       if (d < 9) { ui.toast(`You have arrived: ${waypoint.label}.`); setWaypoint(null); }
