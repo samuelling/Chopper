@@ -175,6 +175,9 @@ async function boot() {
     return SEASON === 'autumn' ? 'leaves' : SEASON === 'winter' ? 'snow' : 'grass';
   };
   player.events.swing = () => audio.swing();
+  player.swimOK = SEASON !== 'winter';
+  player.events.cold = () => ui.toast('Far too cold to swim. The water is just above freezing.', 3.6);
+  player.events.stroke = (side) => { audio.dip?.(0.55, side); fx.splash(player.pos.x - Math.sin(player.yaw) * 0.7, lake.level + 0.03, player.pos.z - Math.cos(player.yaw) * 0.7, 3); };
   player.events.splash = () => { audio.splash(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z); };
   player.events.strike = () => {
     player.forward(tmpDir);
@@ -653,7 +656,8 @@ async function boot() {
     player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
     fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: ((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
-    { const near = player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
+    { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
+      const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
     flyover.update(dt); tut.update(dt);
     // camera shake from big falls
     if (shake > 0.001) {

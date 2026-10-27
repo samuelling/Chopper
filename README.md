@@ -12,7 +12,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 
 | | |
 |---|---|
-| WASD / Shift / Space | walk / hurry / hop |
+| WASD / Shift / Space | walk / hurry / hop (walk into deep water to swim; in winter it is too cold) |
 | Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe, fishing rod and empty hands, and click swings the axe (a big tree takes several swings) |
 | E | get in or out of the rowboat when you are next to it; pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
 | 1 / 2 / 3 | golden hour / morning mist / dusk |

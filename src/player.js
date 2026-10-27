@@ -25,13 +25,13 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false; this.camOff = new THREE.Vector3();
+    this.swim = 0; this.swimming = false; this.swimOK = true; this.strokeT = 0; this.swimT = 0; this.coldCool = 0; this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false; this.camOff = new THREE.Vector3();
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys[e.code] = true;
-      if (e.code === 'Space' && this.locked && !this.boat) { this.sitting = false; this._jump(); }
+      if (e.code === 'Space' && this.locked && !this.boat && !this.swimming) { this.sitting = false; this._jump(); }
       if (e.code === 'KeyE' && this.locked) this.events.interact?.();
       if (e.code === 'KeyB' && this.locked && !this.cameraMode && !this.boat) this.sitting = !this.sitting && waterDepthAt(this.pos.x, this.pos.z) < 0.2;
     });
@@ -129,7 +129,7 @@ export class Player {
   _blockedAt(x, z) {
     if (sdfAt(x, z) > PLAY_SDF) return true;
     if (x < WORLD.minX + 12 || x > WORLD.maxX - 12 || z < WORLD.minZ + 12 || z > WORLD.maxZ - 12) return true;
-    if (waterDepthAt(x, z) > WADE_MAX && groundY(x, z) < this.pos.y + 0.2) return true;
+    if (!this.swimOK && waterDepthAt(x, z) > WADE_MAX && groundY(x, z) < this.pos.y + 0.2) return true;   // deep water is for swimming; in winter it is simply too cold
     return false;
   }
 
@@ -140,7 +140,7 @@ export class Player {
     b.input.turn = on ? (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) : 0;
     const seat = b.seatWorld();
     this.pos.set(seat.x, b.root.position.y - 0.08, seat.z);
-    this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0;
+    this.yaw += b.dh; this.vx = this.vz = 0; this.speed = Math.abs(b.v); this.onGround = true; this.vy = 0; this.sitting = false; this.bob = 0; this.swim = 0; this.swimming = false;
     this.sit += (0.55 - this.sit) * Math.min(1, dt * 3);
     this.stillT = this.speed < 0.3 ? this.stillT + dt : 0;
     this.raise += (this.raiseTo - this.raise) * Math.min(1, dt * 9);
@@ -162,7 +162,19 @@ export class Player {
     if (this.sit > 0.05) { fx = 0; fz = 0; }
     const sprint = k.ShiftLeft || k.ShiftRight || Math.hypot(this.touch.x, this.touch.y) > 0.92;
     const depth = waterDepthAt(this.pos.x, this.pos.z);
+    // swimming: out of your depth (and not winter) you float at the surface and breaststroke; arms are never shown
+    this.swimming = this.swimOK && !this.sitting && (this.swimming ? depth > 0.85 : depth > 1.05);
+    this.swim += ((this.swimming ? 1 : 0) - this.swim) * Math.min(1, dt * 4);
+    this.coldCool -= dt;
+    if (!this.swimOK && depth > 0.85 && (fx || fz) && this.coldCool <= 0) { this.coldCool = 7; this.events.cold?.(); }
     let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
+    if (this.swimming) {
+      const moving = !!(fx || fz);
+      if (moving) { const prev = Math.floor(this.strokeT); this.strokeT += dt * (sprint ? 1.25 : 0.85); if (Math.floor(this.strokeT) !== prev) this.events.stroke?.(Math.floor(this.strokeT) % 2 ? 1 : -1); }
+      const g = Math.pow(Math.max(0, Math.sin(this.strokeT * Math.PI * 2)), 1.4);     // pull, then glide
+      sp = (sprint ? 2.5 : 1.7) * (0.35 + 1.15 * g);
+    }
+    this.swimT += dt;
     const len = Math.hypot(fx, fz) || 1;
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     // forward = (-sin, -cos), right = (cos, -sin)
@@ -192,11 +204,14 @@ export class Player {
 
     // vertical
     const gy = groundY(nx, nz);
-    if (!this.onGround || this.pos.y > gy + 0.02) {
+    if (this.swimming) {
+      const tgt = lake.level - EYE + 0.3 + Math.sin(this.swimT * 1.7) * 0.025;
+      this.pos.y += (tgt - this.pos.y) * Math.min(1, dt * 4.5); this.vy = 0; this.onGround = true; this.sitting = false;
+    } else if (!this.onGround || this.pos.y > gy + 0.02) {
       this.vy -= 14 * dt;
       this.pos.y += this.vy * dt;
     }
-    if (this.pos.y <= gy) {
+    if (this.swimming) { /* floating */ } else if (this.pos.y <= gy) {
       // step up/down gently when walking
       this.pos.y = this.onGround ? this.pos.y + (gy - this.pos.y) * Math.min(1, dt * 18) : gy;
       if (!this.onGround) { this.vy = 0; this.onGround = true; if (depth > 0.1) this.events.splash?.(); }
@@ -211,7 +226,8 @@ export class Player {
     this.wasWet = wet;
 
     // footsteps + head bob
-    if (this.onGround && this.speed > 0.5) {
+    if (this.swimming) { this.stepDist = 0; this.bob *= 0.9; }
+    else if (this.onGround && this.speed > 0.5) {
       this.stepDist += moved;
       this.bob += moved * 2.2;
       const stride = sprint ? 2.0 : 1.55;
@@ -242,7 +258,7 @@ export class Player {
     const bobY = Math.sin(this.bob) * 0.035 * Math.min(1, this.speed / 3.6);
     const bobX = Math.cos(this.bob * 0.5) * 0.02 * Math.min(1, this.speed / 3.6);
     c.position.set(this.pos.x, this.pos.y + EYE - this.sit * 0.95 + bobY, this.pos.z);
-    c.position.add(this.camOff); c.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    c.position.add(this.camOff); c.rotation.set(this.pitch, this.yaw, this.swim * Math.sin(this.strokeT * Math.PI * 2) * 0.014 * Math.min(1, this.speed / 1.2), 'YXZ');
     // axe pose: rest -> windup -> strike
     const s = this.swing;
     let rx = 0.35, ry = 0.0, rz = -0.15, px = 0.36 + bobX, py = -0.42 + bobY * 0.5, pz = -0.6;
