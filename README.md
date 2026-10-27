@@ -146,3 +146,11 @@ Together they add up to **lake protection** (0-100%), which reduces how much the
 
 `?skip2=1` (testing): lands you at the end of summer in Year One, a few seconds before Clyde first appears and Year Two begins. It rewrites your saved run, then drops the parameter from the address.
 
+
+### Wild things, pages and seats
+- **Red fox** (`src/fox.js`): articulated like the deer (torso, turning head and ears, two-part brush, two-jointed legs in black socks); walk, trot and gallop; sniffs, sits with its tail curled round, hunts mice (head cocked, crouch, high leap, nose-first landing), stares when it sees you, then slips away.
+- **Wild plants** (`src/plants.js`): eighteen species in their own habitats and seasons (skunk cabbage and trout lily in spring, pickerelweed and water lilies in summer, asters and goldenrod in autumn, winterberry in the snow); photograph them into the Field Guide's Plants section, which hints when and where to look. They thin out as the park is harmed.
+- **Survey bounties** (Year Two on): the first record of each species pays into the park fund, more for rarer finds. Clyde files it in minutes; without AI you file by hand and a fifth of the money arrives.
+- **Your pages**: the Journal has a place to write anything (field notes, poems), filed by year and season and kept even when you start over.
+- **Seats**: B beside a bench or picnic table (the park's or ones you built) sits you on it, facing the view or the table.
+- **Endings**: skip the credits to the start menu, or stay and watch with a menu button at hand; reloading after an ending opens the start menu.
