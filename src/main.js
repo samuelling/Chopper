@@ -644,7 +644,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     boat.update(dt, player.boat === boat); player.update(dt);
-    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter' }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
+    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) boatT += dt;
     flyover.update(dt); tut.update(dt);
     // camera shake from big falls

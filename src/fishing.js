@@ -6,14 +6,30 @@ import { simpleToon } from './toon.js';
 import { lake, waterDepthAt } from './world.js';
 
 export const FISH = [
-  { id: 'sunfish', name: 'bluegill', min: 5, max: 9, depth: [0, 3.5], w: 4 },
-  { id: 'pumpkinseed', name: 'pumpkinseed', min: 4, max: 8, depth: [0, 2.5], w: 3 },
-  { id: 'perch', name: 'yellow perch', min: 6, max: 11, depth: [0.8, 6], w: 4 },
-  { id: 'crappie', name: 'black crappie', min: 7, max: 12, depth: [1.5, 7], w: 2 },
-  { id: 'bass', name: 'largemouth bass', min: 8, max: 19, depth: [1.5, 9], w: 3 },
-  { id: 'pickerel', name: 'chain pickerel', min: 14, max: 24, depth: [1, 6], w: 1.5 },
-  { id: 'bullhead', name: 'brown bullhead', min: 8, max: 13, depth: [2, 9], w: 1 },
+  // depth: preferred water depth (m).  seasons: when it is likely (others are rare).  dusk: it favours low light.  w: how common.
+  { id: 'sunfish', name: 'bluegill', min: 5, max: 10, depth: [0, 3.5], w: 5 },
+  { id: 'pumpkinseed', name: 'pumpkinseed', min: 4, max: 8, depth: [0, 2.5], w: 4 },
+  { id: 'redbreast', name: 'redbreast sunfish', min: 4, max: 9, depth: [0, 3], w: 2.5 },
+  { id: 'shiner', name: 'golden shiner', min: 4, max: 9, depth: [0, 3], w: 3 },
+  { id: 'perch', name: 'yellow perch', min: 6, max: 12, depth: [0.8, 6], w: 5 },
+  { id: 'whiteperch', name: 'white perch', min: 6, max: 11, depth: [1.5, 7], w: 3, seasons: ['summer', 'autumn'] },
+  { id: 'crappie', name: 'black crappie', min: 7, max: 13, depth: [1.5, 7], w: 3, dusk: true },
+  { id: 'bass', name: 'largemouth bass', min: 8, max: 21, depth: [1.5, 9], w: 4 },
+  { id: 'smallmouth', name: 'smallmouth bass', min: 9, max: 19, depth: [2.5, 9], w: 2 },
+  { id: 'pickerel', name: 'chain pickerel', min: 14, max: 26, depth: [1, 6], w: 2 },
+  { id: 'bullhead', name: 'brown bullhead', min: 8, max: 14, depth: [2, 9], w: 2, dusk: true },
+  { id: 'sucker', name: 'white sucker', min: 10, max: 20, depth: [1.5, 8], w: 1.5, seasons: ['spring', 'autumn'] },
+  { id: 'carp', name: 'common carp', min: 15, max: 32, depth: [0.5, 4], w: 1.2, seasons: ['spring', 'summer'] },
+  { id: 'trout', name: 'rainbow trout', min: 9, max: 18, depth: [2, 9], w: 2, seasons: ['spring', 'autumn', 'winter'] },
+  { id: 'brook', name: 'brook trout', min: 7, max: 14, depth: [2, 9], w: 1, seasons: ['spring', 'autumn', 'winter'] },
+  { id: 'eel', name: 'American eel', min: 18, max: 34, depth: [2, 9], w: 1, dusk: true },
 ];
+const LOOK = {   // [back, belly, height/length, marks]
+  redbreast: ['#6e8a52', '#e8742a', 0.5, 'cheek'], shiner: ['#b5a24a', '#f0e4a8', 0.26, 'plain'], whiteperch: ['#9aa89a', '#e4e8de', 0.36, 'stripe'], smallmouth: ['#7a6a3a', '#d8d0a0', 0.3, 'bars'],
+  sucker: ['#7a7a60', '#d8d5bd', 0.2, 'plain'], carp: ['#a88a4a', '#e0cc90', 0.36, 'plain'], trout: ['#9fb0a8', '#ece8e0', 0.24, 'spots'], brook: ['#5a6a4a', '#e8a04a', 0.22, 'spots'], eel: ['#4e5a3a', '#cfcf9a', 0.06, 'plain'],
+  sunfish: ['#6f8f4a', '#e5a63c', 0.52, 'cheek'], pumpkinseed: ['#7c9b52', '#ea8f3a', 0.54, 'cheek'], perch: ['#aeae3c', '#f1d56a', 0.3, 'bars'],
+  crappie: ['#aab49b', '#e6ebe0', 0.48, 'spots'], bass: ['#5f7a3a', '#dcdcaa', 0.28, 'stripe'], pickerel: ['#6b7b3a', '#d8d9a8', 0.14, 'chain'], bullhead: ['#5a4a35', '#a8946a', 0.28, 'whiskers'],
+};
 const RANGE = [4, 22], TIP = new THREE.Vector3(0, 1.75, 0);
 
 export class Fishing {
@@ -35,6 +51,28 @@ export class Fishing {
     const pts = Array.from({ length: 14 }, () => new THREE.Vector3());
     this.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#e8eef0', transparent: true, opacity: 0.85 })); this.line.frustumCulled = false; this.line.visible = false; scene.add(this.line);
     this.pos = new THREE.Vector3(); this.from = new THREE.Vector3(); this.tgt = new THREE.Vector3(); this.tip = new THREE.Vector3();
+  }
+
+  /** hold the fish up for a moment before it goes back */
+  showCatch(f, inches) {
+    if (this.fishObj) { this.camera.remove(this.fishObj); this.fishObj = null; }
+    const [back, belly, ratio, mark] = LOOK[f.id] || LOOK.sunfish, len = Math.min(0.5, Math.max(0.2, inches * 0.0254 * 1.7)), hgt = len * ratio, wid = hgt * 0.45;
+    const g = new THREE.Group(), add = (geo, col, p, sc = [1, 1, 1], r = [0, 0, 0], outline = true) => { const m = new THREE.Mesh(geo, simpleToon(col)); m.position.set(...p); m.scale.set(...sc); m.rotation.set(...r); if (outline) { const o = new THREE.Mesh(geo, simpleToon('#2a1f24', { side: THREE.BackSide })); o.scale.setScalar(1.1); m.add(o); } g.add(m); return m; };
+    const sph = new THREE.SphereGeometry(0.5, 14, 10);
+    add(sph, back, [0, 0.0, 0], [len, hgt, wid]);                                             // back
+    add(sph, belly, [0, -hgt * 0.14, 0], [len * 0.96, hgt * 0.72, wid * 0.96], [0, 0, 0], false);   // pale belly peeking below
+    add(new THREE.ConeGeometry(0.5, 1, 4), back, [-len * 0.56, 0, 0], [hgt * 0.8, len * 0.26, wid * 0.4], [0, 0, Math.PI / 2]);   // tail
+    add(new THREE.ConeGeometry(0.5, 1, 3), back, [len * 0.04, hgt * 0.5, 0], [len * 0.32, hgt * 0.38, wid * 0.2], [0, 0, 0]);   // dorsal fin
+    add(sph, '#15110f', [len * 0.36, hgt * 0.1, wid * 0.42], [hgt * 0.14, hgt * 0.14, hgt * 0.1], [0, 0, 0], false);              // eye
+    const dark = '#2f3b24';
+    if (mark === 'bars') for (let i = 0; i < 5; i++) add(sph, dark, [len * (0.22 - i * 0.11), hgt * 0.04, 0], [len * 0.05, hgt * 1.02, wid * 1.01], [0, 0, 0], false);
+    if (mark === 'stripe') add(sph, dark, [0, hgt * 0.02, 0], [len * 0.92, hgt * 0.12, wid * 1.02], [0, 0, 0], false);
+    if (mark === 'chain') for (let i = 0; i < 7; i++) add(sph, dark, [len * (0.3 - i * 0.1), hgt * 0.1, 0], [len * 0.07, hgt * 0.6, wid * 1.02], [0, 0, 0.5], false);
+    if (mark === 'spots') for (let i = 0; i < 9; i++) add(sph, '#3a3f35', [len * (0.3 - (i % 5) * 0.12), hgt * (0.15 - (i % 3) * 0.14), wid * 0.45], [hgt * 0.1, hgt * 0.1, hgt * 0.06], [0, 0, 0], false);
+    if (mark === 'cheek') add(sph, '#1d2a3a', [len * 0.34, -hgt * 0.04, wid * 0.46], [hgt * 0.2, hgt * 0.18, hgt * 0.1], [0, 0, 0], false);
+    if (mark === 'whiskers') for (const k of [-1, 1]) add(new THREE.CylinderGeometry(0.004, 0.002, hgt * 0.7, 4), '#3a3025', [len * 0.52, -hgt * 0.1, k * wid * 0.3], [1, 1, 1], [0, 0, 1.2], false);
+    g.traverse((o) => { o.frustumCulled = false; });
+    this.fishObj = g; this.fishT = 0; this.camera.add(g);
   }
 
   get busy() { return this.state !== 'idle'; }
@@ -65,16 +103,17 @@ export class Fishing {
   _reel(hooked) { this.state = 'reel'; this.t = 0; this.hooked = hooked; this.rev = this.pos.clone(); this.hooks.reel?.(); }
 
   _pick() {
-    const d = this.depth, pool = FISH.filter((f) => d >= f.depth[0] - 0.3 && d <= f.depth[1] + 2);
-    const list = pool.length ? pool : FISH.slice(0, 2), tot = list.reduce((a, f) => a + f.w, 0); let r = this.rng() * tot;
-    for (const f of list) { r -= f.w; if (r <= 0) return f; }
-    return list[0];
+    const d = this.depth, c = this.ctx || {}, pool = FISH.filter((f) => d >= f.depth[0] - 0.3 && d <= f.depth[1] + 2);
+    const list = (pool.length ? pool : FISH.slice(0, 2)).map((f) => ({ f, w: f.w * (f.seasons && !f.seasons.includes(c.season) ? 0.12 : 1) * (f.dusk ? 0.25 + 2.2 * (c.dusk ?? 0.5) ** 2 : 1) }));
+    const tot = list.reduce((a, o) => a + o.w, 0); let r = this.rng() * tot;
+    for (const o of list) { r -= o.w; if (r <= 0) return o.f; }
+    return list[0].f;
   }
   _ripple(x, z, k = 1) { this.ring.position.set(x, lake.level + 0.03, z); this.ringT = 0; this.ringK = k; this.ring.visible = true; }
 
   /** ctx: { life (0..1 wildlife), full (0..1 reservoir), dusk (0..1 low light), cold, tipWorld } */
   update(dt, ctx, show) {
-    this.rod.visible = show;
+    this.ctx = ctx; this.rod.visible = show;
     const c = this.camera;
     // rod flex and cast flick
     let flick = 0, bend = 0;
@@ -96,8 +135,8 @@ export class Fishing {
           if (k >= 1) {
             this.state = 'wait'; this.t = 0; this.pos.copy(this.tgt); this._ripple(this.pos.x, this.pos.z); this.hooks.plop?.(this.pos.x, lake.level, this.pos.z);
             const act = Math.max(0, Math.min(1, ctx.life)) * (0.35 + 0.65 * ctx.full) * (ctx.cold ? 0.55 : 1);
-            this.waitFor = (4 + this.rng() * 9) * (1 - 0.35 * ctx.dusk) / Math.max(0.3, act);
-            this.quiet = this.rng() > 0.25 + 0.75 * act;          // no fish interested at all
+            this.waitFor = (2.5 + this.rng() * 6.5) * (1 - 0.35 * ctx.dusk) / Math.max(0.3, act);
+            this.quiet = this.rng() > 0.4 + 0.6 * act;          // no fish interested at all
             this.maxWait = this.quiet ? 22 : this.waitFor + 12;
           }
           break;
@@ -122,7 +161,7 @@ export class Fishing {
           if (k >= 1) {
             const f = this.hooked ? this.fish : null; const was = this.tgt.clone();
             this.state = 'idle'; this.bobber.visible = false; this.line.visible = false;
-            if (f) { const inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)); this.hooks.caught?.(f, inches, was.x, was.z); }
+            if (f) { const inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)); this.showCatch(f, inches); this.hooks.caught?.(f, inches, was.x, was.z); }
           }
           break;
         }
@@ -134,6 +173,11 @@ export class Fishing {
         for (let i = 0; i < n; i++) { const u = i / (n - 1); pa.setXYZ(i, A.x + (B.x - A.x) * u, A.y + (B.y - A.y) * u - Math.sin(u * Math.PI) * slack * A.distanceTo(B) * 0.5, A.z + (B.z - A.z) * u); }
         pa.needsUpdate = true; this.line.visible = true;
       }
+    }
+    if (this.fishObj) {                                   // held up for a moment, wagging, then back into the water
+      this.fishT += dt; const t = this.fishT, g = this.fishObj, inK = Math.min(1, t / 0.25), out = Math.max(0, (t - 2.6) / 0.6);
+      if (t > 3.2) { c.remove(g); this.fishObj = null; this.hooks.plop?.(this.tgt.x, lake.level, this.tgt.z); }
+      else { g.position.set(0.02 + out * 0.15, -0.16 - out * 0.55, -0.62 - out * 0.35); g.rotation.set(0.08, 0.35 + Math.sin(t * 9) * (0.18 - 0.1 * Math.min(1, t / 2)), -0.12 + Math.sin(t * 7) * 0.06 + out * 0.9); g.scale.setScalar(Math.max(0.01, inK * (1 - out * 0.7))); }
     }
     if (this.ring.visible) {
       this.ringT += dt * 1.4; const a = this.ringT;
