@@ -16,6 +16,7 @@ const INTRO_LINES = [
   "Hi, I'm Clyde. You've now seen the park through a whole year, and until now it was only a park.",
   'I can take on the paperwork, the plans and the upkeep it never had staff for.',
   'Every request I answer uses real energy and water somewhere else.',
+  "And somewhere else is closer than you'd think. There's a data center just over the ridge, one of the ones that runs me, and it draws on the same groundwater that keeps this reservoir full.",
   'So first, honestly: how much do you lean on AI in your own life?',
 ];
 
@@ -39,7 +40,7 @@ export function showInterlude(el, ctx, onContinue) {
         <div class="tapgo">Tap to open</div>
       </div>
       <div class="istep" data-step="1">${pbar(false)}
-        <div class="pscroll"><div data-i-chat></div><div class="ihide" data-i-usagewrap><div data-usage-panel2></div><div class="go inactive" data-i-next>Next</div></div></div>
+        <div class="pscroll"><div data-i-chat></div><div class="ihide" data-i-usagewrap><small class="chmore" style="margin:-4px 2px 10px">The data center is invented for the game. The nearest real ones are in Marlborough and Northborough, about ten miles north.</small><div data-usage-panel2></div><div class="go inactive" data-i-next>Next</div></div></div>
       </div>
       <div class="istep" data-step="2">${pbar(true)}${decide}</div>
       <div class="idots hide"><i class="on"></i><i></i><i></i></div>
