@@ -28,7 +28,7 @@
   .ctl .cg h4 { margin:0 0 6px; padding-bottom:4px; border-bottom:1px solid rgba(244,230,200,.3); font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
   .ctl .r { display:grid; grid-template-columns:100px 1fr; gap:10px; align-items:baseline; padding:3px 0; }
   .ctl .k { text-align:right; white-space:nowrap; } .ctl .k kbd { margin:0 0 0 3px; min-width:1.6em; padding:0 .3em; font-size:.8em; border-width:1.5px; border-bottom-width:3px; text-align:center; }
-  .ctl .wasd { display:inline-grid; grid-template-columns:repeat(3, auto); gap:3px; vertical-align:middle; } .ctl .wasd kbd { margin:0; } .ctl .wasd .w { grid-area:1/2; } .ctl .wasd .a { grid-area:2/1; } .ctl .wasd .s { grid-area:2/2; } .ctl .wasd .d { grid-area:2/3; }
+  .wasd { display:inline-grid; grid-template-columns:repeat(3, auto); gap:3px; vertical-align:middle; margin-right:4px; } .wasd kbd { margin:0 !important; text-align:center; } .wasd .w { grid-area:1/2; } .wasd .a { grid-area:2/1; } .wasd .s { grid-area:2/2; } .wasd .d { grid-area:2/3; }
   .ctl .r:has(.wasd) { align-items:center; }
   .ctl .t { opacity:.92; } .ctl { text-shadow:0 1px 4px rgba(0,0,0,.55); }
   @media (max-width: 900px) { .ctl { grid-template-columns:repeat(2, minmax(0, 1fr)); row-gap:14px; } }
@@ -44,6 +44,9 @@
   .card .v { font-size:20px; }
   .meter { height:8px; background:rgba(0,0,0,.4); border-radius:5px; margin-top:6px; overflow:hidden; border:1px solid rgba(244,230,200,.4); }
   .meter i { display:block; height:100%; width:100%; background:#4fa3a5; }
+  .meter.wood { position:relative; } .meter.wood i { background:#6fa046; transition:width .8s ease, background .8s ease; } .meter.wood.low i { background:#d9572b; }
+  .meter.wood s { position:absolute; left:20%; top:-1px; bottom:-1px; width:2px; background:rgba(244,230,200,.85); }   /* 20% alive: the woods are lost if they stay below it */
+  .card .v.low { color:#ffb08a; }
   #cross { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; background:rgba(255,248,230,.85); box-shadow:0 0 0 2px rgba(40,24,24,.6); }
   #prompt { position:absolute; left:50%; bottom:14%; transform:translateX(-50%); padding:8px 16px; background:rgba(34,20,22,.7); border:2px solid var(--paper); border-radius:6px; font-size:17px; opacity:0; transition:opacity .2s; white-space:nowrap; }
   #prompt.on { opacity:1; }
@@ -402,7 +405,7 @@
     </div></div>
 
 <div id="hud">
-  <div class="card"><b>Trees felled</b><div class="v" id="felled">0</div>
+  <div class="card"><b>The woods</b><div class="v" id="felled">All standing</div><div class="meter wood" title="Trees alive. Below the mark for long, the woods are lost."><i id="woodbar"></i><s></s></div>
     <b style="margin-top:8px" id="lakename">Ashland Reservoir</b><div class="v" id="lakepct">Full</div>
     <div class="meter"><i id="lakebar"></i></div><div id="chint" hidden>C &nbsp;make choices</div><div id="fundline" hidden></div></div>
   <div id="mood"></div>

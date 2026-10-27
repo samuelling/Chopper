@@ -420,7 +420,7 @@ async function boot() {
       { text: '<b>Tools</b> also picks up litter, plants a seed and turns the corner map on. At the dam gatehouse, <b>Use</b> works the gate', ok: () => false, max: 14 },
     ] : [
       { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
-      { text: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
+      { text: '<span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
       { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
@@ -767,7 +767,7 @@ async function boot() {
       if (woodsHold > 60) beginEnding('silent');
     }
   }
-  let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0;
+  let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0, woodsHudT = 0, woodsAlive = 1;
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
@@ -933,7 +933,8 @@ async function boot() {
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
-    ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
+    if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsAlive = 1 - woodsDead(); }
+    ui.hud(woodsAlive, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
   const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };

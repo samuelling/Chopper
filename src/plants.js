@@ -1,4 +1,4 @@
-// Wild plants to find, photograph and log: eighteen species typical of a Massachusetts reservoir's woods, wet ground,
+// Wild plants to find, photograph and log: thirty-four species typical of a Massachusetts reservoir's woods, wet ground,
 // shores and sunny edges, each in its own habitat and its own season (skunk cabbage through the last snow, cardinal flower
 // by the water in August, winterberry's red against the snow).  Habitat-typical, NOT from a survey of the real park.
 // They are placed deterministically on a 5 m grid around you, and thin out as the park is harmed.
@@ -67,6 +67,59 @@ const BUILD = {
     for (let s = 0; s < 6; s++) { const a = r() * 6.28, h = 0.2 + r() * 0.15; stem(b, 0, 0, h, 0.4, a, '#6a4a3a', 0.004);
       for (let k = 0; k < 8; k++) { const t = r(); leaf(b, Math.sin(a) * 0.4 * h * t + (r() - 0.5) * 0.06, h * t + 0.03, Math.cos(a) * 0.4 * h * t + (r() - 0.5) * 0.06, 0.03, 0.016, r() * 6, -0.2, col[k % 3]); }
       if (!fall) for (let k = 0; k < 3; k++) b.add(ball, matrix(Math.sin(a) * 0.08, h * 0.7, Math.cos(a) * 0.08 + k * 0.01, 0, 0, 0, 0.009, 0.009, 0.009), { color: C('#3a4a8a') }); } },
+  // ---- spring
+  bloodroot(b) { const r = R(59); for (let i = 0; i < 3; i++) { const a = i * 2.1 + r(), x = Math.cos(a) * 0.06, z = Math.sin(a) * 0.06;
+    stem(b, x, z, 0.1, 0.1, a, '#7a8a5a', 0.004); b.add(ball, matrix(x, 0.07, z, -0.5, a, 0, 0.06, 0.008, 0.05), { color: C('#7a9a6a') });     // the one lobed leaf, cupped round the stem
+    stem(b, x, z, 0.16, 0, 0, '#9a8a6a', 0.003);
+    for (let k = 0; k < 9; k++) { const pa = k * 0.7; b.add(ball, matrix(x + Math.cos(pa) * 0.02, 0.16, z + Math.sin(pa) * 0.02, 0, -pa, 0.25, 0.022, 0.003, 0.008), { color: C('#fbf8f0') }); }
+    b.add(ball, matrix(x, 0.165, z, 0, 0, 0, 0.008, 0.006, 0.008), { color: C('#f2c41c') }); } },
+  mayflower(b) { const r = R(61); for (let i = 0; i < 6; i++) { const a = r() * 6.28, d = r() * 0.12, x = Math.cos(a) * d, z = Math.sin(a) * d, h = 0.1 + r() * 0.05;
+    stem(b, x, z, h, 0.05, a, '#5a8a3a', 0.003); for (const sd of [0, Math.PI]) leaf(b, x, h * 0.6, z, 0.07, 0.04, a + sd, -0.15, '#3f7a2c');
+    if (i % 2 === 0) for (let k = 0; k < 6; k++) b.add(ball, matrix(x, h + 0.01 + k * 0.008, z, 0, 0, 0, 0.007, 0.006, 0.007), { color: C('#f6f4ea') }); } },
+  jack(b) { stem(b, 0, 0, 0.35, 0.03, 0, '#6a7a4a', 0.008); for (const a of [0.4, 2.6]) { stem(b, 0, 0, 0.4, 0.25, a, '#5a7a3a', 0.005); for (let k = 0; k < 3; k++) leaf(b, Math.sin(a) * 0.05, 0.42, Math.cos(a) * 0.05, 0.12, 0.06, a + (k - 1) * 1.2, -0.1, '#3f7a2c'); }
+    b.add(ball, matrix(0, 0.33, 0, 0, 0, 0, 0.012, 0.035, 0.012), { color: C('#4a2a2a') });                                                    // Jack
+    b.add(ball, matrix(0, 0.34, -0.012, -0.35, 0, 0, 0.032, 0.06, 0.03), { faceColorFn: (c) => _c.copy(C(Math.sin(c.y * 260) > 0.2 ? '#5a2a3a' : '#6a8a3a')) }); },   // the striped hood
+  cinnamonfern(b) { const r = R(67), fall = SEASON === 'autumn';
+    for (let i = 0; i < 8; i++) { const a = i * 0.79 + r() * 0.2; for (let k = 0; k < 7; k++) { const t = k / 7, x = Math.sin(a) * (0.04 + t * 0.4), y = 0.08 + Math.sin(t * 2.2) * 0.42, z = Math.cos(a) * (0.04 + t * 0.4); b.add(ball, matrix(x, y, z, -0.5 + t, a, 0, 0.045 * (1 - t * 0.5), 0.005, 0.034), { color: C(fall ? (k % 2 ? '#c8a03a' : '#b88a2a') : (k % 2 ? '#3f7a2c' : '#4f8a34')) }); } }
+    if (SEASON !== 'autumn') for (let i = 0; i < 2; i++) b.add(cyl, matrix((i - 0.5) * 0.05, 0.3, 0, 0, 0, 0, 0.012, 0.5, 0.012), { color: C('#a8642a') }); },     // the cinnamon fertile fronds
+  blueflag(b) { const r = R(71); for (let i = 0; i < 7; i++) { const a = r() * 6.28, h = 0.45 + r() * 0.25; b.add(cone, matrix(Math.cos(a) * 0.03, h / 2, Math.sin(a) * 0.03, Math.cos(a) * 0.15, a, -Math.sin(a) * 0.15, 0.018, h, 0.005), { color: C('#4f7a4a') }); }
+    for (let i = 0; i < 2; i++) { const x = (i - 0.5) * 0.08, h = 0.55 + r() * 0.1; stem(b, x, 0, h, 0, 0, '#4f7a4a', 0.004);
+      for (let k = 0; k < 3; k++) { const pa = k * 2.09; b.add(ball, matrix(x + Math.cos(pa) * 0.025, h - 0.01, Math.sin(pa) * 0.025, 0.9 * Math.sin(pa), -pa, 0.9 * Math.cos(pa), 0.03, 0.004, 0.016), { color: C('#6a4ab8') }); b.add(cone, matrix(x + Math.cos(pa + 1) * 0.008, h + 0.02, Math.sin(pa + 1) * 0.008, 0, 0, 0, 0.008, 0.04, 0.004), { color: C('#8a6ad0') }); } } },
+  // ---- summer
+  laurel(b) { const r = R(73), bloom = SEASON === 'summer'; for (let s = 0; s < 9; s++) { const a = r() * 6.28, lean = 0.12 + r() * 0.25, h = 0.6 + r() * 0.5; stem(b, 0, 0, h, lean, a, '#5a4a3a', 0.01);
+    for (let k = 0; k < 16; k++) { const t = 0.35 + r() * 0.65, x = Math.sin(a) * lean * h * t, z = Math.cos(a) * lean * h * t; leaf(b, x + (r() - 0.5) * 0.18, h * t, z + (r() - 0.5) * 0.18, 0.11, 0.045, r() * 6, -0.2, k % 3 ? '#2f5a2c' : '#3f6a34'); }
+    if (bloom) for (let k = 0; k < 6; k++) { const x = Math.sin(a) * lean * h + (r() - 0.5) * 0.1, z = Math.cos(a) * lean * h + (r() - 0.5) * 0.1; b.add(ball, matrix(x, h + 0.02 + r() * 0.05, z, 0, 0, 0, 0.022, 0.012, 0.022), { faceColorFn: (c, n) => _c.copy(C(n.y > 0.4 ? '#f6dce6' : '#e8a8c0')) }); } } },
+  buttonbush(b) { const r = R(79); for (let s = 0; s < 8; s++) { const a = r() * 6.28, lean = 0.12 + r() * 0.25, h = 0.8 + r() * 0.5; stem(b, 0, 0, h, lean, a, '#6a5a44', 0.012);
+    for (let k = 0; k < 14; k++) { const t = 0.35 + r() * 0.65; leaf(b, Math.sin(a) * lean * h * t + (r() - 0.5) * 0.16, h * t, Math.cos(a) * lean * h * t + (r() - 0.5) * 0.16, 0.13, 0.055, r() * 6, -0.2, k % 3 ? '#3f7a2c' : '#4f8a34'); }
+    for (let k = 0; k < 2; k++) { const x = Math.sin(a) * lean * h + (r() - 0.5) * 0.08, z = Math.cos(a) * lean * h + (r() - 0.5) * 0.08; b.add(ball, matrix(x, h + 0.04, z, 0, 0, 0, 0.035, 0.035, 0.035), { faceColorFn: (c) => _c.copy(C(Math.sin(c.x * 400) * Math.sin(c.y * 400) > 0.3 ? '#e8e0b0' : '#f8f6ea')) }); } } },
+  indianpipe(b) { const r = R(83); for (let i = 0; i < 6; i++) { const a = r() * 6.28, d = r() * 0.05, x = Math.cos(a) * d, z = Math.sin(a) * d, h = 0.1 + r() * 0.07, tip = 0.9 + r() * 0.4;
+    stem(b, x, z, h, 0.05, a, '#f2f0ea', 0.007); b.add(cone, matrix(x + Math.sin(a) * 0.01, h + 0.005, z + Math.cos(a) * 0.01, Math.PI - tip * Math.cos(a), 0, tip * Math.sin(a), 0.014, 0.035, 0.014), { color: C('#f6f4f0') }); } },
+  jewelweed(b) { const r = R(89); for (let s = 0; s < 4; s++) { const a = r() * 6.28, x = Math.cos(a) * 0.08, z = Math.sin(a) * 0.08, h = 0.6 + r() * 0.3; stem(b, x, z, h, 0.05, a, '#8aa86a', 0.008);
+    for (let k = 0; k < 5; k++) leaf(b, x, 0.25 + k * 0.08, z, 0.09, 0.05, k * 2.4, -0.25, '#5a9a4a');
+    for (let k = 0; k < 4; k++) { const fa = r() * 6.28, fx = x + Math.cos(fa) * 0.06, fz = z + Math.sin(fa) * 0.06, fy = h - 0.08 - r() * 0.15; b.add(cone, matrix(fx, fy, fz, Math.PI / 2, fa, 0, 0.016, 0.04, 0.016), { faceColorFn: (c) => _c.copy(C(Math.sin(c.x * 500 + c.z * 300) > 0.6 ? '#a8301a' : '#f08a1c')) }); } } },
+  pepperbush(b) { const r = R(97); for (let s = 0; s < 8; s++) { const a = r() * 6.28, lean = 0.1 + r() * 0.22, h = 0.8 + r() * 0.5; stem(b, 0, 0, h, lean, a, '#6a5a44', 0.01);
+    for (let k = 0; k < 14; k++) { const t = 0.35 + r() * 0.6; leaf(b, Math.sin(a) * lean * h * t + (r() - 0.5) * 0.16, h * t, Math.cos(a) * lean * h * t + (r() - 0.5) * 0.16, 0.11, 0.05, r() * 6, -0.2, k % 3 ? '#3f7a2c' : '#4f8a34'); }
+    const x = Math.sin(a) * lean * h, z = Math.cos(a) * lean * h; b.add(ball, matrix(x, h + 0.06, z, Math.sin(a) * 0.2, 0, Math.cos(a) * 0.2, 0.016, 0.075, 0.016), { color: C('#f8f6ea') }); } },
+  // ---- autumn and on
+  witchhazel(b) { const r = R(101), bloom = SEASON === 'autumn'; for (let s = 0; s < 7; s++) { const a = r() * 6.28, lean = 0.18 + r() * 0.25, h = 1.1 + r() * 0.6; stem(b, 0, 0, h, lean, a, '#6a5a4a', 0.014);
+    for (let k = 0; k < 14; k++) { const t = 0.35 + r() * 0.65, x = Math.sin(a) * lean * h * t + (r() - 0.5) * 0.16, z = Math.cos(a) * lean * h * t + (r() - 0.5) * 0.16;
+      if (bloom) for (let q = 0; q < 4; q++) { const qa = q * 1.57 + r(); b.add(cone, matrix(x + Math.cos(qa) * 0.01, h * t, z + Math.sin(qa) * 0.01, Math.sin(qa) * 1.2, 0, -Math.cos(qa) * 1.2, 0.003, 0.03, 0.002), { color: C('#f2d03a') }); }
+      else leaf(b, x, h * t, z, 0.09, 0.06, r() * 6, -0.2, '#4f7a34'); } } },
+  sumac(b) { const r = R(103), fall = SEASON === 'autumn', bare = SEASON === 'winter';
+    for (let s = 0; s < 5; s++) { const a = r() * 6.28, lean = 0.12 + r() * 0.2, h = 1.2 + r() * 0.7, tx = Math.sin(a) * lean * h, tz = Math.cos(a) * lean * h; stem(b, 0, 0, h, lean, a, '#7a6a52', 0.014);
+      if (!bare) for (let k = 0; k < 4; k++) { const la = a + (k - 1.5) * 0.9; for (let q = 0; q < 6; q++) leaf(b, tx + Math.sin(la) * (0.05 + q * 0.06), h - 0.05 - q * 0.02, tz + Math.cos(la) * (0.05 + q * 0.06), 0.07, 0.025, la + 1.57, -0.2, fall ? (q % 2 ? '#d8282a' : '#e8582a') : '#3f7a2c'); }
+      b.add(ball, matrix(tx, h + 0.08, tz, 0, 0, 0, 0.05, 0.11, 0.05), { color: C('#a8202a') }); } },             // the red seed cone, standing up
+  pokeweed(b) { const r = R(107); for (let s = 0; s < 3; s++) { const a = r() * 6.28, x = Math.cos(a) * 0.1, z = Math.sin(a) * 0.1, h = 1.1 + r() * 0.4; stem(b, x, z, h, 0.08, a, '#b02a6a', 0.014);
+    for (let k = 0; k < 6; k++) leaf(b, x, 0.4 + k * 0.12, z, 0.2, 0.08, k * 2.3, -0.2, '#5a8a3a');
+    for (let k = 0; k < 3; k++) { const fa = a + k * 2.1, fx = x + Math.cos(fa) * 0.1, fz = z + Math.sin(fa) * 0.1, fy = h - 0.1 - k * 0.1; stem(b, fx, fz, 0.0001, 0, 0);
+      for (let q = 0; q < 9; q++) b.add(ball, matrix(fx + (r() - 0.5) * 0.025, fy - q * 0.022, fz + (r() - 0.5) * 0.025, 0, 0, 0, 0.012, 0.011, 0.012), { color: C(SEASON === 'summer' && q < 3 ? '#8aa86a' : '#3a1a3a') }); } } },
+  // ---- all year
+  princesspine(b) { const r = R(109); for (let i = 0; i < 7; i++) { const a = r() * 6.28, d = r() * 0.14, x = Math.cos(a) * d, z = Math.sin(a) * d, h = 0.12 + r() * 0.08; stem(b, x, z, h, 0, 0, '#3f6a2c', 0.005);
+    for (let k = 0; k < 4; k++) for (let q = 0; q < 4; q++) { const qa = q * 1.57 + k * 0.6; b.add(cone, matrix(x + Math.cos(qa) * 0.02, h * (0.4 + k * 0.17), z + Math.sin(qa) * 0.02, Math.sin(qa) * 1.1, 0, -Math.cos(qa) * 1.1, 0.012, 0.05 - k * 0.008, 0.012), { color: C(k % 2 ? '#2f5a2c' : '#3f6a34') }); } } },
+  partridgeberry(b) { const r = R(113); for (let i = 0; i < 12; i++) { const a = r() * 6.28, d = r() * 0.15, x = Math.cos(a) * d, z = Math.sin(a) * d; for (const sd of [-1, 1]) b.add(ball, matrix(x + sd * 0.012, 0.012, z, 0, a, 0, 0.012, 0.003, 0.012), { color: C('#1f4a2a') }); }
+    for (let i = 0; i < 4; i++) b.add(ball, matrix((r() - 0.5) * 0.15, 0.02, (r() - 0.5) * 0.15, 0, 0, 0, 0.01, 0.009, 0.01), { color: C('#d8202a') }); },
+  soldiers(b) { const r = R(127); b.add(ball, matrix(0, 0, 0, 0, 0, 0, 0.12, 0.03, 0.1), { color: C('#8a9a7a') });           // a mat of grey-green lichen
+    for (let i = 0; i < 14; i++) { const a = r() * 6.28, d = r() * 0.08, x = Math.cos(a) * d, z = Math.sin(a) * d, h = 0.02 + r() * 0.02; b.add(cyl, matrix(x, h / 2 + 0.01, z, 0, 0, 0, 0.003, h, 0.003), { color: C('#a8b898') }); b.add(ball, matrix(x, h + 0.013, z, 0, 0, 0, 0.005, 0.004, 0.005), { color: C('#d8202a') }); } },
 };
 
 // id, name, seasons, habitat, weight (how common within its habitat), photo radius
@@ -88,7 +141,22 @@ export const PLANTS = [
   { id: 'winterberry', name: 'Winterberry', seasons: ['autumn', 'winter'], hab: 'wet', w: 0.7, h: 1.2, blurb: 'A holly that drops its leaves, leaving branches thick with red berries for the winter birds.' },
   { id: 'wintergreen', name: 'Wintergreen', seasons: ['spring', 'summer', 'autumn'], hab: 'forest', w: 0.8, h: 0.08, blurb: 'Teaberry: glossy evergreen leaves and red berries that taste of wintergreen.' },
   { id: 'christmasfern', name: 'Christmas Fern', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'forest', w: 0.9, h: 0.35, blurb: 'Green all winter. Each leaflet has a little "boot", like a Christmas stocking.' },
-  { id: 'blueberry', name: 'Lowbush Blueberry', seasons: ['summer', 'autumn'], hab: 'pine', w: 1.2, h: 0.3, blurb: 'Low thickets on dry, rocky ground. Blue fruit in July, scarlet leaves in October.' },
+  { id: 'blueberry', name: 'Lowbush Blueberry', seasons: ['summer', 'autumn'], hab: 'pine', w: 1.2, h: 0.3, blurb: 'Low thickets on dry, rocky ground. Blue fruit in July, scarlet leaves in October.' },  { id: 'bloodroot', name: 'Bloodroot', seasons: ['spring'], hab: 'forest', w: 0.7, h: 0.16, blurb: 'A single white flower wrapped in one lobed leaf, open for only a day or two. Break the root and it bleeds orange-red sap. Ants carry off its seeds.' },
+  { id: 'mayflower', name: 'Canada Mayflower', seasons: ['spring'], hab: 'forest', w: 1.3, h: 0.12, blurb: 'Two shiny leaves and a little spike of white stars, carpeting the woods in May. Also called wild lily-of-the-valley.' },
+  { id: 'jack', name: 'Jack-in-the-pulpit', seasons: ['spring', 'summer'], hab: 'forest', w: 0.6, h: 0.42, blurb: 'A striped hood (the pulpit) over a club (Jack). A plant can switch from male to female as it grows bigger.' },
+  { id: 'cinnamonfern', name: 'Cinnamon Fern', seasons: ['spring', 'summer', 'autumn'], hab: 'wet', w: 1.1, h: 0.5, blurb: 'Big clumps on wet ground. Its fronds unroll from fiddleheads in spring; the fertile ones turn cinnamon brown, and the rest go gold in the fall.' },
+  { id: 'blueflag', name: 'Blue Flag Iris', seasons: ['spring', 'summer'], hab: 'shore', w: 0.8, h: 0.6, blurb: 'Violet irises at the wet edge of the shore in June, among stiff green swords of leaves.' },
+  { id: 'laurel', name: 'Mountain Laurel', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'pine', w: 0.9, h: 1, blurb: 'An evergreen shrub of rocky woods. In June it is covered in pink-white cups whose stamens are bent back like springs, flinging pollen onto visiting bees.' },
+  { id: 'buttonbush', name: 'Buttonbush', seasons: ['summer'], hab: 'shore', w: 0.8, h: 1.2, blurb: 'A shrub of flooded shores with white flower balls like pincushions in July. Ducks eat the seeds.' },
+  { id: 'indianpipe', name: 'Indian Pipe', seasons: ['summer', 'autumn'], hab: 'forest', w: 0.4, h: 0.15, blurb: 'Ghost-white and leafless. It has no chlorophyll and lives off the fungi tied into tree roots. It turns black when picked.' },
+  { id: 'jewelweed', name: 'Jewelweed', seasons: ['summer'], hab: 'wet', w: 1.1, h: 0.8, blurb: 'Orange, spotted trumpets on wet ground. Ripe seed pods burst at a touch, which is why it is also called touch-me-not.' },
+  { id: 'pepperbush', name: 'Sweet Pepperbush', seasons: ['summer'], hab: 'shore', w: 0.9, h: 1.2, blurb: 'Spikes of white flowers in August, so fragrant you smell the shore before you see it.' },
+  { id: 'witchhazel', name: 'Witch Hazel', seasons: ['summer', 'autumn'], hab: 'forest', w: 0.6, h: 1.5, blurb: 'It blooms when everything else is done: spidery yellow ribbons in October and November. Its ripe pods shoot their seeds several metres.' },
+  { id: 'sumac', name: 'Staghorn Sumac', seasons: ['summer', 'autumn', 'winter'], hab: 'edge', w: 0.8, h: 1.6, blurb: 'Fuzzy branches like antlers in velvet, scarlet leaves in autumn, and red cones of seeds that stand all winter.' },
+  { id: 'pokeweed', name: 'Pokeweed', seasons: ['summer', 'autumn'], hab: 'edge', w: 0.7, h: 1.3, blurb: 'Tall magenta stems with hanging clusters of dark purple berries. Birds eat them; for people every part is poisonous.' },
+  { id: 'princesspine', name: 'Princess Pine', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'pine', w: 0.9, h: 0.18, blurb: 'Not a pine but a clubmoss: little evergreen trees a hand tall, from a group of plants older than the dinosaurs, spreading by runners under the leaves.' },
+  { id: 'partridgeberry', name: 'Partridgeberry', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'forest', w: 0.9, h: 0.04, blurb: 'A creeping evergreen with paired round leaves. Each red berry comes from two flowers fused together: look for its two dimples.' },
+  { id: 'soldiers', name: 'British Soldiers', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'pine', w: 0.5, h: 0.05, blurb: 'Not a plant at all but a lichen, a fungus and an alga living as one: scarlet caps on grey-green stalks on old stumps and dry ground.' },
 ];
 const ACTIVE = PLANTS.filter((p) => p.seasons.includes(SEASON));
 const CELL = 5, RAD = 75, CAP = 180;

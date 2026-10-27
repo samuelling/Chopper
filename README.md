@@ -149,7 +149,7 @@ Together they add up to **lake protection** (0-100%), which reduces how much the
 
 ### Wild things, pages and seats
 - **Red fox** (`src/fox.js`): articulated like the deer (torso, turning head and ears, two-part brush, two-jointed legs in black socks); walk, trot and gallop; sniffs, sits with its tail curled round, hunts mice (head cocked, crouch, high leap, nose-first landing), stares when it sees you, then slips away.
-- **Wild plants** (`src/plants.js`): eighteen species in their own habitats and seasons (skunk cabbage and trout lily in spring, pickerelweed and water lilies in summer, asters and goldenrod in autumn, winterberry in the snow); photograph them into the Field Guide's Plants section, which hints when and where to look. They thin out as the park is harmed.
+- **Wild plants** (`src/plants.js`): thirty-four species (wildflowers, ferns, shrubs, a clubmoss, a lichen and the ghostly Indian pipe) in their own habitats and seasons (skunk cabbage and trout lily in spring, pickerelweed and water lilies in summer, asters and goldenrod in autumn, winterberry in the snow); photograph them into the Field Guide's Plants section, which hints when and where to look. They thin out as the park is harmed.
 - **The park's page** (Year Two on): the first record of each species, moment or place goes on the park's (fictional) "Found at Ashland" page, and the visitors it draws pay into the park fund; rarer finds and places guests can go out to see pay more. Clyde writes it up in minutes; without AI you write it yourself and a fifth of the money arrives.
 
 ### Exploring (`src/explore.js`)
