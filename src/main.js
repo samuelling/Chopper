@@ -779,6 +779,7 @@ async function boot() {
     player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
     fishing.update(dt, { life: PRESSURE.life * (FUND.has('shade') ? 0.7 : 1), full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
+    if (player.swimming && !RUN.s.swam) { RUN.s.swam = true; RUN.save?.(); ui.toast(MOBILE ? 'You are swimming. Hold HOP to dive under; let go to come up.' : 'You are swimming. Hold SPACE to dive under; let go to come up.', 5); }   // the first swim only
     { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
       const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
     flyover.update(dt); tut.update(dt);
