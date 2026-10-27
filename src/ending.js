@@ -31,7 +31,7 @@ export function creditsHTML(kind, st) {
     '<div class="gap"></div>', '<h2>The real part</h2>',
     '<p>Map and trails: OpenStreetMap contributors</p><p>Hills: USGS 3DEP lidar</p><p>Forest cover: NLCD 2021</p><p>Lake depth: MassWildlife and MassGIS</p>',
     '<div class="gap"></div>', '<h2>The invented part</h2>',
-    '<p>The trees, rocks and benches, every animal and its habits, the harm and care figures, and the end of the lake.</p>',
+    '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
   ];

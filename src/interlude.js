@@ -40,7 +40,7 @@ export function showInterlude(el, ctx, onContinue) {
         <div class="tapgo">Tap to open</div>
       </div>
       <div class="istep" data-step="1">${pbar(false)}
-        <div class="pscroll"><div data-i-chat></div><div class="ihide" data-i-usagewrap><small class="chmore" style="margin:-4px 2px 10px">The data center is invented for the game. The nearest real ones are in Marlborough and Northborough, about ten miles north.</small><div data-usage-panel2></div><div class="go inactive" data-i-next>Next</div></div></div>
+        <div class="pscroll"><div data-i-chat></div><div class="ihide" data-i-usagewrap><div data-usage-panel2></div><div class="go inactive" data-i-next>Next</div></div></div>
       </div>
       <div class="istep" data-step="2">${pbar(true)}${decide}</div>
       <div class="idots hide"><i class="on"></i><i></i><i></i></div>
