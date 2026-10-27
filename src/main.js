@@ -64,12 +64,15 @@ const MOBILE = params.has('desktop') ? false : params.has('mobile')
   || (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches)
   || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
 if (MOBILE) document.body.classList.add('mobile');
-// testing aid: ?skip2=1 lands you at the end of summer in Year One, a few seconds before Clyde first appears and Year Two begins
-if (params.has('skip2') && !RUN.dev) {
+// testing aids: ?skip2=1 lands you at the end of Year One's last season, a few seconds before Clyde first appears and
+// Year Two begins; ?skipto=N does the same for Year N (e.g. ?skipto=3: the end of Year Two, just before Year Three)
+if ((params.has('skip2') || params.has('skipto')) && !RUN.dev) {
+  const yr = params.has('skipto') ? Math.max(2, parseInt(params.get('skipto')) || 2) : 2;
   if (RUN.s.born == null) RUN.setBorn(new Date().getFullYear() - 40, true);
-  RUN.s.n = 3; RUN.s.played = Math.max(0, RUN.len - 12); RUN.s.end = null; RUN.save();
+  if (RUN.s.lifeYears != null && RUN.s.lifeYears < yr + 1) RUN.s.lifeYears = yr + 1;      // enough life left to reach it
+  RUN.s.n = 4 * (yr - 1) - 1; RUN.s.played = Math.max(0, RUN.len - 12); RUN.s.end = null; RUN.save();
   try { sessionStorage.setItem('ashland.inplay', '1'); } catch {}
-  const q = new URLSearchParams(location.search); ['skip2', 'x', 'z', 'yaw', 'season'].forEach((k) => q.delete(k));
+  const q = new URLSearchParams(location.search); ['skip2', 'skipto', 'x', 'z', 'yaw', 'season'].forEach((k) => q.delete(k));
   location.replace(location.pathname + (q.toString() ? `?${q}` : ''));
   await new Promise(() => {});                    // stop here; the page is reloading
 }
@@ -342,7 +345,11 @@ async function boot() {
   };
   const intoPlay = () => {
     if (MOBILE) { player.locked = true; ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); touch.show(); }
-    else renderer.domElement.requestPointerLock?.();
+    else {
+      renderer.domElement.requestPointerLock?.();
+      // if the browser would not capture the mouse from that turn, fall back to the soft 'click to look around' line
+      setTimeout(() => { if (!player.locked && !tut.active) tut.start(); }, 700);
+    }
   };
   const begin = () => {
     audio.init();

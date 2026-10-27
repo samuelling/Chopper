@@ -144,7 +144,7 @@ Together they add up to **lake protection** (0-100%), which reduces how much the
 - **Catch log** (`src/catches.js`): every fish you land is photographed while you hold it, with its length, weight (from a length-weight curve per species), fight time, water depth, boat or shore, the nearest place you have named, season, year and light. The phone's Journal opens with a strip of catch cards to swipe through; tap one for the full card. Storage is local; when it fills, the oldest ordinary photos go first, never a trophy or a species' best.
 - **Under the surface** (`src/underwater.js`): looking up while diving shows the world above through Snell's window, a rippling circle about 48.6 degrees across, with the surface a dark mirror outside it and a bright seam where it meets your eye line.
 
-`?skip2=1` (testing): lands you at the end of summer in Year One, a few seconds before Clyde first appears and Year Two begins. It rewrites your saved run, then drops the parameter from the address.
+`?skip2=1` (testing): lands you at the end of Year One, a few seconds before Clyde first appears and Year Two begins. `?skipto=N` does the same for Year N (`?skipto=3`: the end of Year Two, just before Year Three). Both rewrite your saved run, then drop the parameter from the address.
 
 
 ### Wild things, pages and seats
