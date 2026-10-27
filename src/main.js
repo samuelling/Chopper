@@ -422,14 +422,15 @@ async function boot() {
       { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
       { text: '<span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
-      { text: '<kbd>Q</kbd> takes out your phone, then your axe, then puts them away &nbsp; <kbd>P</kbd> raises the phone to your face', ok: () => tut.phoned, max: 35 },
+      { text: '<kbd>P</kbd> raises your phone to your face: the map, your journal, the field guide, the Park Fund and more. <kbd>P</kbd> again puts it down', ok: () => tut.phoned, max: 40 },
+      { text: '<kbd>Q</kbd> changes what is in your hands: the phone, the axe, the fishing rod, or nothing. Click uses what you hold', ok: () => tut.tooled, max: 30 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
       { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer', ok: () => tut.sat, max: 20 },
       { text: '<kbd>Q</kbd> again brings out a fishing rod: click to cast into open water, and click when the bobber dips', ok: () => tut.fished, max: 25 },
       { text: 'At the boat ramp, <kbd>E</kbd> gets you into the rowboat. <kbd>W</kbd> <kbd>S</kbd> row, <kbd>A</kbd> <kbd>D</kbd> turn', ok: () => false, max: 14 },
       { text: '<kbd>E</kbd> picks up litter (at the dam gatehouse, it works the gate) &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
     ],
-    moved: 0, turned: 0, sat: false, hopped: false, phoned: false, shot: false, _p: null, _y: 0,
+    moved: 0, turned: 0, sat: false, hopped: false, phoned: false, tooled: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
     go(i) {
       if (this.done && i >= 1) i = this.steps.length;
@@ -449,7 +450,7 @@ async function boot() {
       if (s.ok() || (!s.always && this.t > s.max)) this.go(this.i + 1);
     },
   };
-  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP' || e.code === 'KeyQ') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; if (e.code === 'KeyB') tut.sat = true; });
+  addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyQ') tut.tooled = true; if (e.code === 'KeyV') tut.shot = true; if (e.code === 'KeyB') tut.sat = true; });
   document.addEventListener('click', () => { if (started && !player.locked && !MOBILE && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden') && tut.active) begin(); });
   // ---- sit and wait: the day passes faster while you are still
   deer.onSnort = () => audio.snort?.();
