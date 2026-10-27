@@ -20,7 +20,17 @@ export const SUPPLIES = [
   { id: 'saplings', title: 'Nursery saplings', price: 900, gain: '8 young trees, already three seasons along. G plants these before seeds.', give: () => { S().saplingStock += 8; return '8 saplings ready to plant. G plants one.'; } },
 ];
 
+// in price order, from things a park crew can do in a week to things that take the town and the data center
 export const MEASURES = [
+  { id: 'fixtures', title: 'Low-flow taps and toilets at the bathhouse', w: 0.03, price: 500, harm: 0, kind: 'Park',
+    gain: 'The beach bathhouse and the ranger station get efficient fixtures. Small, but every summer day of it adds up.',
+    real: 'WaterSense-labelled fixtures use at least 20% less water than standard ones (US EPA).' },
+  { id: 'raingarden', title: 'Rain gardens at the parking lot', w: 0.05, price: 1200, harm: 0, kind: 'Park',
+    gain: 'Shallow planted basins where the lot drains, so rain soaks into the ground and feeds the reservoir from below instead of running off down the storm drain.',
+    real: 'Rain gardens and bioswales are standard green infrastructure for letting stormwater recharge groundwater.' },
+  { id: 'rebates', title: 'Smart sprinkler rebates in town', w: 0.08, price: 2500, harm: 0.004, kind: 'AI',
+    gain: 'Clyde finds the households watering lawns hardest in summer and runs the rebate program: controllers that skip watering when it has rained or will.',
+    real: 'Utilities across the US give rebates for weather-based irrigation controllers, which the EPA certifies under WaterSense.' },
   { id: 'buffer', title: 'Replant the shoreline', w: 0.10, price: 3000, harm: 0, kind: 'Park',
     gain: 'Clyde maps the bare banks; volunteers plant a strip of native shrubs and trees along the water near you. Roots hold the soil, shade keeps the water cool, and the trees look less harmed.',
     real: 'Riparian buffers are standard practice in lake and stream restoration.' },
@@ -36,34 +46,44 @@ export const MEASURES = [
   { id: 'shade', title: 'Shade-ball cover on the cove (with BU)', w: 0.15, price: 6000, harm: 0.020, kind: 'AI', delay: true,
     gain: 'A Boston University team, working with Clyde, designs a cover for the cove: black plastic balls, sized and placed by a model of wind and evaporation. Fish bite less under it. It only starts to pay back next season, and making the balls costs water and harm now.',
     real: 'Los Angeles claimed 85–90% less evaporation in drought; an MIT-led study found making its 96 million balls took 66–766 million gallons of water, one to two and a half years to pay back.' },
+  { id: 'asr', title: 'Bank winter water underground', w: 0.25, price: 16000, harm: 0.012, kind: 'AI',
+    gain: 'Wells that push the spring overflow down into the aquifer, and pump it back out in August. Clyde models the aquifer and schedules the wells.',
+    real: 'Aquifer storage and recovery is used in Florida, Texas, Arizona and elsewhere to carry wet-season water into dry months.' },
+  { id: 'recycled', title: 'Recycled water for the data center\u2019s cooling', w: 0.35, price: 25000, harm: 0.006, kind: 'AI', firm: true,
+    gain: 'Clyde helps the town and the data center over the ridge pipe treated wastewater to its cooling towers, so it stops drawing on the water table. It goes at the cause, so this protection holds at any level of use.',
+    real: 'Google\u2019s data center in Douglas County, Georgia, has cooled with recycled municipal wastewater since the early 2010s.' },
 ];
 
-// bounties (Year Two on): the first record of each species you file pays into the fund.  Clyde files your photo or catch
-// with a biodiversity survey.  The survey and its rates are invented; rarer finds pay more.
-const RARE = { fox: 600, beaver: 600, woodduck: 500, hawk: 500, heron: 400, ladyslipper: 600, cardinalflower: 450, columbine: 400, deer: 350, turtle: 300, troutlily: 300, eel: 400, brook: 400, carp: 300 };
-const BY_CAT = { Trees: 100, Plants: 200, Birds: 250, Animals: 250, Fish: 150 };
+// bounties (Year Two on): the first record of each find pays into the fund.  The backstory: Clyde writes each one up for the
+// park's page ("Found at Ashland"), and the visitors it draws pay in parking and donations.  The page and the rates are
+// invented; rarer finds, and the places guests can go out to see, pay more.
+const RARE = { osprey: 500, fox: 600, beaver: 600, woodduck: 500, hawk: 500, heron: 400, ladyslipper: 600, cardinalflower: 450, columbine: 400, deer: 350, turtle: 300, troutlily: 300, eel: 400, brook: 400, carp: 300 };
+const BY_CAT = { Trees: 100, Plants: 200, Birds: 250, Animals: 250, Fish: 150, Moments: 300, Places: 150, Attractions: 400 };
 for (const k of ['bounties']) if (S()[k] === undefined) S()[k] = {};
 
 export const FUND = {
   /** pays the first record of a species from Year Two on; returns what it paid (0 if nothing) */
-  rate(id, cat) { const l = Usage.level(); return Math.round((RARE[id] ?? BY_CAT[cat] ?? 150) * [0.2, 0.6, 1, 1.1, 1.2][l === null ? 0 : Math.round(l)] / 10) * 10; },
+  rate(id, cat, base) { const l = Usage.level(); return Math.round((base ?? RARE[id] ?? BY_CAT[cat] ?? 150) * [0.2, 0.6, 1, 1.1, 1.2][l === null ? 0 : Math.round(l)] / 10) * 10; },
   paid(id) { return S().bounties[id] || 0; },
   /** how much of a bounty reaches the fund: Clyde files records in minutes; by hand it takes weeks and most lapse */
   byHand() { const l = Usage.level(); return l === null || Math.round(l) === 0; },
-  bounty(id, cat) {
+  bounty(id, cat, base) {
     if (!(RUN.phaseTwo || RUN.dev) || S().bounties[id]) return 0;
-    const l = Usage.level(), k = [0.2, 0.6, 1, 1.1, 1.2][l === null ? 0 : Math.round(l)];
-    const amt = Math.round((RARE[id] ?? BY_CAT[cat] ?? 150) * k / 10) * 10; S().bounties[id] = amt; S().fund += amt; RUN.save?.(); return amt;
+    const amt = this.rate(id, cat, base); S().bounties[id] = amt; S().fund += amt; RUN.save?.(); return amt;
   },
   get balance() { return S().fund; },
   has(id) { return !!S().measures[id]; },
   /** total lake protection from what is installed (shade balls count from the season after they go in) */
-  water() {
+  water(firm = false) {
     let w = 0;
-    for (const m of MEASURES) { const b = S().measures[m.id]; if (b && (!m.delay || RUN.n > b.n || RUN.dev)) w += m.w; }
+    for (const m of MEASURES) { const b = S().measures[m.id]; if (b && !!m.firm === firm && (!m.delay || RUN.n > b.n || RUN.dev)) w += m.w; }
     return Math.min(1, w);
   },
-  refresh() { S().water = this.water(); },
+  /** protection that holds whatever your use (it removes the draw rather than offsetting it) */
+  firm() { return this.water(true); },
+  /** what actually protects the lake right now */
+  guard() { return Math.min(1, this.water() * this.holds() + this.firm()); },
+  refresh() { S().water = this.water(); S().waterFirm = this.firm(); },
   /** how much of that protection holds at your current use: all of it up to Medium, none at Very heavy */
   holds() { return Math.max(0, Math.min(1, 1 - Math.max(0, PRESSURE.target - 0.4) / 0.6)); },
   buySupply(id) {

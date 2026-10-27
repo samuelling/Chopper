@@ -229,7 +229,7 @@ export class Fox {
             this._attach(this._u, body, hind ? HIP[s] : FSH[s], a1, 0, 0); this._put(hind ? P.upH : P.upF, s, this._u);
             this._attach(this._a, this._u, KNEE, a2, 0, 0); this._put(P.low, i, this._a);
           }
-          this.seen.push({ kind: 'fox', x: f.x, y: y + 0.35 + po.lift, z: f.z, r: 0.45 });
+          this.seen.push({ kind: 'fox', x: f.x, y: y + 0.35 + po.lift, z: f.z, r: 0.45, act: f.leap && po.lift > 0.15 ? 'fox-pounce' : po.sit > 0.7 ? 'fox-sit' : null });
           shown = 1;
         }
       }

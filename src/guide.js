@@ -41,6 +41,7 @@ export const ENTRIES = [
   { id: 'beaver', cat: 'Animals', name: 'North American Beaver', blurb: 'Engineers the water. The gnawed stumps along the shore are its handiwork.' },
   { id: 'fox', cat: 'Animals', name: 'Red Fox', blurb: 'Trots the trail edges at dawn and dusk, ears turning like dishes.' },
   { id: 'chipmunk', cat: 'Animals', name: 'Eastern Chipmunk', blurb: 'Cheeks stuffed with seeds, it ticks like a clock when it is alarmed.' },
+  { id: 'osprey', cat: 'Birds', name: 'Osprey', blurb: 'Hovers over the water, then plunges feet-first for a fish. It nests on dead trees over water and winters in South America.' },
   { id: 'woodduck', cat: 'Birds', name: 'Wood Duck', blurb: 'The most colourful duck in the east, and one that nests in tree holes.' },
   { id: 'dragonfly', cat: 'Animals', name: 'Dragonfly', blurb: 'Hunts mosquitoes over the water on four wings that move independently.' },
   { id: 'butterfly', cat: 'Animals', name: 'Monarch Butterfly', blurb: 'In autumn it begins a journey of thousands of kilometres to Mexico.' },
@@ -55,6 +56,17 @@ export const ENTRIES = [
 // wild plants (plants.js): a hint of when and where for the ones you have not found yet
 const HAB = { wet: 'wet ground', shore: 'the water\u2019s edge', shallows: 'the shallows', water: 'on the water', forest: 'the forest floor', pine: 'dry pine woods', edge: 'sunny trail edges' };
 for (const p of PLANTS) ENTRIES.push({ id: p.id, cat: 'Plants', name: p.name, blurb: p.blurb, hint: `${p.seasons.length === 4 ? 'All year' : p.seasons.map((s) => s[0].toUpperCase() + s.slice(1)).join(', ')} \u00b7 ${HAB[p.hab]}` });
+// moments: a species doing the thing it does.  Each is its own photo to get (and, from Year Two, its own page feature)
+for (const [id, of, name, hint] of [
+  ['fox-pounce', 'fox', 'Red fox, mid-pounce', 'A hunting fox freezes, crouches, then leaps on a mouse under the leaves. Dawn and dusk'],
+  ['fox-sit', 'fox', 'Red fox, sitting', 'Between hunts a fox sits and watches. Stay still'],
+  ['deer-bound', 'deer', 'Deer, bounding away', 'Startled deer bolt with their white tails up'],
+  ['deer-stomp', 'deer', 'Deer, stamping', 'A deer that has seen you stamps a forefoot to warn the others'],
+  ['beaver-slap', 'beaver', 'Beaver tail-slap', 'Get close to a swimming beaver at dusk and it slaps the water and dives'],
+  ['woodduck-flight', 'woodduck', 'Wood ducks taking off', 'Wood ducks spook from the water and climb away low. Day, warm months'],
+  ['chipmunk-sit', 'chipmunk', 'Chipmunk, sitting up', 'A chipmunk stops dead and sits up to look around'],
+  ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
+]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
 const SONG_TO_ID = {}; for (const e of ENTRIES) if (e.song) SONG_TO_ID[e.song] = e.id;
 

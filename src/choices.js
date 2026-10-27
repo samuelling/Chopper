@@ -67,6 +67,14 @@ export const CHOICES = [
       if (!best) return { ok: false, msg: 'No good site within reach.' };
       setWaypoint(best.x, best.z, 'Building site'); return { msg: 'A site is marked: the flattest, least wooded ground nearby.' };
     } },
+  { id: 'scout', kind: 'AI', title: 'Ask Clyde where to look', gain: 'Clyde reads old survey maps, aerial photos and lidar, and circles three hidden things on your map: ruins, the lodge, the nest, what lies under the water. Tighter circles than any rumour', care: 0.02, cost: 0.02, hours: 2, saved: 0,
+    note: 'Each time you ask costs harm. Finding them on foot costs nothing.',
+    run({ explore }) {
+      if (!explore) return { ok: false, msg: 'Not available here.' };
+      let n = 0; for (let i = 0; i < 3; i++) if (explore.addLead('clyde', { r: 32, quiet: true })) n++;
+      if (!n) return { ok: false, msg: 'Clyde has nothing left to point you to: you have found everything, or already have a lead on it.' };
+      return { msg: `Clyde circles ${n === 1 ? 'one place' : n === 2 ? 'two places' : 'three places'} on your map. Phone \u2192 Places lists the leads.` };
+    } },
   { id: 'hold', kind: 'Park', title: 'Hold off on AI today', gain: 'Sets today to "none" so no new harm builds; the park starts to heal', care: 0, cost: 0, note: 'Recovery is slow. Past harm stays, and so does any good you could have done.',
     run() { Usage.checkin(0); return { msg: 'Today is set to none. The park starts to heal.' }; } },
 ];

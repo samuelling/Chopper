@@ -109,11 +109,19 @@ export class Minimap {
       if (!inside) { const dx = ox - cx, dy = oy - cy, t = this.mode === 'local' ? (W / 2 - 12) / (Math.hypot(dx, dy) || 1) : Math.min((W / 2 - 12) / Math.abs(dx || 1e-6), (H / 2 - 12) / Math.abs(dy || 1e-6)); ox = cx + dx * t; oy = cy + dy * t; }
       c.lineWidth = 3; c.strokeStyle = '#ffd24a'; c.fillStyle = 'rgba(255,210,74,.35)'; c.beginPath(); c.arc(ox, oy, inside ? 8 : 5, 0, 6.3); c.fill(); c.stroke();
     }
+    // leads: a dashed circle roughly where someone said something is
+    for (const l of this.leads || []) {
+      const ox = (this.px(l.cx) - sx) * k, oy = (this.py(l.cz) - sy) * k, rr = l.r * this.res * k;
+      if (ox < -rr || oy < -rr || ox > W + rr || oy > H + rr) continue;
+      c.save(); c.setLineDash([5, 4]); c.lineWidth = 2; c.strokeStyle = 'rgba(232,194,106,.9)'; c.fillStyle = 'rgba(232,194,106,.12)';
+      c.beginPath(); c.arc(ox, oy, Math.max(6, rr), 0, 6.3); c.fill(); c.stroke(); c.restore();
+      if (this.mode === 'full') { c.font = '600 12px serif'; c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(20,16,14,.85)'; c.strokeText('?', ox, oy + 4); c.fillStyle = '#e8c26a'; c.fillText('?', ox, oy + 4); c.textAlign = 'left'; }
+    }
     // your named places and what you have found
     for (const pin of this.pins) {
       const ox = (this.px(pin.x) - sx) * k, oy = (this.py(pin.z) - sy) * k;
       if (ox < 4 || oy < 4 || ox > W - 4 || oy > H - 4) continue;
-      c.fillStyle = pin.found ? '#9ad08a' : '#ffd9a0'; c.strokeStyle = '#2a1f24'; c.lineWidth = 2;
+      c.fillStyle = pin.c || (pin.found ? '#9ad08a' : '#ffd9a0'); c.strokeStyle = '#2a1f24'; c.lineWidth = 2;
       c.beginPath(); c.moveTo(ox, oy - 7); c.lineTo(ox + 5, oy); c.lineTo(ox, oy + 7); c.lineTo(ox - 5, oy); c.closePath(); c.fill(); c.stroke();
       if (this.mode === 'full' && pin.name) { c.font = '600 11px serif'; c.textAlign = 'left'; c.lineWidth = 3; c.strokeStyle = 'rgba(20,16,14,.85)'; c.strokeText(pin.name, ox + 8, oy + 4); c.fillStyle = '#f4e6c8'; c.fillText(pin.name, ox + 8, oy + 4); }
     }

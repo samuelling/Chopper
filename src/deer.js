@@ -264,7 +264,7 @@ export class Deer {
         this._attach(this._u, body, pivot, a1, 0, 0); this._put(hind ? P.upH : P.upF, n * 2 + s, this._u);
         this._attach(this._a, this._u, KNEE, a2, 0, 0); this._put(P.low, n * 4 + i, this._a);
       }
-      this.seen.push({ kind: 'deer', x: d.x, y: y + 1.0 * d.sc, z: d.z, r: 0.9 });
+      this.seen.push({ kind: 'deer', x: d.x, y: y + 1.0 * d.sc, z: d.z, r: 0.9, act: d.st === 'flee' && d.gait > 1.4 ? 'deer-bound' : d.st === 'alert' && stomp > 0.3 ? 'deer-stomp' : null });
       n++;
     }
     for (const [k, p] of Object.entries(P)) {

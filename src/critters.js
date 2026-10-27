@@ -104,7 +104,7 @@ export class Critters {
       c.v = ease(c.v, v, 10, dt); c.gp += dt * (4 + c.v * 5);
       const y = groundY(c.x, c.z), up = c.st === 'sit' ? 0.7 : 0, hop = Math.abs(Math.sin(c.gp)) * 0.03 * Math.min(1, c.v / 2);
       this._put(P.chip, n, this._root(c.x, y + hop, c.z, c.h, -up));
-      this.seen.push({ kind: 'chipmunk', x: c.x, y: y + 0.08, z: c.z, r: 0.15 }); n++;
+      this.seen.push({ kind: 'chipmunk', x: c.x, y: y + 0.08, z: c.z, r: 0.15, act: c.st === 'sit' && c.timer > 0.2 ? 'chipmunk-sit' : null }); n++;
     }
     this._fin(P.chip, n);
     // ---- frogs: sit at the water's edge, hop off when you come close
@@ -118,7 +118,7 @@ export class Critters {
       if (f.st === 'hop') { f.hop += dt * 2.6; const k = f.hop % 1; lift = Math.sin(k * Math.PI) * 0.3; f.x += f.dx * dt * 1.8; f.z += f.dz * dt * 1.8; f.h = Math.atan2(f.dx, f.dz); if (sdfAt(f.x, f.z) < 0 || f.hop > 3) { if (sdfAt(f.x, f.z) < 0) this.onSplash?.(f.x, f.z); f.active = false; f.wait = 30 + this.rng() * 40; continue; } }
       y = Math.max(groundY(f.x, f.z), lake.level - 0.02) + lift;
       this._put(P.frog, n, this._root(f.x, y, f.z, f.h, -0.1 + (f.st === 'hop' ? -0.5 * Math.cos((f.hop % 1) * Math.PI) : 0)));
-      this.seen.push({ kind: 'frog', x: f.x, y: y + 0.05, z: f.z, r: 0.12 }); n++;
+      this.seen.push({ kind: 'frog', x: f.x, y: y + 0.05, z: f.z, r: 0.12, act: f.st === 'hop' && lift > 0.12 ? 'frog-hop' : null }); n++;
     }
     this._fin(P.frog, n);
     // ---- beaver: swims slowly out at dusk and in the mist; slaps its tail and dives if you come near
@@ -135,7 +135,7 @@ export class Critters {
       const root = this._root(b.x, lake.level - 0.02 + bob - sunk, b.z, b.h, b.st === 'slap' ? -0.1 : 0).clone();
       this._put(P.beaver, n, root);
       if (b.v > 0.3) { this._put(P.wake, nw++, this._root(b.x, lake.level + 0.015, b.z, b.h)); }
-      if (b.st !== 'dive') this.seen.push({ kind: 'beaver', x: b.x, y: lake.level + 0.1, z: b.z, r: 0.5 });
+      if (b.st !== 'dive' || b.sink < 0.3) this.seen.push({ kind: 'beaver', x: b.x, y: lake.level + 0.1, z: b.z, r: 0.5, act: b.st === 'slap' || b.st === 'dive' ? 'beaver-slap' : null });
       n++;
     }
     this._fin(P.beaver, n); this._fin(P.wake, nw);
@@ -160,7 +160,7 @@ export class Critters {
       const lift = d.st === 'fly' ? Math.min(4, d.timer * 1.6) : 0, bob = Math.sin(t * 1.4 + d.ph) * 0.01, headBob = d.st === 'swim' ? Math.sin(t * 2.2 + d.ph) * 0.12 : 0;
       const m = this._root(d.x, lake.level - 0.005 + bob + lift, d.z, d.h, headBob * 0.3 - lift * 0.08);
       this._put(i === 0 ? P.drake : P.hen, 0, m); if (i === 0) nd = 1; else nh = 1;
-      this.seen.push({ kind: 'woodduck', x: d.x, y: lake.level + 0.08 + lift, z: d.z, r: 0.25 });
+      this.seen.push({ kind: 'woodduck', x: d.x, y: lake.level + 0.08 + lift, z: d.z, r: 0.25, act: d.st === 'fly' && lift < 3.5 ? 'woodduck-flight' : null });
     }
     this._fin(P.drake, nd); this._fin(P.hen, nh);
   }

@@ -45,6 +45,8 @@ import { Weather } from './weather.js';
 import { CareActs } from './careacts.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
+import { Explore, ATTRACTION } from './explore.js';
+import { Usage } from './usage.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
@@ -254,13 +256,14 @@ async function boot() {
       const lb = Math.round((ex.lb || 0) * 10) / 10, wt = lb < 1 ? `${Math.max(1, Math.round(lb * 16))} oz` : `${lb} lb`;
       // where: the nearest of your own named places, else the boat ramp, else just shore or boat
       let place = null, pd = 90; for (const pl of PLACES.list) { const d = Math.hypot(pl.x - player.pos.x, pl.z - player.pos.z); if (d < pd) { pd = d; place = pl.name; } }
+      if (!place) { let ed = 70; for (const pl of explore.named) { const d = Math.hypot(pl.x - player.pos.x, pl.z - player.pos.z); if (d < ed) { ed = d; place = pl.name.replace(/^The /, 'the '); } } }
       if (!place && Math.hypot(RAMP.x - player.pos.x, RAMP.z - player.pos.z) < 60) place = 'the boat ramp';
       lastCatch = CATCHES.add({ id: f.id, name: f.name, inches, lb, trophy: !!ex.trophy, clean: !!clean, fight: Math.round(ex.fight || 0), depth: Math.round((ex.depth || 0) * 10) / 10,
         boat: !!player.boat, place, season: SEASON, year: Math.floor((RUN.n || 0) / 4) + 1, light: PRESETS[mood]?.name, at: Date.now(), img: null });
       const pb = prevBest && inches > prevBest.inches;
       JOURNAL.add(ex.trophy ? `A trophy ${f.name}: ${inches} inches, about ${wt}, ${player.boat ? 'from the rowboat' : 'from the shore'}. Let it go.` : `Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.${clean ? ' A clean fight.' : ''}`, player.pos.x, player.pos.z);
       ui.toast(ex.trophy ? `A trophy. A ${inches}-inch ${f.name}, about ${wt}. You hold it up, then let it go.` : `A ${inches}-inch ${f.name}, ${wt}${clean ? ', a clean catch' : ''}. You let it go.${first ? ' New in your Field Guide.' : pb ? ' Your biggest yet.' : ''}`, ex.trophy ? 6 : 4.5);
-      { const paid = FUND.bounty(f.id, 'Fish'); if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You file the catch by hand: +$${paid} for the park fund.` : `Clyde files the catch with the biodiversity survey: +$${paid} for the park fund.`, 3.4), 5000); }
+      { const paid = FUND.bounty(f.id, 'Fish'); if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write the catch up for the park\u2019s page by hand: +$${paid} for the park fund.` : `Clyde writes the catch up for the park\u2019s page. Anglers will come for it: +$${paid} for the park fund.`, 3.4), 5000); }
       audio.landSplash?.(ex.trophy ? 1.4 : 1); fx.splash(x, lake.level + 0.03, z, ex.trophy ? 20 : 12);
     },
     // a photo of the fish held up, for the catch log in the Journal
@@ -338,24 +341,28 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
     if (!pick) { ui.toast('Nothing in frame.', 1.4); return; }
-    const id = pick.kind === 'squirrel' ? 'squirrel' : pick.kind;
-    if (!BY_ID[id]) return;
+    const id = pick.kind === 'squirrel' ? 'squirrel' : pick.kind, act = pick.act && BY_ID[pick.act] ? pick.act : null;
+    if (!BY_ID[id] && !act) return;
     renderer.render(scene, camera);
     const src = renderer.domElement, tw = 192, th = 128, cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
     const sw = Math.min(src.width, src.height * 1.5) * 0.7, sh = sw / 1.5;
     cv.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, tw, th);
     const bg = document.createElement('canvas'); bg.width = 480; bg.height = 320;
     bg.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 320);
-    const had = GUIDE.photographed(id);
-    GUIDE.addPhoto(id, cv.toDataURL('image/jpeg', 0.7), SEASON, bg.toDataURL('image/jpeg', 0.72));
+    const had = BY_ID[id] && GUIDE.photographed(id), hadAct = act && GUIDE.photographed(act), thumb = cv.toDataURL('image/jpeg', 0.7), big = bg.toDataURL('image/jpeg', 0.72);
+    // a moment (a fox mid-pounce, a beaver's tail-slap) files the photo under the moment, and still counts for the species
+    if (BY_ID[id]) GUIDE.addPhoto(id, thumb, SEASON, act ? null : big);
+    if (act) GUIDE.addPhoto(act, thumb, SEASON, big);
+    if (act && !hadAct) { const pa = FUND.bounty(act, 'Moments'); if (pa) setTimeout(() => ui.toast(FUND.byHand() ? `You put the photo on the park\u2019s page yourself, weeks later: +$${pa} for the park fund.` : `Clyde puts your photo on the park\u2019s page. People come hoping to see that: +$${pa} for the park fund.`, 3.8), 2600); }
+    if (!BY_ID[id]) return;
     const paid = FUND.bounty(id, BY_ID[id].cat);
-    if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You file the record by hand. It takes weeks, and most of the survey money lapses: +$${paid} for the park fund.` : `Clyde files your photo with the biodiversity survey: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
-    else if (had) ui.toast(`${BY_ID[id].name}. Another for the album.`, 1.8);
+    if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes it up for the park\u2019s page. Finds like this bring visitors: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
+    else if (had && !(act && !hadAct)) ui.toast(`${act ? BY_ID[act].name : BY_ID[id].name}. Another for the album.`, 1.8);
   };
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
   const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
@@ -552,8 +559,21 @@ async function boot() {
   initHud();
   const jobQueue = [];
   const discoveries = new Discoveries(scene, chunks);
-  discoveries.onFound = (it, k) => ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5);
-  const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+  const explore = new Explore(scene, discoveries);
+  // a find goes on the park's page (Year Two): guests come out to see it, and that pays into the fund
+  const featured = (id, cat, base, what) => {
+    const paid = FUND.bounty(id, cat, base);
+    if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write ${what} up for the park\u2019s page yourself. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes ${what} up for the park\u2019s page, and guests start coming out to see it: +$${paid} for the park fund.`, 4), 4600);
+  };
+  discoveries.onFound = (it, k) => { ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5); explore.ruinFound(); featured(it.id, 'Attractions', 350, 'the ruin'); };
+  explore.onFound = (it) => {
+    ui.toast(it.real ? `${it.name}. On your map now.` : `You found ${it.name.replace(/^The /, 'the ')}. Named on your map.`, 4.2);
+    audio.notify?.();
+    featured('place-' + it.id, ATTRACTION[it.kind] ? 'Attractions' : 'Places', ATTRACTION[it.kind], it.name.replace(/^The /, 'the '));
+  };
+  explore.onLead = (l) => ui.toast(`A lead: ${l.text} Circled on your map.`, 6);
+  let leadT = 0;
+  const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
@@ -576,7 +596,7 @@ async function boot() {
   const showChoices = () => {
     const on = phaseTwo();
     document.getElementById('chint').hidden = !on;
-    document.querySelectorAll('[data-choices]').forEach((el) => { el.hidden = !on; if (on) renderChoices(el, { player, chunks, lake, structures, setWaypoint }); });
+    document.querySelectorAll('[data-choices]').forEach((el) => { el.hidden = !on; if (on) renderChoices(el, { player, chunks, lake, structures, setWaypoint, explore }); });
   };
   addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat && started && phaseTwo()) { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } });
   new MutationObserver(showChoices).observe(ui.els.paused, { attributes: true, attributeFilter: ['class'] });
@@ -636,7 +656,7 @@ async function boot() {
   const endStats = () => ({
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
-    fish: RUN.s.fish || 0, species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
+    fish: RUN.s.fish || 0, species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, mapped: explore.named.length, moments: Object.keys(GUIDE.d).filter((k) => BY_ID[k]?.cat === 'Moments' && GUIDE.d[k].photos).length, built: CARE.built.length,
     harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours, measures: Object.keys(RUN.s.measures || {}).length, lake: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1),
   });
   // a finished life: reloading lands on the start menu (not the credits again); Begin starts a new life
@@ -678,7 +698,7 @@ async function boot() {
   }
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
-    const ctx = { audio, player, chunks, lake, structures, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
+    const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
     showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
       const felled = [];
       for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });
@@ -775,8 +795,10 @@ async function boot() {
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
-    minimap.update(dt); phone.update(); discoveries.update(player.pos);
-    if ((pinT += dt) > 1) { pinT = 0; minimap.pins = [...PLACES.list.map((p) => ({ x: p.x, z: p.z, name: p.name })), ...discoveries.foundList().map((f) => ({ x: f.x, z: f.z, found: true }))]; }
+    minimap.update(dt); phone.update(); discoveries.update(player.pos); explore.update(dt, player);
+    // this season's leads, once you are out in it (a page load is a season)
+    if (leadT >= 0 && started && player.locked && (leadT += dt) > 9) { leadT = -1; explore.seasonLeads(RUN.s.n || 0, { clyde: !!(RUN.phaseTwo || RUN.dev) && (Usage.level() ?? 0) >= 0.5 }); }
+    if ((pinT += dt) > 1) { pinT = 0; minimap.pins = [...PLACES.list.map((p) => ({ x: p.x, z: p.z, name: p.name })), ...discoveries.foundList().map((f) => ({ x: f.x, z: f.z, found: true })), ...explore.pins()]; minimap.leads = explore.openLeads(); }
     if (player.phone.visible && (screenT += dt) > 0.2) { screenT = 0; drawPhoneScreen(); }
     if (jobQueue.length && !phone.isOpen && !interludeOn) {                       // the crew works while you walk
       for (const j of jobQueue) j.at -= tdt;
@@ -844,7 +866,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

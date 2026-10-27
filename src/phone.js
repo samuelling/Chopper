@@ -34,8 +34,8 @@ const ALL = [...APPS, ...DOCK];
 const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : '');
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
-  constructor({ fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
-    Object.assign(this, { fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
+  constructor({ fundCtx, discoveries, explore, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
+    Object.assign(this, { fundCtx, discoveries, explore, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && (this.tab === 'photos' || this.tab === 'journal')) this._key?.(e); });
   }
@@ -118,7 +118,7 @@ export class Phone {
       const comp = document.createElement('div'); comp.className = 'compass'; comp.dataset.compass = ''; body.appendChild(comp);
       this._prevMap = this.minimap.mode; this.minimap.set('full');
       const cv = this._borrow(this.minimap); cv.style.display = 'block'; cv.style.border = '3px solid rgba(244,230,200,.6)'; body.appendChild(cv);
-      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Gold dot: the gate. Yellow ring: a marker from Clyde, if you have one. The Tools app turns the corner map on and off.'; body.appendChild(n);
+      const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Pins: places you have found (blue ones by or under the water). Dashed circles: leads, roughly where something is. Yellow ring: a marker. Gold dot: the gate. The Tools app turns the corner map on and off.'; body.appendChild(n);
     } else if (tab === 'status') {
       if (RUN.phaseTwo || RUN.dev) {
         const cv = this._borrow(this.gauge); cv.style.display = 'block'; cv.style.width = '300px'; cv.style.height = '190px'; body.appendChild(cv);
@@ -130,7 +130,7 @@ export class Phone {
       const n = document.createElement('div'); n.className = 'bubble';
       n.innerHTML = `<b>Field Guide</b> &middot; ${GUIDE.count()} of ${ENTRIES.length} found.<br>Press V for the camera and photograph trees, wildflowers, birds and animals. Fish go in when you catch them (Q for the rod). Songs you hear go in too. These are species typical of a Massachusetts reservoir forest, not a survey of the real park.`;
       body.appendChild(n);
-      for (const cat of ['Trees', 'Plants', 'Birds', 'Animals', 'Fish', 'Sounds']) {
+      for (const cat of ['Trees', 'Plants', 'Birds', 'Animals', 'Moments', 'Fish', 'Sounds']) {
         const h = document.createElement('h4'); h.textContent = cat; h.style.cssText = 'margin:14px 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.7'; body.appendChild(h);
         for (const e of ENTRIES.filter((x) => x.cat === cat)) {
           const d = GUIDE.d[e.id] || {}, row = document.createElement('div');
@@ -138,7 +138,7 @@ export class Phone {
           const pic = d.thumb ? `<img src="${d.thumb}" style="width:72px;height:48px;border-radius:6px;object-fit:cover;flex:none">` : `<div style="width:72px;height:48px;border-radius:6px;background:#1d1b22;flex:none;display:grid;place-items:center;opacity:.5">${e.songOnly ? '\u266a' : '?'}</div>`;
           const known = GUIDE.found(e.id);
           row.dataset.id = e.id;
-          row.innerHTML = `${pic}<div style="flex:1"><b>${known ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}${(RUN.phaseTwo || RUN.dev) && !e.songOnly && e.cat !== 'Sounds' ? (FUND.paid(e.id) ? ` <small style="color:#9fd07a">survey: paid</small>` : ` <small style="color:#e8c26a">survey bounty $${FUND.rate(e.id, e.cat)}</small>`) : ''}<br><small style="opacity:.8">${known ? e.blurb : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
+          row.innerHTML = `${pic}<div style="flex:1"><b>${known || e.cat === 'Moments' ? e.name : '???'}</b>${d.photos > 1 ? ` <small>\u00d7${d.photos}</small>` : ''}${d.caught ? ` <small>caught \u00d7${d.caught}, best ${d.best} in</small>` : ''}${(RUN.phaseTwo || RUN.dev) && !e.songOnly && e.cat !== 'Sounds' ? (FUND.paid(e.id) ? ` <small style="color:#9fd07a">on the park\u2019s page</small>` : ` <small style="color:#e8c26a">worth $${FUND.rate(e.id, e.cat)} to the park</small>`) : ''}<br><small style="opacity:.8">${known ? e.blurb : e.cat === 'Moments' ? `Not caught yet. ${e.hint}.` : e.hint ? `Not found yet. Look in: ${e.hint}.` : (e.songOnly ? 'Listen for it.' : e.fish ? 'Catch it, or photograph it.' : 'Photograph it.')}</small></div>`;
           if (e.song && d.heard) { const b = document.createElement('button'); b.textContent = '\u25b6'; b.title = 'Play its song'; b.style.cssText = 'font:inherit;background:#3a3646;color:inherit;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;cursor:pointer'; b.addEventListener('click', (ev) => { ev.stopPropagation(); this.audio?.replay(e.song); }); row.appendChild(b); }
           if (d.photos) { row.style.cursor = 'pointer'; row.addEventListener('click', () => { const i = GUIDE.photos.filter((q) => q.id === e.id).length - 1; if (i >= 0) { this.tab = 'photos'; this.el.querySelector('[data-ph-name]').textContent = 'Photos'; this._photos(body, i, e.id); } }); }
           body.appendChild(row);
@@ -245,10 +245,10 @@ export class Phone {
     top.innerHTML = `<div class="fbal">${fmt(FUND.balance)}</div><small>Money the park keeps because of the help you asked for: grants written, hours saved, timber sold, and each season's dividend from your AI use. Figures are invented.${FUND.byHand() && (RUN.phaseTwo || RUN.dev) ? ' <b>Without AI it fills slowly:</b> no seasonal dividend, and survey records filed by hand pay a fifth.' : ''}</small>`;
     body.appendChild(top);
     if (!live) { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'The fund opens when Clyde does, after your first year here.'; body.appendChild(n); return; }
-    const W = FUND.water(), holds = FUND.holds(), lv = Usage.level(), lvName = lv === null ? 'not set' : LEVELS[Math.round(lv)].name;
+    const W = FUND.water(), F = FUND.firm(), G = FUND.guard(), holds = FUND.holds(), lv = Usage.level(), lvName = lv === null ? 'not set' : LEVELS[Math.round(lv)].name;
     const lake = document.createElement('div'); lake.className = 'flake';
-    lake.innerHTML = `<div class="fl1"><span>Lake protection</span><b>${Math.round(W * holds * 100)}%</b></div><i><u style="width:${W * 100}%"></u><s style="width:${W * holds * 100}%"></s></i>
-      <small>${Math.round(W * 100)}% installed. ${holds >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : holds <= 0.001 ? `At ${lvName} use none of it holds: the lake drops faster than any of this can keep up.` : `At ${lvName} use only ${Math.round(holds * 100)}% of it holds. Ease off and it all works.`}</small>`;
+    lake.innerHTML = `<div class="fl1"><span>Lake protection</span><b>${Math.round(G * 100)}%</b></div><i><u style="width:${Math.min(1, W + F) * 100}%"></u><s style="width:${G * 100}%"></s></i>
+      <small>${Math.round(Math.min(1, W + F) * 100)}% installed${F ? ` (${Math.round(F * 100)}% of it holds at any use)` : ''}. ${holds >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : holds <= 0.001 ? `At ${lvName} use none of it holds: the lake drops faster than any of this can keep up.` : `At ${lvName} use only ${Math.round(holds * 100)}% of it holds. Ease off and it all works.`}</small>`;
     body.appendChild(lake);
     const sect = (t) => { const h = document.createElement('div'); h.className = 'uh'; h.style.margin = '16px 0 4px'; h.textContent = t; body.appendChild(h); };
     const card = (kind, title, lines, price, done, onBuy) => {
@@ -263,7 +263,7 @@ export class Phone {
     const have = document.createElement('small'); have.style.cssText = 'display:block;opacity:.7;margin:2px 2px 0'; have.textContent = `In your pocket: ${RUN.s.seeds || 0} seeds, ${RUN.s.saplingStock || 0} saplings. Planted so far: ${RUN.s.planted || 0}.`; body.appendChild(have);
     sect('For the lake');
     for (const m of MEASURES) {
-      const lines = `<div class="cone">${m.gain}</div><div class="chips"><span class="chip fx">+${Math.round(m.w * 100)}% lake protection${m.delay ? ' (from next season)' : ''}</span>${m.harm ? `<span class="chip harmchip">+${(m.harm * 100).toFixed(1)}% harm</span>` : ''}</div><div class="freal">${m.real}</div>`;
+      const lines = `<div class="cone">${m.gain}</div><div class="chips"><span class="chip fx">+${Math.round(m.w * 100)}% lake protection${m.delay ? ' (from next season)' : ''}${m.firm ? ', at any use' : ''}</span><span class="chip">${m.price < 2000 ? 'Small' : m.price < 10000 ? 'Medium' : 'Big'} project</span>${m.harm ? `<span class="chip harmchip">+${(m.harm * 100).toFixed(1)}% harm</span>` : ''}</div><div class="freal">${m.real}</div>`;
       card(m.kind, m.title, lines, m.price, FUND.has(m.id), () => FUND.buyMeasure(m.id, this.fundCtx));
     }
     const n = document.createElement('small'); n.style.cssText = 'display:block;opacity:.6;margin:12px 2px 0;line-height:1.45'; n.textContent = 'The practices are real. What each one does to this lake, and what it costs, is invented for the game.'; body.appendChild(n);
@@ -287,6 +287,29 @@ export class Phone {
       const mk = (t, f) => { const b = document.createElement('button'); b.className = 'choice sm'; b.textContent = t; b.style.cssText = 'padding:6px 9px;font-size:13px'; b.addEventListener('click', (e) => { e.stopPropagation(); f(); }); return b; };
       r.append(mk('Mark', () => { this.setWaypoint?.(pl.x, pl.z, pl.name); }), mk('\u2715', () => { PLACES.remove(pl); this._places(body); }));
       body.appendChild(r);
+    }
+    const ex = this.explore, H = (t) => { const h = document.createElement('h4'); h.textContent = t; h.style.cssText = 'margin:16px 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.7'; body.appendChild(h); };
+    const mkMark = (x, z, l) => { const b = document.createElement('button'); b.className = 'choice sm'; b.textContent = 'Mark'; b.style.cssText = 'float:right;padding:3px 9px;font-size:12px;margin-left:8px'; b.addEventListener('click', (e) => { e.stopPropagation(); this.setWaypoint?.(x, z, l); }); return b; };
+    if (ex) {
+      // leads first: where someone says something is
+      const open = ex.openLeads();
+      H(`Leads (${open.length})`);
+      if (!open.length) { const m = document.createElement('div'); m.style.cssText = 'font-size:12px;opacity:.55;margin:4px 2px'; m.textContent = 'No open leads. New ones come with each season, and with what you find.'; body.appendChild(m); }
+      for (const l of [...open].reverse()) {
+        const d = Math.round(Math.max(0, Math.hypot(l.cx - p.pos.x, l.cz - p.pos.z) - l.r));
+        const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;line-height:1.45;border-left:3px dashed #e8c26a';
+        r.innerHTML = `${l.text.replace(/</g, '&lt;')}<br><small style="opacity:.65">${d ? `The circle is ${d} m away` : 'You are inside the circle'} · ${l.season}</small>`;
+        r.prepend(mkMark(l.cx, l.cz, 'A lead')); body.appendChild(r);
+      }
+      const named = ex.named, all = ex.list.length;
+      H(`On your map (${named.length} of ${all})`);
+      for (const pl of named) {
+        const d = Math.round(Math.hypot(pl.x - p.pos.x, pl.z - p.pos.z));
+        const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px;line-height:1.45';
+        r.innerHTML = `<b>${pl.name}</b> <small style="opacity:.65">${d} m${pl.real ? '' : ' \u00b7 invented name'}</small><br><small style="opacity:.8">${(ex.note(pl.kind) || '').replace(/</g, '&lt;')}</small>`;
+        r.prepend(mkMark(pl.x, pl.z, pl.name)); body.appendChild(r);
+      }
+      if (named.length < all) { const m = document.createElement('div'); m.style.cssText = 'font-size:12px;opacity:.55;margin:4px 2px'; m.textContent = `${all - named.length} more to find. Some only from the water, and some only under it (hold Space to dive).`; body.appendChild(m); }
     }
     const found = this.discoveries?.foundList() ?? [], total = this.discoveries?.items.length ?? 0;
     const h = document.createElement('h4'); h.textContent = `Found in the woods (${found.length} of ${total})`; h.style.cssText = 'margin:16px 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.7'; body.appendChild(h);

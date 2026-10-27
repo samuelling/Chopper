@@ -21,7 +21,7 @@ export function creditsHTML(kind, st) {
   const mine = [];
   const add = (n, a, b) => { if (n > 0) mine.push(plural(n, a, b)); };
   add(st.years, 'year played', 'years played'); add(st.felled, 'tree felled', 'trees felled'); add(st.planted, 'seed planted', 'seeds planted'); add(st.litter, 'piece of litter picked up', 'pieces of litter picked up');
-  add(st.fish, 'fish caught and let go', 'fish caught and let go'); add(st.species, 'species in your guide', 'species in your guide'); add(st.photos, 'photo', 'photos'); add(st.places, 'place named', 'places named'); add(st.ruins, 'ruin found', 'ruins found'); add(st.built, 'thing built', 'things built'); add(st.measures, 'water measure installed', 'water measures installed');
+  add(st.fish, 'fish caught and let go', 'fish caught and let go'); add(st.species, 'species in your guide', 'species in your guide'); add(st.photos, 'photo', 'photos'); add(st.places, 'place named', 'places named'); add(st.ruins, 'ruin found', 'ruins found'); add(st.mapped, 'place found and put on your map', 'places found and put on your map'); add(st.moments, 'moment caught on camera', 'moments caught on camera'); add(st.built, 'thing built', 'things built'); add(st.measures, 'water measure installed', 'water measures installed');
   const ledger = `Harm ${Math.round(st.harm * 100)}% · Care ${Math.round(st.care * 100)}%${st.hours ? ` · ${Math.round(st.hours)} staff hours freed (invented figure)` : ''}`;
   const parts = [
     ...blocks.map(([h, t]) => `<p class="big">${esc(t)}</p>`),
@@ -32,6 +32,7 @@ export function creditsHTML(kind, st) {
     '<p>Map and trails: OpenStreetMap contributors</p><p>Hills: USGS 3DEP lidar</p><p>Forest cover: NLCD 2021</p><p>Lake depth: MassWildlife and MassGIS</p>',
     '<div class="gap"></div>', '<h2>The invented part</h2>',
     '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake.</p>',
+    '<p>The coves, points, hills and swamps by name, the beaver lodge, the osprey nest, the sunken skiff and the old road under the water, the leads and who gives them, the park\u2019s page and what it pays.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
     '<h2>Part of MEGAzine</h2>', '<p>Between money and doom</p>', '<p><a href="https://megazine.org" target="_blank" rel="noopener" style="color:inherit;pointer-events:auto">megazine.org</a></p>', '<div class="gap"></div>',
