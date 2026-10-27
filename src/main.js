@@ -5,13 +5,13 @@ import { initUsageUI } from './usageui.js';
 import { creditsHTML, rollCredits } from './ending.js';
 import { Minimap } from './minimap.js';
 import { phaseTwo, renderChoices } from './choices.js';
-import { RUN } from './run.js';
+import { RUN, INTRO } from './run.js';
 import { Flyover } from './flyover.js';
 import { Phone } from './phone.js';
 import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
-import { showInterlude } from './interlude.js';
+import { showInterlude, CLYDE_ICON } from './interlude.js';
 import { FUND, MEASURES, SUPPLIES } from './fund.js';
 import { CATCHES } from './catches.js';
 import { Underwater } from './underwater.js';
@@ -46,7 +46,7 @@ import { CareActs } from './careacts.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { Explore, ATTRACTION } from './explore.js';
-import { Usage } from './usage.js';
+import { Usage, LEVELS } from './usage.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
 import { Player } from './player.js';
@@ -314,13 +314,40 @@ async function boot() {
   };
   player.onLockChange = (locked) => {
     ui.els.title.classList.add('hidden');
-    ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn || phoneOn);
+    ui.els.paused.classList.toggle('hidden', locked || !started || interludeOn || phoneOn || knobOn);
     ui.els.hud.classList.toggle('on', locked || started);
   };
-  let started = false, interludeOn = false, phoneOn = false;
+  let started = false, interludeOn = false, phoneOn = false, knobOn = false;
+  // ---- the season's check-in (Year Two on, from the second season of it): the usage knob, alone in the middle of the
+  // screen; turn it (or keep last season's answer) and you are straight back in the game
+  const knobEl = document.createElement('div'); knobEl.id = 'knobask'; knobEl.className = 'hidden'; document.body.appendChild(knobEl);
+  ['click', 'pointerdown', 'keydown', 'keyup'].forEach((ev) => knobEl.addEventListener(ev, (e) => e.stopPropagation()));
+  const needKnob = () => !RUN.dev && RUN.phaseTwo && RUN.n > INTRO && RUN.s.askN !== RUN.n && !RUN.s.end;
+  const askKnob = (then) => {
+    knobOn = true; if (MOBILE) { player.locked = false; touch.hide?.(); }
+    const prev = Usage.level();
+    knobEl.innerHTML = `<div class="kacard"><div class="kahead"><i>${CLYDE_ICON}</i><b>Clyde</b><span>${SEASON_DEF.label}</span></div>
+      <p>A new season. Before you head out: how much of your Claude limit have you used lately?</p>
+      <div data-knob-panel></div>${prev === null ? '' : `<button class="ckeep" data-keep>About the same as last season (${LEVELS[Math.round(prev)].name})</button>`}</div>`;
+    knobEl.classList.remove('hidden', 'out');
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true; knobOn = false; RUN.s.askN = RUN.n; RUN.save?.();
+      const l = Usage.level(); ui.toast(l === null ? 'Into the season.' : `Counted as ${LEVELS[Math.round(l)].name}. Into the season.`, 2.4);
+      knobEl.classList.add('out'); setTimeout(() => knobEl.classList.add('hidden'), 450);
+      then();                                     // still inside the knob's pointer gesture, so the mouse can be captured again
+    };
+    initUsageUI(knobEl, () => { if (!done && Usage.todayLevel() !== undefined) finish(); });
+    knobEl.querySelector('[data-keep]')?.addEventListener('click', () => { Usage.checkin(Math.round(prev), 'kept'); finish(); });
+  };
+  const intoPlay = () => {
+    if (MOBILE) { player.locked = true; ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); touch.show(); }
+    else renderer.domElement.requestPointerLock?.();
+  };
   const begin = () => {
     audio.init();
     started = true; flyover.stop();
+    if (needKnob()) { ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
     if (MOBILE) {
       player.locked = true;
       ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden');
@@ -463,6 +490,7 @@ async function boot() {
       if (spawnFromDrone) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
         audio.init(); started = true; autoCard = false;
+        if (needKnob()) { ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
         if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
       });
@@ -621,7 +649,7 @@ async function boot() {
   new MutationObserver(showChoices).observe(ui.els.paused, { attributes: true, attributeFilter: ['class'] });
   showChoices();
   if (waypoint) setWaypoint(waypoint.x, waypoint.z, waypoint.label);
-  initUsageUI();
+  initUsageUI(document, () => { if (RUN.phaseTwo && Usage.todayLevel() !== undefined && !knobOn) { RUN.s.askN = RUN.n; RUN.save?.(); } });   // the title's knob counts as this season's check-in
   const pr = document.querySelectorAll('[data-pressure]'), prv = document.querySelectorAll('[data-pressure-val]');
   const showP = () => prv.forEach((e) => { e.textContent = PRESSURE.target < 0.01 ? 'none (park as it is)' : `${Math.round(PRESSURE.target * 100)}%`; });
   pr.forEach((s) => { s.value = PRESSURE.target * 100; s.addEventListener('input', () => { PRESSURE.set(s.value / 100); pr.forEach((o) => { o.value = s.value; }); showP(); }); s.addEventListener('click', (e) => e.stopPropagation()); });

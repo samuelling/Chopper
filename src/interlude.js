@@ -11,7 +11,7 @@ import { FUND } from './fund.js';
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const PULSE = 0.12;                    // lasting harm added at each interlude, scaled by your footprint level
 
-const CLYDE_ICON = '<svg viewBox="0 0 48 48" width="22" height="22" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13h28a3 3 0 013 3v15a3 3 0 01-3 3H22l-8 7v-7h-4a3 3 0 01-3-3V16a3 3 0 013-3z"/></svg>';
+export const CLYDE_ICON = '<svg viewBox="0 0 48 48" width="22" height="22" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13h28a3 3 0 013 3v15a3 3 0 01-3 3H22l-8 7v-7h-4a3 3 0 01-3-3V16a3 3 0 013-3z"/></svg>';
 const INTRO_LINES = [
   "Hi, I'm Clyde. You've now seen the park through a whole year, and until now it was only a park.",
   'I can take on the paperwork, the plans and the upkeep it never had staff for.',

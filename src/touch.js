@@ -53,6 +53,7 @@ export class TouchControls {
     addEventListener('touchcancel', end, opts);
   }
   show() { this.root.classList.add('on'); }
+  hide() { this.root.classList.remove('on'); }
   _joy(t) {
     const R = 52;
     let dx = t.clientX - this.joy.cx, dy = t.clientY - this.joy.cy;
