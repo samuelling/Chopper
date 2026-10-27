@@ -233,14 +233,19 @@ async function boot() {
     fishing.reset(); const prev = camera.position.clone(); player.boat = boat; player.setCarry('none'); player.yaw = boat.h; player.pitch = -0.12; boatT = 0; player.blendFrom(prev);
     RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You climb into the rowboat.', 2); audio.boardThump?.();
   };
-  const disembark = () => {
+  const shoreSpot = (maxR = 9) => {
     let best = null, bs = 1e9;
-    for (let r = 1.5; r <= 9; r += 0.75) for (let a = 0; a < 24; a++) {
+    for (let r = 1.5; r <= maxR; r += 0.75) for (let a = 0; a < 24; a++) {
       const an = (a / 24) * Math.PI * 2, x = boat.x + Math.cos(an) * r, z = boat.z + Math.sin(an) * r;
       if (waterDepthAt(x, z) > 0.55 || player._blockedAt(x, z)) continue;
       const fx0 = -Math.sin(player.yaw), fz0 = -Math.cos(player.yaw), score = r - 0.8 * ((x - boat.x) * fx0 + (z - boat.z) * fz0) / r + (waterDepthAt(x, z) > 0.15 ? 6 : 0);   // dry ground beats wading
       if (score < bs) { bs = score; best = { x, z }; }
     }
+    return best;
+  };
+  let shoreNear = false, shoreChk = 0;
+  const disembark = () => {
+    const best = shoreSpot();
     if (!best) { ui.toast('Row closer to the shore to climb out.', 2.4); return; }
     fishing.reset(); const prev = camera.position.clone(); player.boat = null; player.teleport(best.x, best.z, player.yaw, player.pitch); player.blendFrom(prev);
     RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You step out onto the shore.', 2); audio.thud?.(0.6);
@@ -647,7 +652,7 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
     fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: ((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
-    if (player.boat) boatT += dt;
+    if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
     { const near = player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
     flyover.update(dt); tut.update(dt);
     // camera shake from big falls
@@ -678,7 +683,7 @@ async function boot() {
     const wx = weather.update(dt, atmosphere, () => audio.thunder?.());
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained });
     ui.tick(dt);
-    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : player.boat ? (boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
+    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
