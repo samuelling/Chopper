@@ -15,7 +15,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | WASD / Shift / Space | walk / hurry / hop (walk into deep water to swim, hold Space there to dive; in winter it is too cold) |
 | Mouse | look. You carry your phone (map, heading and harm/care on its screen); **Q** cycles phone, axe, fishing rod and empty hands, and click swings the axe (a big tree takes several swings) |
 | E | get in or out of the rowboat when you are next to it; pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
-| 1 / 2 / 3 / 4 | time of day: the season's three lights (e.g. golden hour, morning mist, dusk), then night |
+| 1 / 2 / 3 / 4, 0 | each season is one day, morning to night, on its own clock (sitting makes it pass 4x faster); 1-4 hold a light of your choosing (4 is night), 0 goes back to following the day |
 | Pause menu | Spring / Summer / Autumn / Winter buttons jump to a season (`?season=winter` does too; **T** cycles seasons in dev mode only) |
 | B | sit and wait: stay still and the woods come closer |
 | G | plant a seed (collected from litter) |

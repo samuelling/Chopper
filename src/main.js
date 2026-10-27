@@ -395,19 +395,14 @@ async function boot() {
   };
   addEventListener('keydown', (e) => { if (!tut.active) return; if (e.code === 'Space') tut.hopped = true; if (e.code === 'KeyP' || e.code === 'KeyQ') tut.phoned = true; if (e.code === 'KeyV') tut.shot = true; if (e.code === 'KeyB') tut.sat = true; });
   document.addEventListener('click', () => { if (started && !player.locked && !MOBILE && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden') && tut.active) begin(); });
-  // ---- sit and wait: time passes while you are still (misty morning, golden hour, dusk, night)
-  let sitClock = 0; const ORDER = [1, 0, 2, 3];
+  // ---- sit and wait: the day passes faster while you are still
   deer.onSnort = () => audio.snort?.();
   critters.onSplash = (x, z, slap) => { fx.splash(x, lake.level + 0.05, z, slap ? 24 : 8); if (slap) audio.splash?.(); };
   deer.onMoment = () => { ui.toast('A deer grazes close by. You are very still.', 4); JOURNAL.add('A deer grazed close by while I sat still.', player.pos.x, player.pos.z); };
   addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(() => ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2), 0); });
-  const stepSit = (dt) => {
-    if (!player.sitting) { sitClock = 0; return; }
-    sitClock += dt;
-    if (sitClock > 22) { sitClock = 0; const i = ORDER.indexOf(mood); if (i < ORDER.length - 1 && PRESETS.length > 3) { setMood(ORDER[i + 1]); ui.toast(['The mist lifts.', 'The light turns gold.', 'Dusk comes on.', 'Night.'][i] ?? '', 2.6); } }
-  };
+  const stepSit = () => {};                                   // sitting now lets the day itself pass faster (see the season clock)
   const touch = new TouchControls(player, {
-    onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length),
+    onUse: () => player.events.interact?.(), onMood: () => { if (manual && mood === PRESETS.length - 1 && !RUN.dev) followDay(); else handLight(manual ? (mood + 1) % PRESETS.length : 0); },
     onMenu: () => { if (started && !interludeOn) openMenu(); },
     onPhone: () => { if (!started || interludeOn) return; if (player.cameraMode) setCameraMode(false); else togglePhone(); },
     onSwing: (down) => {                                                    // the one big button: swing, cast and reel, or shutter
@@ -484,14 +479,40 @@ async function boot() {
     if (MOBILE) { player.locked = false; player.touch.x = player.touch.y = 0; touch.root.classList.remove('on'); }
     ui.els.paused.classList.remove('hidden'); ui.els.paused.scrollTop = 0;
   }
+  // ---- each season is one day: morning, midday, golden light and dusk, and night as the season ends.  The light follows
+  // the season's clock; 1-4 (or the sun button) take the light into your own hands and hold it there; 0 gives it back.
+  const ARC = { autumn: [1, 0, 2, 3], winter: [1, 0, 2, 3], spring: [1, 0, 2, 3], summer: [0, 1, 2, 3] }[SEASON] || [1, 0, 2, 3];
+  const SEG = [[0, 0.16], [0.3, 0.5], [0.72, 0.8], [0.94, 1]];        // holds at each light; the gaps between are the transitions
+  const PHASE = ['morning', 'midday', 'evening', 'night'];
+  const arcAt = (p) => {
+    for (let i = 0; i < SEG.length; i++) {
+      if (p <= SEG[i][1]) return [ARC[i], ARC[i], 0, i];
+      if (i < SEG.length - 1 && p < SEG[i + 1][0]) { const k = (p - SEG[i][1]) / (SEG[i + 1][0] - SEG[i][1]); return [ARC[i], ARC[i + 1], k * k * (3 - 2 * k), i]; }
+    }
+    return [ARC[3], ARC[3], 0, 3];
+  };
+  let manual = RUN.dev, arcPhase = -1, arcT = 0;                        // test links (?season=) keep the old hand-set light
+  const dayProgress = () => Math.min(1, Math.max(0, RUN.s.played / Math.max(1, RUN.len)));
+  const stepDay = (dt) => {
+    if (manual) return;
+    const [i0, i1, k, ph] = arcAt(dayProgress());
+    if (ph !== arcPhase) { if (arcPhase >= 0 && started && !interludeOn) ui.toast({ 1: 'The morning warms toward midday.', 2: 'The light turns low and gold.', 3: 'Night comes on.' }[ph] ?? '', 3); arcPhase = ph; }
+    arcT -= dt; if (arcT > 0) return; arcT = 0.15;
+    atmosphere.setArc(i0, i1, k); mood = k < 0.5 ? i0 : i1;
+  };
+  const handLight = (i) => { manual = true; setMood(i); ui.toast(`Light: ${PRESETS[i].name}. ${MOBILE ? 'Keep tapping the sun to return to the day.' : 'Press 0 to follow the day again.'}`, 2.6); };
+  const followDay = () => { manual = RUN.dev; if (manual) return; const [i0, i1, k] = arcAt(dayProgress()); setMood(k < 0.5 ? i0 : i1); arcT = 1.8; ui.toast(`Following the day: ${PHASE[arcAt(dayProgress())[3]]}.`, 2); };
   addEventListener('keydown', (e) => {
-    if (e.code === 'Digit1') setMood(0);
-    if (e.code === 'Digit2') setMood(1);
-    if (e.code === 'Digit3') setMood(2);
-    if (e.code === 'Digit4' && PRESETS.length > 3) setMood(3);
+    if (e.repeat || !started) return;
+    if (e.code === 'Digit1') handLight(0);
+    if (e.code === 'Digit2') handLight(1);
+    if (e.code === 'Digit3') handLight(2);
+    if (e.code === 'Digit4' && PRESETS.length > 3) handLight(3);
+    if (e.code === 'Digit0' || e.code === 'Backquote') followDay();
   });
-  let mood = startPreset;
+  let mood = RUN.dev ? startPreset : arcAt(dayProgress())[0];
   function setMood(i) { mood = i; atmosphere.setPreset(i); }
+  if (!RUN.dev) { const [i0, i1, k] = arcAt(dayProgress()); atmosphere.blend = 1; atmosphere.setArc(i0, i1, k); }
 
   // season picker (reloads at the current spot for now) + the T key
   if (RUN.dev) document.querySelectorAll('[data-seasons] button').forEach((b) => {
@@ -560,7 +581,7 @@ async function boot() {
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-knob-panel]').forEach((e) => e.remove());   // the check-in knob waits for the AI phase
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1–4 light · Esc menu';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1–4 light, 0 the day · Esc menu';
     if (!RUN.phaseTwo) document.querySelectorAll('[data-phase2]').forEach((e) => e.remove());   // choices arrive with the AI phase
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
@@ -713,7 +734,7 @@ async function boot() {
     const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
     PRESSURE.update(tdt); checkEndings(tdt);
     if (!RUN.dev && started && player.locked && !interludeOn) {
-      RUN.s.played += tdt;
+      RUN.s.played += tdt * (player.sitting && player.sit > 0.9 ? 4 : 1);   // sit and wait: the day goes by faster around you
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
@@ -760,7 +781,7 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, player.pos, player.speed);
     squirrels.update(dt, player.pos);
-    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); stepSit(dt);
+    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); stepSit(dt); stepDay(dt);
     birds.update(dt, player.pos);
     // a regular: the same heron, season after season
     if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {

@@ -348,6 +348,14 @@ export class Atmosphere {
     this.applyState(this.state);
   }
 
+  /** the day's own light: a point between two presets (k 0..1), set directly each frame by the season's arc */
+  setArc(i0, i1, k) {
+    this._ps ??= PRESETS.map((p) => this._stateFrom(p));
+    if (this.blend < 1) return;                           // let a hand-set change finish its glide first
+    const a = this._ps[i0], b = this._ps[i1], s = this.state;
+    for (const key in s) { if (s[key] && s[key].isColor) s[key].copy(a[key]).lerp(b[key], k); else s[key] = lerp(a[key], b[key], k); }
+    this.presetIndex = k < 0.5 ? i0 : i1; this.target = null; this.applyState(s);
+  }
   setPreset(i) {
     if (i === this.presetIndex && this.blend >= 1) return;
     this.presetIndex = i;
