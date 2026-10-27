@@ -596,7 +596,7 @@ async function boot() {
   }
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
-    const ctx = { player, chunks, lake, structures, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
+    const ctx = { audio, player, chunks, lake, structures, setWaypoint, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
     showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
       const felled = [];
       for (const [key, recs] of chunks.felledByChunk) for (const rec of recs) felled.push({ key, rec });

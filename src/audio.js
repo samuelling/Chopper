@@ -38,6 +38,8 @@ export class Audio {
   }
   /** let everything sink away over `sec` seconds (the season turning through black) */
   /** head under the surface: the world goes dull and far away */
+  /** a phone notification: two soft, bright notes */
+  notify() { if (!this.ready) return; this._tone(1318.5, 0.5, 0.05, 'sine'); setTimeout(() => this._tone(1975.5, 0.7, 0.04, 'sine'), 120); }
   setUnder(on) { if (!this.ready) return; this.muff.frequency.setTargetAtTime(on ? 520 : 22000, this.ctx.currentTime, on ? 0.12 : 0.18); }
   fadeOut(sec = 1.5) { if (!this.ready) return; const t = this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(this.master.gain.value, t); this.master.gain.linearRampToValueAtTime(0, t + sec); }
   _loop(freq, q, gain) {
