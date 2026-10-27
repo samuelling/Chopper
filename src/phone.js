@@ -7,6 +7,7 @@ import { GUIDE, ENTRIES, BY_ID } from './guide.js';
 import { mountHudPanel } from './hud.js';
 import { PLACES, JOURNAL } from './places.js';
 import { FUND, SUPPLIES, MEASURES } from './fund.js';
+import { CATCHES } from './catches.js';
 import { Usage, LEVELS } from './usage.js';
 
 const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
@@ -28,12 +29,13 @@ const DOCK = [
   { id: 'clyde', name: 'Clyde', bg: 'linear-gradient(#d98a6a,#a8503c)', svg: ic('<path d="M10 13h28a3 3 0 013 3v15a3 3 0 01-3 3H22l-8 7v-7h-4a3 3 0 01-3-3V16a3 3 0 013-3z"/>', '<circle cx="18" cy="23.5" r="1.8" fill="#fff"/><circle cx="25" cy="23.5" r="1.8" fill="#fff"/><circle cx="32" cy="23.5" r="1.8" fill="#fff"/>') },
 ];
 const ALL = [...APPS, ...DOCK];
+const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : '');
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
   constructor({ fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
     Object.assign(this, { fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
-    addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
+    addEventListener('keydown', (e) => { if (this.isOpen && (this.tab === 'photos' || this.tab === 'journal')) this._key?.(e); });
   }
   open(tab = 'home') {
     this.isOpen = true; this.tab = tab; this.onOpen?.();
@@ -78,6 +80,7 @@ export class Phone {
     } else if (tab === 'places') {
       this._places(body);
     } else if (tab === 'journal') {
+      this._key = null; this._catchStrip(body);
       const n = document.createElement('div'); n.className = 'bubble'; n.textContent = JOURNAL.list.length ? 'Your notes, newest first.' : 'Nothing yet. Walk, look, listen. What you find and name goes here.'; body.appendChild(n);
       for (const j of [...JOURNAL.list].reverse()) {
         const r = document.createElement('div'); r.style.cssText = 'background:#2d2a36;border-radius:10px;padding:9px 12px;margin-bottom:7px;font-size:13px;line-height:1.45';
@@ -155,6 +158,44 @@ export class Phone {
       body.appendChild(n);
     }
     this.update();
+  }
+  /** the catch log at the top of the Journal: a strip of cards to swipe through, newest first */
+  _catchStrip(body) {
+    const L = CATCHES.list; if (!L.length) return;
+    const s = CATCHES.summary(), b = s.biggest, wt = (c) => (c.lb < 1 ? `${Math.max(1, Math.round(c.lb * 16))} oz` : `${c.lb} lb`);
+    const h = document.createElement('div'); h.className = 'clhead';
+    h.innerHTML = `<div class="uh">Catch log</div><small>${s.landed} landed \u00b7 ${s.species} species${s.trophies ? ` \u00b7 ${s.trophies} troph${s.trophies === 1 ? 'y' : 'ies'}` : ''}${b ? ` \u00b7 heaviest: ${wt(b)} ${b.name}` : ''}</small>`;
+    body.appendChild(h);
+    const strip = document.createElement('div'); strip.className = 'clstrip';
+    [...L].reverse().forEach((c) => {
+      const d = document.createElement('div'); d.className = 'clcard' + (c.trophy ? ' trophy' : '');
+      d.innerHTML = `${c.img ? `<img src="${c.img}">` : `<div class="clnoimg">${c.name}</div>`}<div class="clbadges">${c.trophy ? '<span class="t">TROPHY</span>' : ''}${CATCHES.isBest(c) ? '<span>BEST</span>' : ''}</div>
+        <div class="clt"><b>${c.inches}\u2033 ${c.name}</b><small>${wt(c)} \u00b7 ${cap(c.season)}, Year ${c.year}</small></div>`;
+      d.addEventListener('click', (e) => { e.stopPropagation(); this._catchView(body, L.indexOf(c)); });
+      strip.appendChild(d);
+    });
+    body.appendChild(strip);
+  }
+  /** one catch, full size; swipe, the arrows or the arrow keys thumb through the rest */
+  _catchView(body, i) {
+    const L = CATCHES.list, c = L[i]; if (!c) return this.show('journal');
+    body.innerHTML = ''; body.scrollTop = 0;
+    const wt = c.lb < 1 ? `${Math.max(1, Math.round(c.lb * 16))} oz` : `${c.lb} lb`, row = (k, v) => (v == null || v === '' ? '' : `<div><span>${k}</span><b>${v}</b></div>`);
+    const w = document.createElement('div'); w.className = 'clview';
+    w.innerHTML = `${c.img ? `<img src="${c.img}">` : `<div class="clnoimg big">${c.name}</div>`}
+      <div class="clvt"><b>${c.inches}-inch ${c.name}</b><div class="clbadges inline">${c.trophy ? '<span class="t">TROPHY</span>' : ''}${CATCHES.isBest(c) ? '<span>BIGGEST OF ITS KIND</span>' : ''}${c.clean ? '<span class="c">CLEAN FIGHT</span>' : ''}</div></div>
+      <div class="clstats">${row('Length', `${c.inches} in`)}${row('Weight', wt)}${row('Fight', c.fight ? `${c.fight} s` : '')}${row('Water', c.depth ? `${c.depth} m deep` : '')}${row('From', c.boat ? 'the rowboat' : 'the shore')}${row('Near', c.place)}${row('When', `${cap(c.season)}, Year ${c.year}${c.light ? `, ${c.light.toLowerCase()}` : ''}`)}${row('Date', new Date(c.at).toLocaleDateString())}</div>
+      <small class="clnote">Catch ${c.n} of ${L.length}. Let go, like every fish here.</small>`;
+    body.appendChild(w);
+    const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:8px;margin-top:10px';
+    const mk = (t, f, dim) => { const b = document.createElement('button'); b.className = 'choice'; b.textContent = t; b.style.cssText = 'flex:1;padding:9px 6px;font-size:14px;' + (dim ? 'opacity:.35;pointer-events:none' : ''); b.addEventListener('click', (ev) => { ev.stopPropagation(); f(); }); return b; };
+    // newest is shown first in the strip, so "older" walks back through the list
+    bar.append(mk('\u2190 Newer', () => this._catchView(body, i + 1), i >= L.length - 1), mk('Journal', () => this.show('journal')), mk('Older \u2192', () => this._catchView(body, i - 1), i <= 0));
+    body.appendChild(bar);
+    this._key = (ev) => { if (ev.code === 'ArrowLeft' && i < L.length - 1) this._catchView(body, i + 1); if (ev.code === 'ArrowRight' && i > 0) this._catchView(body, i - 1); };
+    let sx = null; const im = w.firstElementChild;
+    im.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    im.addEventListener('touchend', (e) => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (dx < -40 && i > 0) this._catchView(body, i - 1); else if (dx > 40 && i < L.length - 1) this._catchView(body, i + 1); });
   }
   /** Park Fund: what AI help has saved the park, to spend on seeds, saplings and the lake */
   _fund(body) {

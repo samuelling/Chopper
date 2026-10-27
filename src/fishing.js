@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { simpleToon } from './toon.js';
 import { lake, waterDepthAt } from './world.js';
+import { makeFish, WEIGHT_K } from './fishmodel.js';
 
 export const FISH = [
   // depth: preferred water depth (m).  seasons: when it is likely (others are rare).  dusk: it favours low light.  w: how common.
@@ -25,12 +26,9 @@ export const FISH = [
   { id: 'eel', name: 'American eel', min: 18, max: 34, depth: [2, 9], w: 1, dusk: true },
 ];
 const FIGHT = { sunfish: 0.25, pumpkinseed: 0.2, redbreast: 0.25, shiner: 0.15, perch: 0.35, whiteperch: 0.4, crappie: 0.35, bass: 0.65, smallmouth: 0.8, pickerel: 0.7, bullhead: 0.4, sucker: 0.5, carp: 0.9, trout: 0.7, brook: 0.5, eel: 0.85 };
-const LOOK = {   // [back, belly, height/length, marks]
-  redbreast: ['#6e8a52', '#e8742a', 0.5, 'cheek'], shiner: ['#b5a24a', '#f0e4a8', 0.26, 'plain'], whiteperch: ['#9aa89a', '#e4e8de', 0.36, 'stripe'], smallmouth: ['#7a6a3a', '#d8d0a0', 0.3, 'bars'],
-  sucker: ['#7a7a60', '#d8d5bd', 0.2, 'plain'], carp: ['#a88a4a', '#e0cc90', 0.36, 'plain'], trout: ['#9fb0a8', '#ece8e0', 0.24, 'spots'], brook: ['#5a6a4a', '#e8a04a', 0.22, 'spots'], eel: ['#4e5a3a', '#cfcf9a', 0.06, 'plain'],
-  sunfish: ['#6f8f4a', '#e5a63c', 0.52, 'cheek'], pumpkinseed: ['#7c9b52', '#ea8f3a', 0.54, 'cheek'], perch: ['#aeae3c', '#f1d56a', 0.3, 'bars'],
-  crappie: ['#aab49b', '#e6ebe0', 0.48, 'spots'], bass: ['#5f7a3a', '#dcdcaa', 0.28, 'stripe'], pickerel: ['#6b7b3a', '#d8d9a8', 0.14, 'chain'], bullhead: ['#5a4a35', '#a8946a', 0.28, 'whiskers'],
-};
+// trophies: rare fish well past the usual size, for the bigger species.  More likely deep, at dusk, and in a park with its wildlife.
+export const TROPHY = { bass: [22, 27], smallmouth: [20, 23], pickerel: [27, 31], carp: [33, 42], trout: [20, 26], eel: [36, 44], bullhead: [15, 18], crappie: [14, 17], perch: [13, 15], sucker: [21, 25], brook: [16, 19] };
+export const weightLb = (id, inches) => (WEIGHT_K[id] || 0.0005) * inches ** 3;
 const RANGE = [4, 22], TIP = new THREE.Vector3(0, 1.75, 0);
 
 export class Fishing {
@@ -58,26 +56,14 @@ export class Fishing {
     this.pos = new THREE.Vector3(); this.from = new THREE.Vector3(); this.tgt = new THREE.Vector3(); this.tip = new THREE.Vector3();
   }
 
-  /** hold the fish up for a moment before it goes back */
-  showCatch(f, inches) {
+  /** hold the fish up for a moment before it goes back (a trophy is held longer, and lower, two-handed) */
+  showCatch(f, inches, trophy = false) {
     if (this.fishObj) { this.camera.remove(this.fishObj); this.fishObj = null; }
-    const [back, belly, ratio, mark] = LOOK[f.id] || LOOK.sunfish, len = Math.min(0.5, Math.max(0.2, inches * 0.0254 * 1.7)), hgt = len * ratio, wid = hgt * 0.45;
-    const g = new THREE.Group(), add = (geo, col, p, sc = [1, 1, 1], r = [0, 0, 0], outline = true) => { const m = new THREE.Mesh(geo, simpleToon(col)); m.position.set(...p); m.scale.set(...sc); m.rotation.set(...r); if (outline) { const o = new THREE.Mesh(geo, simpleToon('#2a1f24', { side: THREE.BackSide })); o.scale.setScalar(1.1); m.add(o); } g.add(m); return m; };
-    const sph = new THREE.SphereGeometry(0.5, 14, 10);
-    add(sph, back, [0, 0.0, 0], [len, hgt, wid]);                                             // back
-    add(sph, belly, [0, -hgt * 0.14, 0], [len * 0.96, hgt * 0.72, wid * 0.96], [0, 0, 0], false);   // pale belly peeking below
-    add(new THREE.ConeGeometry(0.5, 1, 4), back, [-len * 0.56, 0, 0], [hgt * 0.8, len * 0.26, wid * 0.4], [0, 0, Math.PI / 2]);   // tail
-    add(new THREE.ConeGeometry(0.5, 1, 3), back, [len * 0.04, hgt * 0.5, 0], [len * 0.32, hgt * 0.38, wid * 0.2], [0, 0, 0]);   // dorsal fin
-    add(sph, '#15110f', [len * 0.36, hgt * 0.1, wid * 0.42], [hgt * 0.14, hgt * 0.14, hgt * 0.1], [0, 0, 0], false);              // eye
-    const dark = '#2f3b24';
-    if (mark === 'bars') for (let i = 0; i < 5; i++) add(sph, dark, [len * (0.22 - i * 0.11), hgt * 0.04, 0], [len * 0.05, hgt * 1.02, wid * 1.01], [0, 0, 0], false);
-    if (mark === 'stripe') add(sph, dark, [0, hgt * 0.02, 0], [len * 0.92, hgt * 0.12, wid * 1.02], [0, 0, 0], false);
-    if (mark === 'chain') for (let i = 0; i < 7; i++) add(sph, dark, [len * (0.3 - i * 0.1), hgt * 0.1, 0], [len * 0.07, hgt * 0.6, wid * 1.02], [0, 0, 0.5], false);
-    if (mark === 'spots') for (let i = 0; i < 9; i++) add(sph, '#3a3f35', [len * (0.3 - (i % 5) * 0.12), hgt * (0.15 - (i % 3) * 0.14), wid * 0.45], [hgt * 0.1, hgt * 0.1, hgt * 0.06], [0, 0, 0], false);
-    if (mark === 'cheek') add(sph, '#1d2a3a', [len * 0.34, -hgt * 0.04, wid * 0.46], [hgt * 0.2, hgt * 0.18, hgt * 0.1], [0, 0, 0], false);
-    if (mark === 'whiskers') for (const k of [-1, 1]) add(new THREE.CylinderGeometry(0.004, 0.002, hgt * 0.7, 4), '#3a3025', [len * 0.52, -hgt * 0.1, k * wid * 0.3], [1, 1, 1], [0, 0, 1.2], false);
-    g.traverse((o) => { o.frustumCulled = false; });
-    this.fishObj = g; this.fishT = 0; this.camera.add(g);
+    const len = Math.min(trophy ? 0.6 : 0.42, Math.max(0.18, inches * 0.0254 * 1.35));
+    // held up by the tail, hanging head down: a pivot at the grip, the fish below it
+    const fish = makeFish(f.id, len), g = new THREE.Group(); fish.rotation.z = -Math.PI / 2; fish.position.y = -0.5 * len; g.add(fish);
+    g.userData.tail = fish.userData.tail; g.userData.len = len;
+    this.fishObj = g; this.fishT = 0; this.fishTrophy = trophy; this.snapped = false; this.camera.add(g);
   }
 
   /** for the reel's sound */
@@ -111,8 +97,12 @@ export class Fishing {
   }
   /** the hook is set: start the fight */
   _hook() {
-    const f = this.fish, inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)), sizeK = (inches - f.min) / Math.max(1, f.max - f.min);
-    const D = Math.min(1, (FIGHT[f.id] ?? 0.4) * (0.7 + 0.6 * sizeK));
+    const f = this.fish, c0 = this.ctx || {}, tr = TROPHY[f.id];
+    const pT = tr ? 0.035 * (1 + 1.2 * (c0.dusk ?? 0.5) ** 2) * (this.depth > 4 ? 1.6 : 1) * Math.max(0.2, Math.min(1, c0.life ?? 1)) : 0;
+    const trophy = !!tr && (this.rng() < pT || this.forceTrophy); this.forceTrophy = false;
+    const inches = trophy ? Math.round(tr[0] + this.rng() * (tr[1] - tr[0])) : Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)), sizeK = (inches - f.min) / Math.max(1, f.max - f.min);
+    const D = trophy ? 1 : Math.min(1, (FIGHT[f.id] ?? 0.4) * (0.7 + 0.6 * sizeK));
+    this.trophy = trophy; this.lb = weightLb(f.id, inches) * (0.88 + this.rng() * 0.24); this.fightStart = performance.now();
     const c = this.camera.position, dx = this.tgt.x - c.x, dz = this.tgt.z - c.z, d0 = Math.max(5, Math.hypot(dx, dz));
     Object.assign(this, { state: 'fight', t: 0, inches, D, d: d0, d0, dir0: new THREE.Vector3(dx / d0, 0, dz / d0), T: 0.45, stam: 1, run: 0, runDir: 0, tele: 0, nextRun: 1.4, side: 0, red: 0, snapT: 0, slackT: 0, hold: false, lean: 0, tick: 0, firstFight: !(this.stats.landed + this.stats.lost) });
     this.hooks.hooked?.(); this.hud.style.display = 'block';
@@ -125,7 +115,8 @@ export class Fishing {
   }
   _land() {
     const f = this.fish, inches = this.inches, clean = this.red < 0.6; this.stats.landed++; if (clean) this.stats.clean++; this.stats.best = Math.max(this.stats.best, inches); this.hooks.stats?.(this.stats);
-    const was = this.pos.clone(); this._endFight(); this.showCatch(f, inches); this.hooks.caught?.(f, inches, was.x, was.z, clean);
+    const was = this.pos.clone(); this._endFight(); this.showCatch(f, inches, this.trophy);
+    this.hooks.caught?.(f, inches, was.x, was.z, clean, { trophy: this.trophy, lb: this.lb, fight: (performance.now() - this.fightStart) / 1000, depth: this.depth });
   }
   _reel(hooked) { this.state = 'reel'; this.t = 0; this.hooked = hooked; this.rev = this.pos.clone(); this.hooks.reel?.(); }
 
@@ -203,7 +194,7 @@ export class Fishing {
           if (running) { v = hold ? v * (counter ? 0.6 : 0.2) : 0; this.d += (hold && !counter ? 0.9 : 1.4) * power * dt; }
           this.d = clamp(this.d - v * dt, 0, this.d0 * 1.5); this.reelSpeed = v / 2.4; this.dragging = running && !hold;
           // it tires while the line is in the green, and fastest when you answer a run correctly
-          this.stam = clamp(this.stam - dt * ((green && hold ? 0.05 * (1.1 - 0.3 * D) : 0) + (counter ? 0.13 : 0)), 0, 1);
+          this.stam = clamp(this.stam - dt * ((green && hold ? 0.05 * (1.1 - 0.3 * D) : 0) + (counter ? 0.13 : 0)) * (this.trophy ? 0.55 : 1), 0, 1);
           // snap or spit
           if (this.T >= 1) { this.snapT += dt; if (this.snapT > 0.25) return this._lose('snap'); } else this.snapT = Math.max(0, this.snapT - dt * 2);
           this.slackT = (this.T < 0.03 && !running) ? this.slackT + dt : 0; if (this.slackT > 6) return this._lose('slack');
@@ -217,7 +208,7 @@ export class Fishing {
           if (this.T > 0.8) { this.strainT = (this.strainT ?? 0) - dt; if (this.strainT <= 0) { this.strainT = 0.22; this.hooks.strain?.(this.T); } }
           // the meter
           this.hudT.style.left = `calc(${(clamp(this.T, 0, 1) * 100).toFixed(1)}% - 2px)`; this.hudD.style.width = `${(clamp((this.d - 1.3) / Math.max(1, this.d0 - 1.3), 0, 1) * 100).toFixed(1)}%`;
-          this.hudP.textContent = `\u00b7 ${D < 0.3 ? 'light' : D < 0.55 ? 'medium' : D < 0.8 ? 'strong' : 'heavy'}`;
+          this.hudP.textContent = `\u00b7 ${this.trophy ? 'something big' : D < 0.3 ? 'light' : D < 0.55 ? 'medium' : D < 0.8 ? 'strong' : 'heavy'}`;
           const arrow = (this.tele > 0 || running) ? (this.runDir < 0 ? '\u25c0 \u25c0 \u25c0' : '\u25b6 \u25b6 \u25b6') : '';
           this.hudH.textContent = arrow; this.hudH.style.color = counter ? '#8fd48f' : wrong ? '#ff6a4a' : '#ffb347';
           this.hudX.textContent = this.firstFight ? (arrow ? 'It is running. Ease off the reel, and lean the other way (A / D).' : 'Hold the mouse button to reel. Let go before the needle reaches the red.') : (T => '')(0);
@@ -229,7 +220,7 @@ export class Fishing {
           if (k >= 1) {
             const f = this.hooked ? this.fish : null; const was = this.tgt.clone();
             this.state = 'idle'; this.bobber.visible = false; this.line.visible = false;
-            if (f) { const inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)); this.showCatch(f, inches); this.hooks.caught?.(f, inches, was.x, was.z); }
+            if (f) { const inches = Math.round(f.min + Math.pow(this.rng(), 1.7) * (f.max - f.min)); this.showCatch(f, inches); this.hooks.caught?.(f, inches, was.x, was.z, true, { lb: weightLb(f.id, inches), fight: 0, depth: this.depth }); }
           }
           break;
         }
@@ -243,9 +234,17 @@ export class Fishing {
       }
     }
     if (this.fishObj) {                                   // held up for a moment, wagging, then back into the water
-      this.fishT += dt; const t = this.fishT, g = this.fishObj, inK = Math.min(1, t / 0.25), out = Math.max(0, (t - 2.6) / 0.6);
-      if (t > 3.2) { c.remove(g); this.fishObj = null; this.hooks.plop?.(this.tgt.x, lake.level, this.tgt.z); }
-      else { g.position.set(0.02 + out * 0.15, -0.16 - out * 0.55 - (1 - inK) * 0.22, -0.62 - out * 0.35); g.rotation.set(0.08, 0.35 + Math.sin(t * 9) * (0.18 - 0.1 * Math.min(1, t / 2)), -0.12 + Math.sin(t * 7) * 0.06 + out * 0.9); g.scale.setScalar(Math.max(0.01, inK * (1 - out * 0.7))); }
+      this.fishT += dt; const t = this.fishT, g = this.fishObj, big = this.fishTrophy, hold = big ? 4.6 : 3.2, inK = Math.min(1, t / 0.35), ease = 1 - (1 - inK) ** 3, out = Math.max(0, (t - (hold - 0.6)) / 0.6);
+      if (!this.snapped && t > 0.8) { this.snapped = true; this.hooks.snap?.(); }       // the photo for your catch log
+      if (t > hold) { c.remove(g); this.fishObj = null; this.hooks.plop?.(this.tgt.x, lake.level, this.tgt.z); }
+      else {
+        const calm = Math.min(1, t / 2.2), L = g.userData.len, swing = Math.sin(t * (big ? 3.2 : 4.2)) * (0.32 - 0.24 * calm) * (1 - out);
+        // the grip sits up and a little right of centre; the fish swings from it like a pendulum, turning slowly to show its side
+        g.position.set(0.04 + out * 0.12, (big ? 0.06 : 0.0) + L * 0.42 - out * 0.7 - (1 - ease) * 0.3, (big ? -0.95 : -0.72) - out * 0.3);
+        g.rotation.set(0.05, 0.25 + Math.sin(t * 1.3) * 0.25 * (1 - calm * 0.5), swing + out * 0.6);
+        if (g.userData.tail) g.userData.tail.rotation.y = Math.sin(t * (big ? 6 : 9) + 1.2) * (0.45 - 0.3 * calm);
+        g.scale.setScalar(Math.max(0.01, (0.4 + 0.6 * ease) * (1 - out * 0.7)));
+      }
     }
     if (this.ring.visible) {
       this.ringT += dt * 1.4; const a = this.ringT;

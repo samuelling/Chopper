@@ -33,8 +33,8 @@ export const MEASURES = [
   { id: 'firo', title: 'Forecast-informed gate operations', w: 0.30, price: 12000, harm: 0.010, kind: 'AI',
     gain: 'Clyde reads the weather forecasts and tells the gatekeepers how much to hold back before a dry spell, instead of following a fixed calendar.',
     real: 'Lake Mendocino, California, stored about 20% more water for the dry season this way in 2020.' },
-  { id: 'shade', title: 'Shade-ball cover on the cove', w: 0.15, price: 6000, harm: 0.020, kind: 'AI', delay: true,
-    gain: 'Millions of black plastic balls on the water to cut evaporation. Fish bite less under the cover. It only starts to pay back next season, and making the balls costs water and harm now.',
+  { id: 'shade', title: 'Shade-ball cover on the cove (with BU)', w: 0.15, price: 6000, harm: 0.020, kind: 'AI', delay: true,
+    gain: 'A Boston University team, working with Clyde, designs a cover for the cove: black plastic balls, sized and placed by a model of wind and evaporation. Fish bite less under it. It only starts to pay back next season, and making the balls costs water and harm now.',
     real: 'Los Angeles claimed 85–90% less evaporation in drought; an MIT-led study found making its 96 million balls took 66–766 million gallons of water, one to two and a half years to pay back.' },
 ];
 

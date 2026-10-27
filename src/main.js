@@ -13,6 +13,8 @@ import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
 import { showInterlude } from './interlude.js';
 import { FUND } from './fund.js';
+import { CATCHES } from './catches.js';
+import { Underwater } from './underwater.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -234,13 +236,32 @@ async function boot() {
     reel: () => audio.reelTick?.(), toast: (t, d) => ui.toast(t, d), pull: () => audio.pull?.(), strain: (k) => audio.strain?.(k),
     hooked: () => { audio.biteSnd?.(); ui.toast('Hooked!', 1.2); }, lost: (why) => { if (why === 'snap') audio.snap?.(); audio.dip?.(1); },
     loadStats: () => RUN.s.angler || { landed: 0, lost: 0, clean: 0, best: 0 }, stats: (st) => { RUN.s.angler = { ...st }; RUN.save?.(); },
-    caught: (f, inches, x, z, clean) => {
-      const first = !GUIDE.found(f.id); GUIDE.addCaught(f.id, inches); RUN.s.fish = (RUN.s.fish || 0) + 1; RUN.save?.();
-      JOURNAL.add(`Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.${clean ? ' A clean fight.' : ''}`, player.pos.x, player.pos.z);
-      ui.toast(`A ${inches}-inch ${f.name}${clean ? ', a clean catch' : ''}. You let it go.${first ? ' New in your Field Guide.' : ''}`, 4.5); audio.landSplash?.(1); fx.splash(x, lake.level + 0.03, z, 12);
+    caught: (f, inches, x, z, clean, ex = {}) => {
+      const first = !GUIDE.found(f.id), prevBest = CATCHES.best(f.id); GUIDE.addCaught(f.id, inches); RUN.s.fish = (RUN.s.fish || 0) + 1; RUN.save?.();
+      const lb = Math.round((ex.lb || 0) * 10) / 10, wt = lb < 1 ? `${Math.max(1, Math.round(lb * 16))} oz` : `${lb} lb`;
+      // where: the nearest of your own named places, else the boat ramp, else just shore or boat
+      let place = null, pd = 90; for (const pl of PLACES.list) { const d = Math.hypot(pl.x - player.pos.x, pl.z - player.pos.z); if (d < pd) { pd = d; place = pl.name; } }
+      if (!place && Math.hypot(RAMP.x - player.pos.x, RAMP.z - player.pos.z) < 60) place = 'the boat ramp';
+      lastCatch = CATCHES.add({ id: f.id, name: f.name, inches, lb, trophy: !!ex.trophy, clean: !!clean, fight: Math.round(ex.fight || 0), depth: Math.round((ex.depth || 0) * 10) / 10,
+        boat: !!player.boat, place, season: SEASON, year: Math.floor((RUN.n || 0) / 4) + 1, light: PRESETS[mood]?.name, at: Date.now(), img: null });
+      const pb = prevBest && inches > prevBest.inches;
+      JOURNAL.add(ex.trophy ? `A trophy ${f.name}: ${inches} inches, about ${wt}, ${player.boat ? 'from the rowboat' : 'from the shore'}. Let it go.` : `Caught a ${inches}-inch ${f.name} ${player.boat ? 'from the rowboat' : 'from the shore'} and let it go.${clean ? ' A clean fight.' : ''}`, player.pos.x, player.pos.z);
+      ui.toast(ex.trophy ? `A trophy. A ${inches}-inch ${f.name}, about ${wt}. You hold it up, then let it go.` : `A ${inches}-inch ${f.name}, ${wt}${clean ? ', a clean catch' : ''}. You let it go.${first ? ' New in your Field Guide.' : pb ? ' Your biggest yet.' : ''}`, ex.trophy ? 6 : 4.5);
+      audio.landSplash?.(ex.trophy ? 1.4 : 1); fx.splash(x, lake.level + 0.03, z, ex.trophy ? 20 : 12);
+    },
+    // a photo of the fish held up, for the catch log in the Journal
+    snap: () => {
+      if (!lastCatch) return;
+      renderer.render(scene, camera);
+      const src = renderer.domElement, cw = 480, ch = 360, cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const sw = Math.min(src.width * 0.5, src.height * 0.78 * 4 / 3), sh = sw * 3 / 4, sx = src.width * 0.52 - sw / 2, sy = Math.min(src.height - sh, src.height * 0.46 - sh / 2);   // framed on the fish
+      const g2 = cv.getContext('2d'); g2.drawImage(src, sx, Math.max(0, sy), sw, sh, 0, 0, cw, ch);
+      CATCHES.setImg(lastCatch, cv.toDataURL('image/jpeg', 0.72));
     },
   });
   player.events.cast = () => { tut.fished = true; if (started && !interludeOn && !player.cameraMode && !phone.isOpen) fishing.click(); };
+  let lastCatch = null;
+  const underwater = new Underwater(renderer);
   const nearBoat = () => !player.boat && Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) < 3.8;
   let boatT = 99;
   const embark = () => {
@@ -550,7 +571,7 @@ async function boot() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     step(dt);
-    renderer.render(scene, camera);
+    if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 
@@ -760,7 +781,7 @@ async function boot() {
     ui.hud(chunks.felledCount, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
-  const render = () => renderer.render(scene, camera);
+  const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
   window.chopper = { phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };

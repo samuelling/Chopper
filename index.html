@@ -69,7 +69,7 @@
   #bHop { right:max(140px, calc(env(safe-area-inset-right) + 110px)); bottom:max(30px, env(safe-area-inset-bottom)); width:62px; height:62px; }
   #bUse { right:max(44px, env(safe-area-inset-right)); bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); width:66px; height:66px; }
   #bPhone { right:max(18px, env(safe-area-inset-right)); top:calc(max(14px, env(safe-area-inset-top)) + 54px); width:56px; height:56px; font-size:11px; letter-spacing:.06em; }
-  #underwater { position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(40,120,130,.38) 0%, rgba(14,62,82,.72) 100%); transition:opacity .25s; }
+  #underwater { position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(40,120,130,0) 40%, rgba(8,40,52,.45) 100%); transition:opacity .25s; }
   #underwater.on { opacity:1; }
   #underwater i { position:absolute; left:50%; bottom:9%; width:min(220px,40vw); height:6px; margin-left:calc(min(220px,40vw) / -2); background:rgba(255,255,255,.18); border-radius:3px; overflow:hidden; } #underwater i::after { content:''; display:block; height:100%; width:var(--breath,100%); background:#cfeff0; }
   #bFull { right:max(70px, calc(env(safe-area-inset-right) + 62px)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:20px; }
@@ -207,6 +207,18 @@
   .flake small { display:block; font-size:11.5px; line-height:1.4; opacity:.8; }
   .fcard { cursor:default; } .fcard .cone { margin-bottom:8px; } .fcard .chips { margin-bottom:6px; } .chip.harmchip { background:rgba(217,87,43,.25); color:#ffbf9a; } .freal { font-size:11px; font-style:italic; opacity:.65; line-height:1.4; margin-bottom:9px; }
   .fcard .cgo:disabled { opacity:.4; cursor:default; filter:grayscale(.5); } .fcard.done .cgo { background:#3c5a2e; opacity:.8; }
+  .clhead { margin:2px 0 6px; } .clhead .uh { margin:0; } .clhead small { font-size:11.5px; opacity:.75; }
+  .clstrip { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 10px; margin:0 -2px 12px; overscroll-behavior-x:contain; }
+  .clcard { position:relative; flex:0 0 78%; scroll-snap-align:start; border-radius:12px; overflow:hidden; background:#2d2a36; cursor:pointer; border:1.5px solid rgba(244,230,200,.15); }
+  .clcard.trophy { border-color:#e8b84a; box-shadow:0 0 0 1px rgba(232,184,74,.4); }
+  .clcard img, .clview img { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; }
+  .clnoimg { aspect-ratio:4/3; display:grid; place-items:center; background:linear-gradient(#3a5a6a,#24414e); font-size:13px; opacity:.8; text-transform:capitalize; } .clnoimg.big { border-radius:10px; }
+  .clt { padding:8px 10px 9px; } .clt b { display:block; font-size:13.5px; text-transform:none; } .clt small { font-size:11px; opacity:.75; }
+  .clbadges { position:absolute; top:8px; left:8px; display:flex; gap:5px; } .clbadges span { font-size:9.5px; letter-spacing:.12em; font-weight:800; padding:3px 7px; border-radius:6px; background:rgba(20,16,18,.72); color:#f4e6c8; } .clbadges span.t { background:#e8b84a; color:#2a1e10; } .clbadges span.c { background:rgba(111,160,70,.9); color:#fff; }
+  .clbadges.inline { position:static; margin-top:6px; flex-wrap:wrap; }
+  .clview img { border-radius:10px; } .clvt { margin:10px 2px 6px; } .clvt b { font-size:17px; }
+  .clstats { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; } .clstats div { background:#2d2a36; border-radius:8px; padding:7px 10px; } .clstats span { display:block; font-size:10px; letter-spacing:.1em; text-transform:uppercase; opacity:.6; } .clstats b { font-size:14px; text-transform:none; }
+  .clnote { display:block; margin-top:8px; font-size:11.5px; opacity:.6; }
   .istats { display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 4px; } .istats span { font-size:12px; padding:4px 10px; border-radius:20px; background:rgba(255,255,255,.09); } .istats .r b { color:#ffbf9a; } .istats .g b { color:#cfe8a8; } .istats .b b { color:#9fd0e8; }
   .iwhy { margin:2px 0 10px; font-size:12px; } .iwhy summary { cursor:pointer; opacity:.7; font-size:11.5px; letter-spacing:.04em; } .iwhy small { display:block; margin-top:6px; line-height:1.45; }
   .ihide { display:none; } [data-i-usagewrap] { animation:bpop .4s both; }
