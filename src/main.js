@@ -176,6 +176,16 @@ async function boot() {
   };
   player.events.swing = () => audio.swing();
   player.swimOK = SEASON !== 'winter';
+  // a season turned while you were swimming (or rowing) into one too cold for it: come back on the nearest shore, looking out at the water
+  if (!player.swimOK && waterDepthAt(player.pos.x, player.pos.z) > 0.85) {
+    const ox = player.pos.x, oz = player.pos.z; let best = null;
+    for (let r = 2; r <= 400 && !best; r += 2) for (let a = 0; a < 48; a++) {
+      const an = a / 48 * Math.PI * 2, x = ox + Math.cos(an) * r, z = oz + Math.sin(an) * r;
+      if (waterDepthAt(x, z) > 0.15 || player._blockedAt(x, z)) continue;
+      const d = waterDepthAt(x, z); if (!best || d < best.d) best = { x, z, d };
+    }
+    if (best) { player.teleport(best.x, best.z, Math.atan2(-(ox - best.x), -(oz - best.z)), -0.05); setTimeout(() => ui.toast('The water is too cold to swim now. You are back on the shore.', 4.5), 4500); }
+  }
   player.events.cold = () => ui.toast('Far too cold to swim. The water is just above freezing.', 3.6);
   player.events.stroke = (side) => { audio.dip?.(0.55, side); fx.splash(player.pos.x - Math.sin(player.yaw) * 0.7, lake.level + 0.03, player.pos.z - Math.cos(player.yaw) * 0.7, 3); };
   player.events.breath = () => ui.toast('Out of breath. You kick for the surface.', 2.2);
@@ -527,7 +537,7 @@ async function boot() {
     document.querySelectorAll('#title [data-usage-panel], [data-choices]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-usage-panel]').forEach((e) => e.remove());
     if (!RUN.phaseTwo) document.querySelectorAll('[data-knob-panel]').forEach((e) => e.remove());   // the check-in knob waits for the AI phase
-    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1 2 3 light · Esc menu';
+    const hint = document.getElementById('hint'); if (hint) hint.textContent = 'P phone · Q axe · V camera · B sit · E litter · G plant · M map · 1–4 light · Esc menu';
     if (!RUN.phaseTwo) document.querySelectorAll('[data-phase2]').forEach((e) => e.remove());   // choices arrive with the AI phase
     const place2 = document.getElementById('placeline'); if (place2) place2.textContent = 'Ashland State Park, Massachusetts';
   }
