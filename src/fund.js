@@ -3,7 +3,7 @@
 // figures and how much each one protects the lake are invented for the game.
 //
 // The paradox is the point: the AI use that pays for the fixes is also what lowers the lake.  Enough measures can save
-// the lake outright at Light or Medium use; at Heavy they only slow it, and at Very heavy they cannot keep up.
+// the lake outright at Light or Medium use; above that there is always a leak, however much is installed.
 import { RUN } from './run.js';
 import { PRESSURE } from './pressure.js';
 import { CARE } from './care.js';
@@ -50,7 +50,7 @@ export const MEASURES = [
     gain: 'Wells that push the spring overflow down into the aquifer, and pump it back out in August. Clyde models the aquifer and schedules the wells.',
     real: 'Aquifer storage and recovery is used in Florida, Texas, Arizona and elsewhere to carry wet-season water into dry months.' },
   { id: 'recycled', title: 'Recycled water for the data center\u2019s cooling', w: 0.35, price: 25000, harm: 0.006, kind: 'AI', firm: true,
-    gain: 'Clyde helps the town and the data center over the ridge pipe treated wastewater to its cooling towers, so it stops drawing on the water table. It goes at the cause, so this protection holds at any level of use.',
+    gain: 'Clyde helps the town and the data center over the ridge pipe treated wastewater to its cooling towers, so it stops drawing on the water table. It goes at the cause, so it keeps working at any level of use, though above Medium use the lake still leaks.',
     real: 'Google\u2019s data center in Douglas County, Georgia, has cooled with recycled municipal wastewater since the early 2010s.' },
 ];
 
@@ -82,7 +82,9 @@ export const FUND = {
   /** protection that holds whatever your use (it removes the draw rather than offsetting it) */
   firm() { return this.water(true); },
   /** what actually protects the lake right now */
-  guard() { return Math.min(1, this.water() * this.holds() + this.firm()); },
+  guard() { return Math.min(this.cap(), this.water() * this.holds() + this.firm()); },
+  /** the most any amount of protection can do at your current use: all of it up to Medium, about 60% at Heavy, 30% at Very heavy */
+  cap() { return PRESSURE.cap; },
   refresh() { S().water = this.water(); S().waterFirm = this.firm(); },
   /** how much of that protection holds at your current use: all of it up to Medium, none at Very heavy */
   holds() { return Math.max(0, Math.min(1, 1 - Math.max(0, PRESSURE.target - 0.4) / 0.6)); },

@@ -1,5 +1,6 @@
 // The phone: raise it (P) to check the map and compass, the harm/care gauge, and Clyde.  It borrows the HUD canvases while open.
 import { PRESSURE } from './pressure.js';
+import { woodsDead } from './woods.js';
 import { CARE, fmt$ } from './care.js';
 import { RUN } from './run.js';
 import { JOBS, delegate } from './jobs.js';
@@ -123,7 +124,7 @@ export class Phone {
       if (RUN.phaseTwo || RUN.dev) {
         const cv = this._borrow(this.gauge); cv.style.display = 'block'; cv.style.width = '300px'; cv.style.height = '190px'; body.appendChild(cv);
         const n = document.createElement('div'); n.className = 'bubble';
-        n.innerHTML = `Harm <b>${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%.<br>Care <b>${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative), ${CARE.built.length} built.`;
+        n.innerHTML = `Harm <b>${Math.round(PRESSURE.harm * 100)}%</b>: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, ${Math.round(woodsDead() * 100)}% of the trees standing dead (at 80% for long, the woods are lost).<br>Care <b>${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative), ${CARE.built.length} built.`;
         body.appendChild(n);
       } else { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Nothing to measure yet. The park is just the park.'; body.appendChild(n); }
     } else if (tab === 'guide') {
@@ -248,7 +249,7 @@ export class Phone {
     const W = FUND.water(), F = FUND.firm(), G = FUND.guard(), holds = FUND.holds(), lv = Usage.level(), lvName = lv === null ? 'not set' : LEVELS[Math.round(lv)].name;
     const lake = document.createElement('div'); lake.className = 'flake';
     lake.innerHTML = `<div class="fl1"><span>Lake protection</span><b>${Math.round(G * 100)}%</b></div><i><u style="width:${Math.min(1, W + F) * 100}%"></u><s style="width:${G * 100}%"></s></i>
-      <small>${Math.round(Math.min(1, W + F) * 100)}% installed${F ? ` (${Math.round(F * 100)}% of it holds at any use)` : ''}. ${holds >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : holds <= 0.001 ? `At ${lvName} use none of it holds: the lake drops faster than any of this can keep up.` : `At ${lvName} use only ${Math.round(holds * 100)}% of it holds. Ease off and it all works.`}</small>`;
+      <small>${Math.round(Math.min(1, W + F) * 100)}% installed${F ? ` (${Math.round(F * 100)}% of it works at any use)` : ''}. ${FUND.cap() >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : `At ${lvName} use the lake leaks whatever is installed: protection can cover at most ${Math.round(FUND.cap() * 100)}% of the drop${holds < 0.999 ? `, and only ${Math.round(holds * 100)}% of the offsetting measures hold` : ''}. Ease off to Medium and enough of it saves the lake.`}</small>`;
     body.appendChild(lake);
     const sect = (t) => { const h = document.createElement('div'); h.className = 'uh'; h.style.margin = '16px 0 4px'; h.textContent = t; body.appendChild(h); };
     const card = (kind, title, lines, price, done, onBuy) => {

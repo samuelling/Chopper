@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
+import { woodsDead } from './woods.js';
 import { initUsageUI } from './usageui.js';
 import { creditsHTML, rollCredits } from './ending.js';
 import { Minimap } from './minimap.js';
@@ -729,6 +730,7 @@ async function boot() {
     ui.els.paused.classList.add('hidden'); ui.els.hud.classList.remove('on'); document.getElementById('interlude')?.classList.add('hidden');
     player.setCarry?.('none'); player.carryHidden = true; player.refreshCarry();
     if (kind === 'drained') { PRESSURE.damage = 1; RUN.s.buffer = 0; lake.level = lake.floor + 0.02; lake.drained = true; }
+    if (kind === 'silent' && PRESSURE.damage < 0.55) PRESSURE.damage = 0.55;     // (only when forced with ?end=silent: show the woods it describes)
     flyover.start(); flyover.speed = kind === 'drained' ? 10 : 8;
     const stats = endStats();
     rollCredits(document.getElementById('credits'), creditsHTML(kind, stats), {
@@ -749,7 +751,19 @@ async function boot() {
     if (!RUN.s.collapse && maxT > 60) { RUN.s.collapse = true; RUN.save(); ui.toast('The reservoir is draining for good.', 6); }
     if (RUN.s.collapse) lake.level = Math.max(lake.floor + 0.02, lake.level - 0.1 * dt);
     if (lake.level <= lake.floor + 0.05 && (lake.drained || RUN.s.collapse)) { lake._endT = (lake._endT || 0) + dt; if (lake._endT > 5) beginEnding('drained'); } else lake._endT = 0;
+    if (ending) return;
+    // the woods give out: four in five of the park's trees standing dead (and with them about half the wildlife) for a
+    // minute. Water measures do not help here; replanting, early warning and easing off do.
+    if ((woodsT += dt) > 2) {
+      woodsT = 0; const dead = woodsDead();
+      if (!woodsWarned && dead >= 0.65) { woodsWarned = true; ui.toast(`About ${Math.round(dead * 100)}% of the park's trees are standing dead, and the woods are going quiet. If use stays this high, they won't come back.`, 7); }
+      if (dead < 0.5) woodsWarned = false;
+      if (dead >= 0.8) { if (!woodsDying) { woodsDying = true; ui.toast('The woods are dying for good.', 5); } } else woodsDying = false;
+      woodsHold = woodsDying ? woodsHold + 2 : 0;
+      if (woodsHold > 60) beginEnding('silent');
+    }
   }
+  let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0;
   function beginInterlude() {
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };

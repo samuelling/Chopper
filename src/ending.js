@@ -16,6 +16,10 @@ export function creditsHTML(kind, st) {
       ['', st.harm < 0.2 ? 'The park is in good shape. The birds will be loud in May.' : st.harm < 0.6 ? "The park is thinner than when you first came. It's still a good place to walk." : "The park is worn. It's still here."],
       ...(st.lake == null ? [] : [['', st.lake > 0.95 ? (st.measures ? 'The reservoir is full. The measures held.' : 'The reservoir is full.') : `The reservoir is at about ${Math.round(st.lake * 100)}%.`]]),
       ['', 'Someone else will walk it next.']);
+  } else if (kind === 'silent') {
+    blocks.push(['', 'The woods have gone quiet.'], ['', 'Most of the trees around the water are standing dead, and the birds, the deer and the frogs have mostly gone.'],
+      ...(st.lake == null ? [] : [['', st.lake > 0.95 ? 'The reservoir is full. The water was saved; the woods were not.' : `The reservoir is at about ${Math.round(st.lake * 100)}%.`]]),
+      ['', "This isn't a forecast for any real place. It's what this game does when the cost keeps going unpaid."]);
   } else {
     blocks.push(['', 'The reservoir is empty.'], ['', 'The herons and turtles have moved on, and the bass with them.'],
       ['', "This isn't a forecast for any real place. It's what this game does when the cost keeps going unpaid."]);
@@ -33,7 +37,7 @@ export function creditsHTML(kind, st) {
     '<div class="gap"></div>', '<h2>The real part</h2>',
     '<p>Map and trails: OpenStreetMap contributors</p><p>Hills: USGS 3DEP lidar</p><p>Forest cover: NLCD 2021</p><p>Lake depth: MassWildlife and MassGIS</p>',
     '<div class="gap"></div>', '<h2>The invented part</h2>',
-    '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake.</p>',
+    '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake or of the woods.</p>',
     '<p>The coves, points, hills and swamps by name, the beaver lodge, the osprey nest, the sunken skiff and the old road under the water, the leads and who gives them, the park\u2019s page and what it pays.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',

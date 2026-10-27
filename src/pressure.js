@@ -35,7 +35,10 @@ export const PRESSURE = {
   get life() { return 1 - 0.9 * this.harm; },            // share of wildlife that still shows up
   // water measures bought from the park fund (fund.js keeps RUN.s.water up to date) protect the lake, fully up to Medium
   // use, less at Heavy, not at all at Very heavy
-  get guard() { return Math.min(1, Math.min(1, RUN.s.water || 0) * clamp01(1 - Math.max(0, this.target - 0.4) / 0.6) + (RUN.s.waterFirm || 0)); },   // waterFirm: measures that hold at any use
+  // waterFirm: measures that keep working at any use.  Above Medium use there is always a leak: protection can cover at most
+  // about 60% of the drop at Heavy and 30% at Very heavy, however much is installed
+  get cap() { return 1 - 0.7 * clamp01((this.target - 0.4) / 0.6); },
+  get guard() { return Math.min(this.cap, Math.min(1, RUN.s.water || 0) * clamp01(1 - Math.max(0, this.target - 0.4) / 0.6) + (RUN.s.waterFirm || 0)); },
   get drop() { return 0.55 * this.harm * (1 - this.guard); },   // fraction of the reservoir's depth held back
   get dropLasting() { return 0.55 * this.damage * (1 - this.guard); },   // the same without upkeep's softening: what decides whether the lake gives out
   get saturate() { return 1 - 0.55 * this.harm; },        // colour vibrancy
