@@ -204,6 +204,7 @@
   .compass { text-align:center; font-size:13px; letter-spacing:.14em; margin:2px 0 6px; opacity:.85; }
   .fsbtn { margin-top:14px; padding:6px 16px; border:2px solid rgba(244,230,200,.6); border-radius:6px; font-size:14px; letter-spacing:.1em; cursor:pointer; pointer-events:auto; }
   .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
+  #bMenu { right:max(122px, calc(env(safe-area-inset-right) + 114px)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:19px; letter-spacing:0; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
   #rotate { display:none; position:fixed; inset:0; z-index:30; background:#1c1517; color:var(--paper); text-align:center; align-items:center; justify-content:center; font-size:20px; padding:30px; }
   @media (orientation: portrait) { body.mobile #rotate { display:flex; } }
@@ -243,7 +244,7 @@
     <kbd>M</kbd> map &nbsp; <kbd>H</kbd> hide dashboard &nbsp; <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> time of day &nbsp; <kbd>F</kbd> fullscreen<span data-phase2> &nbsp; <kbd>C</kbd> make choices</span>
   </div>
   <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone: Share &rarr; Add to Home Screen, then open Ashland from there.</div>
-  <div class="controls only-mobile">Left thumb: walk (push far to hurry)<br>Drag the right side: look around<br>SWING chops · HOP jumps<br>The sun button changes the light</div>
+  <div class="controls only-mobile">Left thumb: walk (push to the edge to hurry)<br>Drag the right side: look around<br>Big button: swing, cast and reel, or shoot in camera mode &middot; HOP jumps (hold to dive)<br>USE: boat, gate &middot; PHONE: map, camera, Tools (rod, sit, litter, seeds, map)<br>&#9776; this menu &middot; the sun button changes the light</div>
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
 
@@ -252,7 +253,7 @@
 <div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>
 <div id="phone" class="overlay hidden"></div>
-<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px">Click to resume</div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="fsbtn" data-skip2>Testing: jump to just before Year Two</div><div class="controls only-desktop" style="margin-top:18px">
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen (F)</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="fsbtn" data-skip2>Testing: jump to just before Year Two</div><div class="controls only-desktop" style="margin-top:18px">
     <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &nbsp; <kbd>Shift</kbd> hurry &nbsp; <kbd>Space</kbd> hop (hold to dive in deep water) &nbsp; <kbd>Mouse</kbd> look &nbsp; <kbd>Esc</kbd> menu<br>
     <kbd>P</kbd> raise the phone &nbsp; <kbd>Q</kbd> phone / axe / fishing rod / empty hands &nbsp; <kbd>Click</kbd> swing the axe, or cast and reel the rod<br>
     <kbd>V</kbd> camera (click to photograph) &nbsp; <kbd>B</kbd> sit and wait &nbsp; <kbd>E</kbd> pick up litter (at the dam gatehouse: work the gate; at the boat: get in or out) &nbsp; <kbd>G</kbd> plant a seed &nbsp; <kbd>W</kbd><kbd>S</kbd> row <kbd>A</kbd><kbd>D</kbd> turn (in the boat)<br>
@@ -273,7 +274,7 @@
 </div>
 <div id="underwater"><i></i></div>
 <div id="touch"><div id="stick"><i></i></div>
-  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
+  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse">Use</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bMenu">&#9776;</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
 <div id="turnup"><div class="tphone"></div><div data-turn-msg>Turn your phone upright to use it</div><small data-turn-sub>Turn it back to put it away</small><button class="tgo" data-turn-away>Put it away</button></div>
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>

@@ -274,7 +274,7 @@ async function boot() {
     started = true; flyover.stop();
     if (MOBILE) {
       player.locked = true;
-      ui.els.title.classList.add('hidden');
+      ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden');
       ui.els.hud.classList.add('on');
       touch.show();
     } else renderer.domElement.requestPointerLock?.();
@@ -367,6 +367,7 @@ async function boot() {
   };
   const touch = new TouchControls(player, {
     onUse: () => player.events.interact?.(), onMood: () => setMood((mood + 1) % PRESETS.length),
+    onMenu: () => { if (started && !interludeOn) openMenu(); },
     onPhone: () => { if (!started || interludeOn) return; if (player.cameraMode) setCameraMode(false); else togglePhone(); },
     onSwing: (down) => {                                                    // the one big button: swing, cast and reel, or shutter
       if (!started || interludeOn || phone.isOpen) return;
@@ -444,6 +445,12 @@ async function boot() {
   birthIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') finishBirth(); });
   ui.els.title.addEventListener('click', () => { if (!RUN.dev && RUN.s.born == null) { birthEl.hidden = false; birthIn.focus(); return; } enter(); });
   ui.els.paused.addEventListener('click', begin);
+  // the pause menu by hand (Esc does it on desktop by releasing the mouse); on a touch screen the game's touch layer steps aside so the menu takes taps and scrolls
+  function openMenu() {
+    document.exitPointerLock?.();
+    if (MOBILE) { player.locked = false; player.touch.x = player.touch.y = 0; touch.root.classList.remove('on'); }
+    ui.els.paused.classList.remove('hidden'); ui.els.paused.scrollTop = 0;
+  }
   addEventListener('keydown', (e) => {
     if (e.code === 'Digit1') setMood(0);
     if (e.code === 'Digit2') setMood(1);
@@ -469,7 +476,7 @@ async function boot() {
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
-      map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); document.exitPointerLock?.(); ui.els.paused.classList.remove('hidden'); } },
+      map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
     onOpen: () => { phoneOn = true; tut.phoned = true; phone._upright = matchMedia('(orientation: portrait)').matches; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   const togglePhone = () => {

@@ -1,13 +1,13 @@
 // On-screen controls: left-thumb joystick, drag the rest of the screen to look, buttons.
 export class TouchControls {
-  constructor(player, { onUse, onMood, onPhone, onSwing }) {
+  constructor(player, { onUse, onMood, onPhone, onSwing, onMenu }) {
     this.player = player;
     this.root = document.getElementById('touch');
     this.stick = document.getElementById('stick');
     this.knob = this.stick.querySelector('i');
     this.look = null;           // {id, x, y}
     this.joy = null;            // {id, cx, cy}
-    this.onUse = onUse; this.onMood = onMood; this.onPhone = onPhone; this.onSwing = onSwing;
+    this.onUse = onUse; this.onMood = onMood; this.onPhone = onPhone; this.onSwing = onSwing; this.onMenu = onMenu;
     const opts = { passive: false };
     const find = (e, id) => [...e.changedTouches].find((t) => t.identifier === id);
     addEventListener('touchstart', (e) => {
@@ -68,6 +68,7 @@ export class TouchControls {
     btn.classList.add('on');
     if (btn.id === 'bSwing') this.onSwing ? this.onSwing(true) : this.player.startSwing();
     else if (btn.id === 'bPhone') this.onPhone?.();
+    else if (btn.id === 'bMenu') this.onMenu?.();
     else if (btn.id === 'bHop') { this.player._jump(); this.player.keys.Space = true; }
     else if (btn.id === 'bUse') this.onUse?.();
     else if (btn.id === 'bMood') this.onMood?.();
