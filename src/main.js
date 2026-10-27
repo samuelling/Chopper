@@ -12,6 +12,7 @@ import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
 import { showInterlude } from './interlude.js';
+import { FUND } from './fund.js';
 import { mulberry32, clamp } from './noise.js';
 import { LEVEL, SPAWN, DAM_Z, WORLD, BEACH, RAMP, DAM_HALF } from './ashland.js';
 import { wetlandAt } from './ashland_wetlands.js';
@@ -482,7 +483,7 @@ async function boot() {
   const jobQueue = [];
   const discoveries = new Discoveries(scene, chunks);
   discoveries.onFound = (it, k) => ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5);
-  const phone = new Phone({ discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+  const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; ui.toast(player.sitting ? 'You sit. Wait, and watch. Any step stands you up.' : 'You stand.', 2.2); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
@@ -566,7 +567,7 @@ async function boot() {
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
     fish: RUN.s.fish || 0, species: Object.keys(GUIDE.d).length, photos: GUIDE.photos.length, places: PLACES.list.length, ruins: discoveries.foundList().length, built: CARE.built.length,
-    harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours,
+    harm: PRESSURE.damage, care: CARE.value, hours: CARE.hours, measures: Object.keys(RUN.s.measures || {}).length, lake: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1),
   });
   function beginEnding(kind) {
     if (ending) return; ending = true;
@@ -586,10 +587,11 @@ async function boot() {
   let maxT = 0, warned = false;
   function checkEndings(dt) {
     if (ending || RUN.dev || !started) return;
-    // the reservoir gives out: harm held at its limit for a minute, and it empties for good
-    if (PRESSURE.damage >= 0.995) maxT += dt; else maxT = 0;
-    if (!warned && PRESSURE.damage >= 0.9) { warned = true; ui.toast("The reservoir is getting low. If use stays this high, it won't refill.", 6); }
-    if (PRESSURE.damage < 0.8) warned = false;
+    // the reservoir gives out: the lake held at half its depth or lower for a minute, and it empties for good.
+    // (harm alone is not enough: water measures from the park fund can keep a harmed park's lake up)
+    if (PRESSURE.dropLasting >= 0.5) maxT += dt; else maxT = 0;
+    if (!warned && PRESSURE.dropLasting >= 0.45) { warned = true; ui.toast("The reservoir is getting low. If use stays this high, it won't refill.", 6); }
+    if (PRESSURE.dropLasting < 0.38) warned = false;
     if (!RUN.s.collapse && maxT > 60) { RUN.s.collapse = true; RUN.save(); ui.toast('The reservoir is draining for good.', 6); }
     if (RUN.s.collapse) lake.level = Math.max(lake.floor + 0.02, lake.level - 0.1 * dt);
     if (lake.level <= lake.floor + 0.05 && (lake.drained || RUN.s.collapse)) { lake._endT = (lake._endT || 0) + dt; if (lake._endT > 5) beginEnding('drained'); } else lake._endT = 0;
@@ -719,7 +721,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
-    fishing.update(dt, { life: PRESSURE.life, full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
+    fishing.update(dt, { life: PRESSURE.life * (FUND.has('shade') ? 0.7 : 1), full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
     { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
       const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }

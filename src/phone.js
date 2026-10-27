@@ -6,6 +6,8 @@ import { JOBS, delegate } from './jobs.js';
 import { GUIDE, ENTRIES, BY_ID } from './guide.js';
 import { mountHudPanel } from './hud.js';
 import { PLACES, JOURNAL } from './places.js';
+import { FUND, SUPPLIES, MEASURES } from './fund.js';
+import { Usage, LEVELS } from './usage.js';
 
 const ic = (d, extra = '') => `<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
 const APPS = [
@@ -15,6 +17,7 @@ const APPS = [
   { id: 'status', name: 'Park', bg: 'linear-gradient(#e0884a,#b24a34)', svg: ic('<path d="M8 33a16 16 0 0132 0"/><path d="M24 33l8-11"/>', '<circle cx="24" cy="33" r="2.5" fill="#fff"/>') },
   { id: 'guide', name: 'Field Guide', bg: 'linear-gradient(#8fbf5a,#4f8a3a)', svg: ic('<path d="M10 38C10 20 22 9 40 9c0 18-11 30-30 29z"/><path d="M10 38C18 28 26 21 33 17"/>') },
   { id: 'jobs', name: 'Park Jobs', bg: 'linear-gradient(#7a8ea8,#455a78)', svg: ic('<rect x="8" y="16" width="32" height="22" rx="4"/><path d="M18 16v-4a3 3 0 013-3h6a3 3 0 013 3v4M8 26h32"/>') },
+  { id: 'fund', name: 'Park Fund', bg: 'linear-gradient(#5fb08a,#2f7a5e)', svg: ic('<path d="M24 8v32"/><path d="M31 15c-2-3-5-4-8-4-4 0-7 2-7 6s3 5 8 6 8 3 8 7-3 6-8 6c-4 0-7-1-9-4"/>') },
   { id: 'tools', name: 'Tools', bg: 'linear-gradient(#6fa3b8,#3b6f8a)', svg: ic('<path d="M30 9a9 9 0 00-8 12L9 34a3.5 3.5 0 005 5l13-13a9 9 0 0012-8l-6 6-5-1-1-5z"/>') },
   { id: 'settings', name: 'Settings', bg: 'linear-gradient(#9a9aa3,#5d5d68)', svg: ic('<circle cx="24" cy="24" r="6"/><path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4"/>') },
 ];
@@ -27,8 +30,8 @@ const DOCK = [
 const ALL = [...APPS, ...DOCK];
 const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export class Phone {
-  constructor({ discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
-    Object.assign(this, { discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
+  constructor({ fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose }) {
+    Object.assign(this, { fundCtx, discoveries, setWaypoint, onCamera, actions, audio, el, player, minimap, gauge, jobCtx, onOpen, onClose, isOpen: false, tab: 'map' });
     el.addEventListener('click', (e) => { if (e.target === el) this.close(); });
     addEventListener('keydown', (e) => { if (this.isOpen && this.tab === 'photos') this._key?.(e); });
   }
@@ -84,6 +87,8 @@ export class Phone {
       const w = document.createElement('div'); w.style.cssText = 'text-align:center;padding-top:10px';
       w.innerHTML = `<div data-compass style="font-size:30px;font-weight:700;margin-bottom:14px"></div><div style="position:relative;width:240px;height:240px;margin:0 auto"><div data-dial style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(244,230,200,.6);background:#25222c"><b style="position:absolute;left:50%;top:6px;transform:translateX(-50%);color:#e0412e">N</b><b style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%)">S</b><b style="position:absolute;top:50%;left:10px;transform:translateY(-50%)">W</b><b style="position:absolute;top:50%;right:10px;transform:translateY(-50%)">E</b></div><div style="position:absolute;left:50%;top:-12px;width:0;height:0;border:9px solid transparent;border-bottom:16px solid #ffd9a0;transform:translateX(-50%)"></div></div><div class="bubble" style="margin-top:22px">North is on the dial. The dam is south of the lake, the beach is on the east shore.</div>`;
       body.appendChild(w);
+    } else if (tab === 'fund') {
+      this._fund(body);
     } else if (tab === 'tools') {
       // everything the keyboard does that a touch screen has no key for (also handy with a keyboard)
       const A = this.actions, p = this.player;
@@ -96,7 +101,7 @@ export class Phone {
       h('Out in the park');
       mk(p.sitting ? 'Stand up' : 'Sit and wait', 'Stay still and the park carries on around you. Any step stands you up.', () => A.sit());
       mk('Pick up litter', 'Whatever is within reach.', () => A.pickUp());
-      mk('Plant a seed', 'Where you stand, if the ground will take it.', () => A.plant());
+      mk((RUN.s.saplingStock || 0) > 0 ? 'Plant a sapling' : 'Plant a seed', `In front of you. You have ${RUN.s.saplingStock || 0} saplings and ${RUN.s.seeds || 0} seeds; the Park Fund app sells more.`, () => A.plant());
       mk('On-screen map', 'Cycles: off, corner, bigger.', () => A.map(), true);
       if (A.phaseTwo()) mk('Choices', 'The harm-and-care choices, the check-in.', () => A.choices());
       const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'Camera and Map are on the home screen. Use climbs in and out of the boat and works the gate.'; body.appendChild(n);
@@ -150,6 +155,37 @@ export class Phone {
       body.appendChild(n);
     }
     this.update();
+  }
+  /** Park Fund: what AI help has saved the park, to spend on seeds, saplings and the lake */
+  _fund(body) {
+    body.innerHTML = '';
+    const live = RUN.phaseTwo || RUN.dev, fmt = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
+    const top = document.createElement('div'); top.className = 'fundtop';
+    top.innerHTML = `<div class="fbal">${fmt(FUND.balance)}</div><small>Money the park keeps because of the help you asked for: grants written, hours saved, timber sold, and each season's dividend from your AI use. Figures are invented.</small>`;
+    body.appendChild(top);
+    if (!live) { const n = document.createElement('div'); n.className = 'bubble'; n.textContent = 'The fund opens when Clyde does, after your first year here.'; body.appendChild(n); return; }
+    const W = FUND.water(), holds = FUND.holds(), lv = Usage.level(), lvName = lv === null ? 'not set' : LEVELS[Math.round(lv)].name;
+    const lake = document.createElement('div'); lake.className = 'flake';
+    lake.innerHTML = `<div class="fl1"><span>Lake protection</span><b>${Math.round(W * holds * 100)}%</b></div><i><u style="width:${W * 100}%"></u><s style="width:${W * holds * 100}%"></s></i>
+      <small>${Math.round(W * 100)}% installed. ${holds >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : holds <= 0.001 ? `At ${lvName} use none of it holds: the lake drops faster than any of this can keep up.` : `At ${lvName} use only ${Math.round(holds * 100)}% of it holds. Ease off and it all works.`}</small>`;
+    body.appendChild(lake);
+    const sect = (t) => { const h = document.createElement('div'); h.className = 'uh'; h.style.margin = '16px 0 4px'; h.textContent = t; body.appendChild(h); };
+    const card = (kind, title, lines, price, done, onBuy) => {
+      const c = document.createElement('div'); c.className = `ccard fcard ${kind === 'AI' ? 'ai' : 'park'}${done ? ' done' : ''}`;
+      c.innerHTML = `<div class="ctop"><span class="ctag">${kind === 'AI' ? 'AI' : 'PARK'}</span><b>${title}</b></div>${lines}<button class="cgo" ${done || FUND.balance < price ? 'disabled' : ''}>${done ? 'Installed' : `Buy \u00b7 ${fmt(price)}`}</button>`;
+      c.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); if (done || FUND.balance < price) return; const r = onBuy(); this.fundCtx?.toast?.(r.msg, 3.2); this._fund(body); });
+      body.appendChild(c);
+    };
+    sect('To plant');
+    const p = this.player;
+    for (const it of SUPPLIES) card('Park', it.title, `<div class="cone">${it.gain}</div>`, it.price, false, () => FUND.buySupply(it.id));
+    const have = document.createElement('small'); have.style.cssText = 'display:block;opacity:.7;margin:2px 2px 0'; have.textContent = `In your pocket: ${RUN.s.seeds || 0} seeds, ${RUN.s.saplingStock || 0} saplings. Planted so far: ${RUN.s.planted || 0}.`; body.appendChild(have);
+    sect('For the lake');
+    for (const m of MEASURES) {
+      const lines = `<div class="cone">${m.gain}</div><div class="chips"><span class="chip fx">+${Math.round(m.w * 100)}% lake protection${m.delay ? ' (from next season)' : ''}</span>${m.harm ? `<span class="chip harmchip">+${(m.harm * 100).toFixed(1)}% harm</span>` : ''}</div><div class="freal">${m.real}</div>`;
+      card(m.kind, m.title, lines, m.price, FUND.has(m.id), () => FUND.buyMeasure(m.id, this.fundCtx));
+    }
+    const n = document.createElement('small'); n.style.cssText = 'display:block;opacity:.6;margin:12px 2px 0;line-height:1.45'; n.textContent = 'The practices are real. What each one does to this lake, and what it costs, is invented for the game.'; body.appendChild(n);
   }
   /** Places: names you give to spots, for you only (not official), plus the ruins you have found */
   _places(body) {

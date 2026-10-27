@@ -12,6 +12,7 @@ export function creditsHTML(kind, st) {
   if (kind === 'life') {
     blocks.push(['', `You walked here for ${plural(st.years, 'year')}${span}.`],
       ['', st.harm < 0.2 ? 'The park is in good shape. The birds will be loud in May.' : st.harm < 0.6 ? "The park is thinner than when you first came. It's still a good place to walk." : "The park is worn. It's still here."],
+      ...(st.lake == null ? [] : [['', st.lake > 0.95 ? (st.measures ? 'The reservoir is full. The measures held.' : 'The reservoir is full.') : `The reservoir is at about ${Math.round(st.lake * 100)}%.`]]),
       ['', 'Someone else will walk it next.']);
   } else {
     blocks.push(['', 'The reservoir is empty.'], ['', 'The herons and turtles have moved on, and the bass with them.'],
@@ -20,7 +21,7 @@ export function creditsHTML(kind, st) {
   const mine = [];
   const add = (n, a, b) => { if (n > 0) mine.push(plural(n, a, b)); };
   add(st.years, 'year played', 'years played'); add(st.felled, 'tree felled', 'trees felled'); add(st.planted, 'seed planted', 'seeds planted'); add(st.litter, 'piece of litter picked up', 'pieces of litter picked up');
-  add(st.fish, 'fish caught and let go', 'fish caught and let go'); add(st.species, 'species in your guide', 'species in your guide'); add(st.photos, 'photo', 'photos'); add(st.places, 'place named', 'places named'); add(st.ruins, 'ruin found', 'ruins found'); add(st.built, 'thing built', 'things built');
+  add(st.fish, 'fish caught and let go', 'fish caught and let go'); add(st.species, 'species in your guide', 'species in your guide'); add(st.photos, 'photo', 'photos'); add(st.places, 'place named', 'places named'); add(st.ruins, 'ruin found', 'ruins found'); add(st.built, 'thing built', 'things built'); add(st.measures, 'water measure installed', 'water measures installed');
   const ledger = `Harm ${Math.round(st.harm * 100)}% · Care ${Math.round(st.care * 100)}%${st.hours ? ` · ${Math.round(st.hours)} staff hours freed (invented figure)` : ''}`;
   const parts = [
     ...blocks.map(([h, t]) => `<p class="big">${esc(t)}</p>`),

@@ -16,6 +16,6 @@ export const CARE = {
   get built() { return S().built; },
   get sightings() { return S().sightings; },
   add(x) { S().care = clamp01(S().care + x); },
-  gain({ care = 0, saved = 0, hours = 0, shield = 0, recover = 0, buffer = 0 }) { this.add(care); S().saved += saved; S().hours += hours; S().shield = Math.min(0.6, S().shield + shield); S().recover = Math.min(2, S().recover + recover); S().buffer = Math.min(0.4, S().buffer + buffer); },
+  gain({ care = 0, saved = 0, hours = 0, shield = 0, recover = 0, buffer = 0 }) { this.add(care); S().saved += saved; S().fund = (S().fund || 0) + saved; S().hours += hours; S().shield = Math.min(0.6, S().shield + shield); S().recover = Math.min(2, S().recover + recover); S().buffer = Math.min(0.4, S().buffer + buffer); },
 };
 export const fmt$ = (n) => `$${Math.round(n).toLocaleString('en-US')}`;

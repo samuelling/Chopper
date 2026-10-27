@@ -33,7 +33,11 @@ export const PRESSURE = {
   get harm() { return this.damage * (1 - Math.min(0.4, RUN.s.buffer || 0)); },
   // the effects (all exaggerated on purpose)
   get life() { return 1 - 0.9 * this.harm; },            // share of wildlife that still shows up
-  get drop() { return 0.55 * this.harm; },                // fraction of the reservoir's depth held back
+  // water measures bought from the park fund (fund.js keeps RUN.s.water up to date) protect the lake, fully up to Medium
+  // use, less at Heavy, not at all at Very heavy
+  get guard() { return Math.min(1, RUN.s.water || 0) * clamp01(1 - Math.max(0, this.target - 0.4) / 0.6); },
+  get drop() { return 0.55 * this.harm * (1 - this.guard); },   // fraction of the reservoir's depth held back
+  get dropLasting() { return 0.55 * this.damage * (1 - this.guard); },   // the same without upkeep's softening: what decides whether the lake gives out
   get saturate() { return 1 - 0.55 * this.harm; },        // colour vibrancy
   get bright() { return 1 - 0.08 * this.harm; },
 };

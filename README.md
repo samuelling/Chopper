@@ -130,3 +130,10 @@ The phone button (top right) raises the in-game phone; turn the device upright a
 
 ### Choices
 Each of Clyde's options is a card: a one-line summary and two bars, care gained and lasting harm, each scaled across the options on screen so they compare at a glance (the exact figures sit beside the bars). Tap a card to see the detail (staff hours, illustrative dollars, side effects) and the button that commits.
+
+### The park fund (Year Two on)
+What AI help saves the park becomes a fund you can spend in the phone's **Park Fund** app: each choice's dollar figure, timber sold, and a per-season **dividend** that grows with your AI footprint (none, light, medium, heavy, very heavy: $0 / 1,500 / 4,000 / 7,000 / 9,000). It buys:
+- **Seeds** (a sack of 25) and **nursery saplings** (8, three seasons along). G plants saplings first, then seeds. Every tree planted adds a little care and speeds the park's healing.
+- **Five lake measures**, each a real practice: replanting the shoreline (riparian buffer; also plants a strip of young trees along the water near you), beaver dam analogs on the brooks, acoustic leak detection in the town mains, forecast-informed gate operations (Lake Mendocino stored about 20% more water this way in 2020), and a shade-ball cover (pays back only from the next season, costs harm up front, and fish bite less under it, after the MIT-led study of LA's shade balls). The AI-built ones cost a little harm too.
+
+Together they add up to **lake protection** (0-100%), which reduces how much the harm lowers the reservoir. It holds fully at Light or Medium use, so enough of it saves the lake outright; at Heavy only part of it holds, and at Very heavy none does. The reservoir ending now follows the lake itself (held at half its depth for a minute), not harm alone. The practices are real; their dollar costs and effects on this lake are invented.

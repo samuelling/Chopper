@@ -6,6 +6,7 @@ import { Usage, LEVELS } from './usage.js';
 import { renderChoices, pickChoices } from './choices.js';
 import { CARE, fmt$ } from './care.js';
 import { SEASON_DEF } from './season.js';
+import { FUND } from './fund.js';
 
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const PULSE = 0.12;                    // lasting harm added at each interlude, scaled by your footprint level
@@ -46,7 +47,7 @@ export function showInterlude(el, ctx, onContinue) {
     <div class="phone clyde">${pbar(false)}${decide}</div>`;
   const text = el.querySelector('[data-i-text]');
   text.textContent = first
-    ? 'Thank you. Now pick one thing for the park. Each card shows what it gives and what it costs before you commit.'
+    ? 'Thank you. Now pick one thing for the park. Each card shows what it gives and what it costs before you commit. What I save the park goes into a fund: spend it in the Park Fund app on your phone, on trees to plant and on ways to keep water in the lake.'
     : 'The season turned. Here is what the park carries from what you did and what you asked of me. Pick one thing.';
   if (first) {
     const steps = [...el.querySelectorAll('.istep')], dots = [...el.querySelectorAll('.idots i')];
@@ -86,7 +87,8 @@ export function showInterlude(el, ctx, onContinue) {
     const l = Usage.level(); if (l === null) { changes.innerHTML = ''; return; }
     const lv = LEVELS[Math.round(l)].name;
     const p = PULSE * LEVELS[Math.round(l)].p;
-    changes.innerHTML = `<div class="istats"><span>Footprint <b>${lv}</b></span><span class="r">This turn <b>+${(p * 100).toFixed(1)}%</b> harm</span><span class="r">Harm <b>${Math.round(PRESSURE.harm * 100)}%</b></span><span class="g">Care <b>${Math.round(CARE.value * 100)}%</b></span></div><details class="iwhy"><summary>What that means</summary><small>Your footprint: <b>${lv}</b>. This turn adds ${(p * 100).toFixed(1)}% lasting harm, and the park keeps taking harm while you play at this level (${Math.round(CARE.shield * 100)}% slower thanks to early warning). <b>Harm ${Math.round(PRESSURE.harm * 100)}%</b>${CARE.buffer > 0 ? ` (lasting ${Math.round(PRESSURE.damage * 100)}%, softened by upkeep)` : ''}${CARE.recover > 0 ? `, healing ${(1 + CARE.recover).toFixed(2).replace(/\.?0+$/, '')}x faster` : ''}: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, colour at ${Math.round(PRESSURE.saturate * 100)}%. <b>Care ${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative, invented figures), ${CARE.built.length} thing${CARE.built.length === 1 ? '' : 's'} built.</small></details>`;
+    const div = FUND.dividend(), fmt = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
+    changes.innerHTML = `<div class="istats"><span>Footprint <b>${lv}</b></span><span class="r">This turn <b>+${(p * 100).toFixed(1)}%</b> harm</span><span class="r">Harm <b>${Math.round(PRESSURE.harm * 100)}%</b></span><span class="g">Care <b>${Math.round(CARE.value * 100)}%</b></span><span class="g">Fund <b>${fmt(FUND.balance)}</b>${div ? ` (+${fmt(div)} this season)` : ''}</span><span class="b">Lake protection <b>${Math.round(FUND.water() * FUND.holds() * 100)}%</b></span></div><details class="iwhy"><summary>What that means</summary><small>Your footprint: <b>${lv}</b>. This turn adds ${(p * 100).toFixed(1)}% lasting harm, and the park keeps taking harm while you play at this level (${Math.round(CARE.shield * 100)}% slower thanks to early warning). <b>Harm ${Math.round(PRESSURE.harm * 100)}%</b>${CARE.buffer > 0 ? ` (lasting ${Math.round(PRESSURE.damage * 100)}%, softened by upkeep)` : ''}${CARE.recover > 0 ? `, healing ${(1 + CARE.recover).toFixed(2).replace(/\.?0+$/, '')}x faster` : ''}: lake held ${Math.round(PRESSURE.drop * 100)}% lower, wildlife at ${Math.round(PRESSURE.life * 100)}%, colour at ${Math.round(PRESSURE.saturate * 100)}%. <b>Care ${Math.round(CARE.value * 100)}%</b>: ${Math.round(CARE.hours)} staff hours freed, about ${fmt$(CARE.saved)} saved (illustrative, invented figures), ${CARE.built.length} thing${CARE.built.length === 1 ? '' : 's'} built.</small></details>`;
   };
   if (need) {
     const mount = el.querySelector('[data-usage-panel2]'); mount.setAttribute('data-usage-panel', '');

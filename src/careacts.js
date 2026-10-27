@@ -33,7 +33,7 @@ export class CareActs {
     const S = RUN.s; S.litterGone ||= []; S.seeds ||= 0; S.saplings ||= []; S.planted ||= 0;
     this.gone = new Set(S.litterGone);
     this.mesh = {}; for (const k of Object.keys(KINDS)) { this.mesh[k] = makeInstanced(KINDS[k].geo(), 30); scene.add(this.mesh[k].fill); scene.add(this.mesh[k].line); }
-    this.sap = makeInstanced(saplingGeo(), 60); scene.add(this.sap.fill); scene.add(this.sap.line);
+    this.sap = makeInstanced(saplingGeo(), 600); scene.add(this.sap.fill); scene.add(this.sap.line);
     const rng = mulberry32(31337), pts = [...TRAIL_LINES.flat(), ...ROAD_LINES.flat()].filter((_, i) => i % 2 === 0);
     this.items = [];
     for (let i = 0; i < 90 && this.items.length < 26; i++) {
@@ -58,13 +58,13 @@ export class CareActs {
     for (const k of Object.keys(KINDS)) { const o = this.mesh[k]; o.fill.count = o.line.count = n[k]; o.fill.instanceMatrix.needsUpdate = o.line.instanceMatrix.needsUpdate = true; o.fill.visible = o.line.visible = n[k] > 0; }
     // saplings grow over many seasons
     const age = RUN.n + RUN.s.played / Math.max(1, RUN.len);
-    RUN.s.saplings.forEach((sp, i) => {
+    RUN.s.saplings.slice(0, 600).forEach((sp, i) => {
       const grown = Math.min(1, Math.max(0, age - sp.age0) / 10), sc = 0.35 + grown * 1.6;
       this._e.set(0, sp.yaw, 0, 'YXZ'); this._q.setFromEuler(this._e); this._m.compose(this._p.set(sp.x, groundY(sp.x, sp.z), sp.z), this._q, this._s.set(sc, sc, sc));
       this.sap.fill.setMatrixAt(i, this._m); this.sap.line.setMatrixAt(i, this._m);
     });
     this._s.set(1, 1, 1);
-    this.sap.fill.count = this.sap.line.count = RUN.s.saplings.length; this.sap.fill.instanceMatrix.needsUpdate = this.sap.line.instanceMatrix.needsUpdate = true; this.sap.fill.visible = this.sap.line.visible = RUN.s.saplings.length > 0;
+    this.sap.fill.count = this.sap.line.count = Math.min(600, RUN.s.saplings.length); this.sap.fill.instanceMatrix.needsUpdate = this.sap.line.instanceMatrix.needsUpdate = true; this.sap.fill.visible = this.sap.line.visible = RUN.s.saplings.length > 0;
   }
   /** returns a prompt string or '' */
   update(dt, player) {
@@ -86,12 +86,33 @@ export class CareActs {
     RUN.save?.(); this._dirty = true; this.nearest = null; return true;
   }
   plant(player) {
-    if (RUN.s.seeds < 1) return this.onToast?.('No seeds. Picking up litter turns some up.');
+    const stock = RUN.s.saplingStock || 0;
+    if (RUN.s.seeds < 1 && stock < 1) return this.onToast?.('Nothing to plant. Picking up litter turns up seeds, and the Park Fund app sells sacks of them.');
     const f = player.forward(), x = player.pos.x + f.x * 1.6, z = player.pos.z + f.z * 1.6;
     if (sdfAt(x, z) < 3) return this.onToast?.('Too close to the water.');
     if (RUN.s.saplings.some((s) => Math.hypot(s.x - x, s.z - z) < 1.2)) return this.onToast?.('There is already one here.');
-    RUN.s.seeds--; RUN.s.planted++; RUN.s.saplings.push({ x, z, yaw: Math.random() * 6.28, age0: RUN.n + RUN.s.played / Math.max(1, RUN.len) });
-    CARE.add(0.012); JOURNAL.add('Planted a sapling. It will take many seasons.', x, z); RUN.save?.(); this._dirty = true;
-    this.onToast?.('Planted. Trees do not hurry, and neither should you.');
+    const now = RUN.n + RUN.s.played / Math.max(1, RUN.len);
+    if (stock > 0) RUN.s.saplingStock--; else RUN.s.seeds--;
+    RUN.s.planted++; RUN.s.saplings.push({ x, z, yaw: Math.random() * 6.28, age0: now - (stock > 0 ? 3 : 0) });
+    this._plantedCare();
+    if (RUN.s.planted === 1 || RUN.s.planted % 25 === 0) JOURNAL.add(RUN.s.planted === 1 ? 'Planted a tree. It will take many seasons.' : `${RUN.s.planted} trees planted now.`, x, z);
+    RUN.save?.(); this._dirty = true;
+    const left = (RUN.s.saplingStock || 0) + (RUN.s.seeds || 0);
+    this.onToast?.(stock > 0 ? `Sapling planted. ${left} left to plant.` : `Seed planted. Trees do not hurry. ${left} left.`, 1.8);
+  }
+  // every tree planted adds a little care, and many of them speed the park's healing (a planted forest is a funded recovery)
+  _plantedCare() { CARE.add(0.004); RUN.s.recover = Math.min(2, (RUN.s.recover || 0) + 0.004); }
+  /** the shoreline buffer: a strip of young trees along the banks near you */
+  plantShore(player) {
+    const now = RUN.n + RUN.s.played / Math.max(1, RUN.len), pts = [];
+    for (let r = 4; r <= 90 && pts.length < 28; r += 2) for (let a = 0; a < 40 && pts.length < 28; a++) {
+      const an = a / 40 * Math.PI * 2, x = player.pos.x + Math.cos(an) * r, z = player.pos.z + Math.sin(an) * r, d = sdfAt(x, z);
+      if (d < 3.5 || d > 12) continue;
+      if (pts.some((p) => Math.hypot(p.x - x, p.z - z) < 3.2) || RUN.s.saplings.some((s) => Math.hypot(s.x - x, s.z - z) < 2)) continue;
+      pts.push({ x, z });
+    }
+    for (const p of pts) { RUN.s.saplings.push({ x: p.x, z: p.z, yaw: Math.random() * 6.28, age0: now - 2 }); RUN.s.planted++; }
+    if (pts.length) JOURNAL.add(`The shoreline buffer went in: ${pts.length} young trees along the water.`, player.pos.x, player.pos.z);
+    RUN.save?.(); this._dirty = true; return pts.length;
   }
 }
