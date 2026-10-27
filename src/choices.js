@@ -1,7 +1,7 @@
 // The choices.  Every one shows what it gives (Care) and what it costs (harm) BEFORE you commit.  AI choices cost a little
 // lasting harm and give real benefits: visitors served, upkeep done, staff stretched.  Park choices act on the land.
 // Numbers are illustrative.  Benefits here are the first pass and meant to grow with the premise.
-import { PRESSURE, treeLuck } from './pressure.js';
+import { PRESSURE, treeLuck, dieAt } from './pressure.js';
 import { Usage } from './usage.js';
 import { CARE, fmt$ } from './care.js';
 import { groundY, sdfAt } from './world.js';
@@ -34,7 +34,7 @@ export const CHOICES = [
   { id: 'survey', kind: 'AI', title: 'Ask for a park condition report', gain: 'A summary of the trees, the lake and the damage around you', care: 0.02, cost: 0.010, hours: 4, saved: 200,
     run({ player, chunks, lake }) {
       const trees = chunks.treesNear(player.pos.x, player.pos.z, 250), h = PRESSURE.harm;
-      const dying = trees.filter((t) => smooth(treeLuck(t.x, t.z) * 0.9, h) > 0.5).length;
+      const dying = trees.filter((t) => dieAt(sdfAt(t.x, t.z), treeLuck(t.x, t.z), h) > 0.3).length;
       const full = Math.round(((lake.level - lake.floor) / (lake.originalLevel - lake.floor)) * 100);
       return { msg: `Within 250 m: ${trees.length} standing trees, ${dying} showing dieback. The reservoir is ${full}% full. Lasting harm: ${Math.round(h * 100)}%.` };
     } },

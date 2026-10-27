@@ -32,6 +32,7 @@ export class InstanceBatch {
       items[i].batch = this;
     }
     near.castShadow = model.castShadow ?? false;
+    if (model.matDepth) near.customDepthMaterial = model.matDepth;
     near.receiveShadow = true;
     near.computeBoundingSphere();
     this.near = near;

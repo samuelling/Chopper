@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
 import { treeColor, SPECIES, buildStump } from './trees.js';
-import { fillMaterial, outlineMaterial } from './toon.js';
+import { fillMaterial, outlineMaterial, dieDepthMaterial } from './toon.js';
 import { wetlandAt } from './ashland_wetlands.js';
 import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
@@ -53,10 +53,11 @@ export class ChunkManager {
     this.treeModels = treeModels;
 
     // shared materials
-    const fill = fillMaterial({ sway: true });
+    const fill = fillMaterial({ sway: true, dieback: true });
     const fillStatic = fillMaterial({ sway: false });
     const fillDouble = fillMaterial({ sway: false, side: THREE.DoubleSide });
-    const outline = outlineMaterial({ sway: true });
+    const outline = outlineMaterial({ sway: true, dieback: true });
+    const treeDepth = dieDepthMaterial();
     const outlineStatic = outlineMaterial({ sway: false });
     this.mats = { fill, fillStatic, fillDouble, outline, outlineStatic };
 
@@ -65,7 +66,7 @@ export class ChunkManager {
     for (const [sp, list] of Object.entries(treeModels)) {
       list.forEach((m, v) => {
         this.defs[`${sp}:${v}`] = {
-          geoNear: m.geo, geoFar: m.geoFar, matFill: fill, matOutline: outline,
+          geoNear: m.geo, geoFar: m.geoFar, matFill: fill, matOutline: outline, matDepth: treeDepth,
           castShadow: true, nearDist: 80, farDist: 255,
         };
       });

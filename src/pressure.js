@@ -49,5 +49,8 @@ export function treeLuck(x, z) {
   const r = f(f(a + b) * c);
   return r - Math.floor(r);
 }
-export const GONE_FRAC = 0.30;                       // share of trees that are gone at full harm
-export const treeGone = (r, harm) => r < GONE_FRAC * harm;
+// Dieback starts at the shore and spreads inland: a tree's turn comes mostly from its distance to the water (sdf, metres),
+// with a little luck.  Same maths as dieAt() in toon.js.  Dead trees stay standing as bare snags, so nothing is removed.
+const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export function dieAt(sdf, luck, harm) { const th = 0.06 + 0.9 * Math.min(1, Math.max(0, sdf / 350)) + 0.3 * (luck - 0.5); return sstep(th, th + 0.18, harm); }
+export const treeGone = () => false;

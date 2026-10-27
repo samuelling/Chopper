@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fbm, noise2, smoothstep, clamp, lerp, GLSL_NOISE } from './noise.js';
-import { gradientMap } from './toon.js';
+import { gradientMap, shared as toonShared } from './toon.js';
 import {
   LEVEL, MAX_DEPTH, DAM_Z, DAM_CREST, VALLEY_Y, WORLD, NX, NZ, CL_LEN, DAM_HALF, GATE,
   lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
@@ -244,6 +244,7 @@ export function makeHeightTexture() {
   tex.generateMipmaps = false;
   tex.needsUpdate = true;
   heightUniforms.uHeightTex.value = tex;
+  toonShared.heightTex.value = tex; toonShared.heightInfo.value.copy(heightUniforms.uHeightInfo.value); toonShared.gridDim.value.copy(heightUniforms.uGridDim.value);
   return tex;
 }
 
