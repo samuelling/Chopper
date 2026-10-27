@@ -70,12 +70,14 @@ export class Boat {
 
   /** one oar's stroke: returns thrust (positive pushes the boat forward).  want: +1 pull, -1 back water, 0 rest */
   _oar(o, dt, want) {
-    const T = 1.5, DRIVE = 0.45, A = 0.55, ease = (u) => u * u * (3 - 2 * u);
-    if (!o.active && want) { o.active = true; o.ph = 0; o.dir = want; o.splashed = false; this.hooks.creak?.(); }
+    const T = 1.5, DRIVE = 0.45, REACH = 0.3, A = 0.55, ease = (u) => u * u * (3 - 2 * u);
+    if (!o.active && want) { o.active = true; o.ph = -REACH; o.a0 = o.a; o.dir = want; o.splashed = false; this.hooks.creak?.(); }
     let thrust = 0, thT = -0.06;
     if (o.active) {
       o.ph += dt / T; const p = o.ph;
-      if (p < DRIVE) {                                       // blade in the water, swinging aft (pull) or forward (back water)
+      if (p < 0) {                                           // blade lifted, swinging from where it rests out to the catch
+        const u = ease(1 + p / REACH); o.a = o.a0 + (o.dir * A - o.a0) * u; thT = -0.16;
+      } else if (p < DRIVE) {                                // blade in the water, swinging aft (pull) or forward (back water)
         const u = ease(p / DRIVE); o.a = o.dir * (A - 2 * A * u); thT = 0.2;
         thrust = o.dir * 2 * A * 6 * u * (1 - u) / (DRIVE * T);
         if (!o.splashed) { o.splashed = true; this._splash(o, 1); }
@@ -84,8 +86,8 @@ export class Boat {
         if (o.splashed) { o.splashed = false; this._splash(o, 0.5); }
       }
       if (o.ph >= 1) { if (want === o.dir) { o.ph -= 1; this.hooks.creak?.(); } else { o.active = false; o.ph = 0; } }
-    } else o.a *= Math.exp(-3 * dt);
-    o.th += (thT - o.th) * Math.min(1, dt * 12);
+    } else o.a *= Math.exp(-2.2 * dt);
+    o.th += (thT - o.th) * (1 - Math.exp(-dt * 9));
     return thrust;
   }
   _splash(o, k) {
@@ -119,7 +121,7 @@ export class Boat {
   _pose(dt) {
     const lv = lake.level, bob = Math.sin(this.t * 1.3) * 0.012;
     this.root.position.set(this.x, lv + 0.0 + bob, this.z);
-    const roll = Math.sin(this.t * 1.05 + 1) * 0.012 + ((this._tr || 0) - (this._tl || 0)) * 0.03;
+    this._roll = (this._roll || 0) + ((((this._tr || 0) - (this._tl || 0)) * 0.03) - (this._roll || 0)) * (1 - Math.exp(-dt * 5)); const roll = Math.sin(this.t * 1.05 + 1) * 0.012 + this._roll;
     this.root.rotation.set(Math.sin(this.t * 0.8) * 0.006 - this.v * 0.006, this.h, roll, 'YXZ');
     for (const o of this.oars) {
       o.g.rotation.set(0, o.s * o.a, -o.s * o.th, 'YZX');

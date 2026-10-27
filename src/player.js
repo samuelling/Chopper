@@ -25,7 +25,7 @@ export class Player {
     this.events = { step: null, swing: null, strike: null, jump: null, splash: null, interact: null };
     this._buildAxe();
     this._buildPhone();
-    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false;
+    this.sitting = false; this.sit = 0; this.stillT = 0; this.boat = null; this.mouseDown = false; this.inputLock = false; this.camOff = new THREE.Vector3();
     this.carry = 'none'; this.raise = 0; this.raiseTo = 0; this.refreshCarry();
 
     addEventListener('keydown', (e) => {
@@ -233,12 +233,16 @@ export class Player {
     this._applyCamera(dt);
   }
 
-  _applyCamera() {
+  /** after a sudden move (into or out of the boat) glide the view from where it was instead of jumping */
+  blendFrom(prev) { this.update(0.0001); this.camOff.copy(prev).sub(this.camera.position); this._applyCamera(0); }
+
+  _applyCamera(dt = 0) {
     const c = this.camera;
+    if (dt > 0) this.camOff.multiplyScalar(Math.exp(-dt * 6));
     const bobY = Math.sin(this.bob) * 0.035 * Math.min(1, this.speed / 3.6);
     const bobX = Math.cos(this.bob * 0.5) * 0.02 * Math.min(1, this.speed / 3.6);
     c.position.set(this.pos.x, this.pos.y + EYE - this.sit * 0.95 + bobY, this.pos.z);
-    c.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    c.position.add(this.camOff); c.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
     // axe pose: rest -> windup -> strike
     const s = this.swing;
     let rx = 0.35, ry = 0.0, rz = -0.15, px = 0.36 + bobX, py = -0.42 + bobY * 0.5, pz = -0.6;

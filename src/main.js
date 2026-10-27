@@ -230,7 +230,7 @@ async function boot() {
   let boatT = 99;
   const embark = () => {
     if (!boat._wet(boat.x, boat.z)) { ui.toast('The boat is sitting on dry mud. The reservoir is too low to row.', 3.8); return; }
-    fishing.reset(); player.boat = boat; player.setCarry('none'); player.yaw = boat.h; player.pitch = -0.12; boatT = 0;
+    fishing.reset(); const prev = camera.position.clone(); player.boat = boat; player.setCarry('none'); player.yaw = boat.h; player.pitch = -0.12; boatT = 0; player.blendFrom(prev);
     RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You climb into the rowboat.', 2);
   };
   const disembark = () => {
@@ -242,7 +242,7 @@ async function boot() {
       if (score < bs) { bs = score; best = { x, z }; }
     }
     if (!best) { ui.toast('Row closer to the shore to climb out.', 2.4); return; }
-    fishing.reset(); player.boat = null; player.teleport(best.x, best.z, player.yaw, player.pitch);
+    fishing.reset(); const prev = camera.position.clone(); player.boat = null; player.teleport(best.x, best.z, player.yaw, player.pitch); player.blendFrom(prev);
     RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You step out onto the shore.', 2);
   };
   player.events.interact = () => {

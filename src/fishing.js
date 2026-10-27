@@ -148,7 +148,9 @@ export class Fishing {
     let tilt = 0;
     if (this.state === 'fight') { bend = 0.05 + this.T * 0.24 + (this.tele > 0 ? Math.sin(this.t * 50) * 0.03 : 0); tilt = (ctx.lean || 0) * 0.16; }
     this.rod.position.set(0.3, -0.34, -0.42); this.rod.rotation.set(-1.3 - flick * 0.5, 0.0, -0.1 - tilt);
-    this.blank.rotation.x = -bend; this.blank.rotation.z = Math.sin(this.t * 1.3) * 0.006;
+    this.bendS = (this.bendS || 0) + (bend - (this.bendS || 0)) * (1 - Math.exp(-dt * 14)); this.tiltS = (this.tiltS || 0) + (tilt - (this.tiltS || 0)) * (1 - Math.exp(-dt * 8));
+    this.rod.rotation.z = -0.1 - this.tiltS;
+    this.blank.rotation.x = -this.bendS; this.blank.rotation.z = Math.sin(this.t * 1.3) * 0.006;
     this.rod.updateMatrixWorld(true);
     this.tip.copy(TIP).applyMatrix4(this.blank.matrixWorld);
     if (this.state === 'idle') { this.line.visible = false; this.bobber.visible = false; }
@@ -160,7 +162,7 @@ export class Fishing {
           const k = Math.min(1, this.t / 0.8), e = 1 - (1 - k) * (1 - k);
           this.pos.lerpVectors(this.from, this.tgt, e); this.pos.y += Math.sin(k * Math.PI) * 3.2;
           if (k >= 1) {
-            this.state = 'wait'; this.t = 0; this.pos.copy(this.tgt); this._ripple(this.pos.x, this.pos.z); this.hooks.plop?.(this.pos.x, lake.level, this.pos.z);
+            this.state = 'wait'; this.t = 0; this.by = undefined; this.pos.copy(this.tgt); this._ripple(this.pos.x, this.pos.z); this.hooks.plop?.(this.pos.x, lake.level, this.pos.z);
             const act = Math.max(0, Math.min(1, ctx.life)) * (0.35 + 0.65 * ctx.full) * (ctx.cold ? 0.55 : 1);
             this.waitFor = (2.5 + this.rng() * 6.5) * (1 - 0.35 * ctx.dusk) / Math.max(0.3, act);
             this.quiet = this.rng() > 0.4 + 0.6 * act;          // no fish interested at all
@@ -177,7 +179,7 @@ export class Fishing {
         }
         case 'nothing': this.pos.set(this.tgt.x, lake.level + 0.02 + Math.sin(this.t * 1.7) * 0.012, this.tgt.z); break;
         case 'bite': {
-          this.pos.set(this.tgt.x + Math.sin(this.t * 14) * 0.03, lake.level - 0.05 - 0.04 * Math.abs(Math.sin(this.t * 9)), this.tgt.z);
+          this.by = (this.by ?? lake.level + 0.02) + ((lake.level - 0.05 - 0.04 * Math.abs(Math.sin(this.t * 9))) - (this.by ?? lake.level + 0.02)) * (1 - Math.exp(-dt * 16)); this.pos.set(this.tgt.x + Math.sin(this.t * 14) * 0.03 * Math.min(1, this.t * 4), this.by, this.tgt.z);
           if (Math.floor(this.t * 6) !== Math.floor((this.t - dt) * 6)) this._ripple(this.pos.x, this.pos.z, 1);
           if (this.t > 1.5) { this.hooks.toast?.('It got away.', 2.2); this._reel(false); }
           break;
@@ -241,7 +243,7 @@ export class Fishing {
     if (this.fishObj) {                                   // held up for a moment, wagging, then back into the water
       this.fishT += dt; const t = this.fishT, g = this.fishObj, inK = Math.min(1, t / 0.25), out = Math.max(0, (t - 2.6) / 0.6);
       if (t > 3.2) { c.remove(g); this.fishObj = null; this.hooks.plop?.(this.tgt.x, lake.level, this.tgt.z); }
-      else { g.position.set(0.02 + out * 0.15, -0.16 - out * 0.55, -0.62 - out * 0.35); g.rotation.set(0.08, 0.35 + Math.sin(t * 9) * (0.18 - 0.1 * Math.min(1, t / 2)), -0.12 + Math.sin(t * 7) * 0.06 + out * 0.9); g.scale.setScalar(Math.max(0.01, inK * (1 - out * 0.7))); }
+      else { g.position.set(0.02 + out * 0.15, -0.16 - out * 0.55 - (1 - inK) * 0.22, -0.62 - out * 0.35); g.rotation.set(0.08, 0.35 + Math.sin(t * 9) * (0.18 - 0.1 * Math.min(1, t / 2)), -0.12 + Math.sin(t * 7) * 0.06 + out * 0.9); g.scale.setScalar(Math.max(0.01, inK * (1 - out * 0.7))); }
     }
     if (this.ring.visible) {
       this.ringT += dt * 1.4; const a = this.ringT;
