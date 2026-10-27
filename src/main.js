@@ -510,7 +510,8 @@ async function boot() {
   if (place) place.textContent = `Ashland State Park, Massachusetts — ${SEASON_DEF.place}`;
   addEventListener('keydown', (e) => { if (RUN.dev && e.code === 'KeyT' && !e.repeat) goToSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4], player); });
 
-  initFullscreen({ mobile: MOBILE });
+  // back in fullscreen after a season turn: if the click that restored it did not also capture the mouse, capture it now
+  initFullscreen({ mobile: MOBILE, onChange: (fs) => { if (fs && started && !MOBILE && !player.locked && !phoneOn && !interludeOn && ui.els.paused.classList.contains('hidden')) renderer.domElement.requestPointerLock?.(); } });
   ui.els.loading.classList.add('hidden');
   if (AUTO) {
     started = true; player.locked = true;
