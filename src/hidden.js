@@ -41,6 +41,10 @@ export const HIDDEN_KINDS = {
   toyboat: { year: 13, where: 'shore', name: 'A toy sailboat', note: 'A child\u2019s wooden sailboat beached on the shore, its sail torn. It sailed off from somewhere and ended up here.', rumour: 'a kid lost a toy sailboat off the beach; it might have washed up along here', pay: 150 },
   horseshoe: { year: 14, where: 'trail', name: 'A horseshoe on a tree', note: 'An old horseshoe nailed to a tree, open end up to hold the luck. The bark has grown over the nails.', rumour: 'someone nailed a horseshoe to a tree near the trail here', pay: 150 },
   owlpellets: { year: 15, where: 'land', name: 'Owl pellets', note: 'Grey pellets of fur and tiny bones under a big pine: an owl roosts above. It coughs up what it can\u2019t digest.', rumour: 'there is a roost tree around here; look under it', pay: 180 },
+  // the branch forts (there from the start; placed last so nothing else moves): big branches leaned together in the woods, there for years, added to by whoever passes
+  teepee: { ship: 0, where: 'land', name: 'A branch teepee', note: 'Dozens of big branches leaned together into a teepee tall enough to stand up in. Nobody knows who started it; it has been here for years, and people keep adding to it.', rumour: 'someone built a teepee out of big branches back in the woods here, years ago, and people keep adding to it', pay: 400 },
+  leanto: { ship: 0, where: 'land', name: 'A branch lean-to', note: 'A long pole lashed between two trees with branches leaned against it, thick enough to keep the rain off. A fort that has outlasted whoever built it.', rumour: 'there is a lean-to of branches between two trees off the trail here, big enough to sit in', pay: 350 },
+  bigfort: { ship: 0, where: 'land', name: 'The big branch fort', note: 'An A-frame of heavy branches over a ridgepole set in the fork of a tree, with a doorway and a log to sit on inside. Generations of kids have kept it standing.', rumour: 'there is a big fort made of branches in the woods somewhere around here, the kind kids keep rebuilding', pay: 450 },
 };
 
 /** the game year you are in (Year One is the first four seasons) */
@@ -60,6 +64,14 @@ export function shipmentSeason(RUN, k) { const life = RUN.lifeYears || 40; retur
 const C = (h) => new THREE.Color(h);
 const box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(1, 1, 1, 8), ball = new THREE.SphereGeometry(1, 7, 5), cone = new THREE.ConeGeometry(1, 1, 7);
 const STONE = ['#8d8a82', '#777469', '#9a968a', '#6f6c62'];
+const BRANCH = ['#6d5a46', '#5b4a3a', '#7a6650', '#4f4234', '#857158', '#665443'];
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
+/** a branch from (x0,y0,z0) to (x1,y1,z1), r thick */
+function seg(b, x0, y0, z0, x1, y1, z1, r, col) {
+  _a.set(x0, y0, z0); _b.set(x1, y1, z1); const len = _a.distanceTo(_b);
+  _q.setFromUnitVectors(_up, _b.clone().sub(_a).normalize());
+  b.add(cyl, new THREE.Matrix4().compose(_a.clone().add(_b).multiplyScalar(0.5), _q, new THREE.Vector3(r, len, r)), { color: C(col) });
+}
 
 // each builder adds world-space geometry at (x, y, z) facing yaw
 const BUILD = {
@@ -148,6 +160,33 @@ const BUILD = {
     for (let k = 0; k < 10; k++) for (let h = 0; h < 2; h++) { const [px, pz] = at(-2.5 + k * 0.55, 0); b.add(box, matrix(px, groundY(px, pz) + 0.25 + h * 0.45, pz, 0, yaw, 0, 0.6, 0.45, 0.6), { color: C(STONE[(k + h) % 4]) }); }
     for (let k = 0; k < 5; k++) { const [px, pz] = at(-2.5, 0.6 + k * 0.55); b.add(box, matrix(px, groundY(px, pz) + 0.25, pz, 0, yaw, 0, 0.6, 0.5, 0.6), { color: C(STONE[k % 4]) }); }
     const [mx, mz] = at(0.5, 1.6); b.add(cyl, matrix(mx, groundY(mx, mz) + 0.2, mz, 0.5, yaw, 0.2, 0.7, 0.18, 0.7), { color: C('#8a8478') });   // the millstone, tipped
+  },
+  teepee(b, x, y, z, yaw, r) {
+    const top = y + 3.7, R = 1.9;
+    for (let i = 0; i < 44; i++) {
+      let a = (i / 44) * 6.283 + (r() - 0.5) * 0.12, d = ((a - yaw) % 6.283 + 6.283) % 6.283; if (d < 0.42 || d > 5.86) continue;   // the doorway
+      const rr = R * (0.85 + r() * 0.3), bx = x + Math.cos(a) * rr, bz = z + Math.sin(a) * rr, over = 0.25 + r() * 0.5;
+      const tx = x + (r() - 0.5) * 0.25, tz = z + (r() - 0.5) * 0.25, ex = tx + (tx - bx) * over / 3.7, ez = tz + (tz - bz) * over / 3.7;
+      seg(b, bx, y - 0.1, bz, ex, top + over, ez, 0.05 + r() * 0.04, BRANCH[i % BRANCH.length]);
+    }
+    for (let i = 0; i < 10; i++) { const a = r() * 6.28, d = 2.4 + r() * 1.5; seg(b, x + Math.cos(a) * d, y + 0.06, z + Math.sin(a) * d, x + Math.cos(a) * d + Math.cos(a + 1.5) * 1.4, y + 0.08, z + Math.sin(a) * d + Math.sin(a + 1.5) * 1.4, 0.04, BRANCH[i % 6]); }   // spares on the ground
+  },
+  leanto(b, x, y, z, yaw, r) {
+    const c = Math.cos(yaw), s = Math.sin(yaw), at = (u, v) => [x + c * u + s * v, z - s * u + c * v], H = 1.9, L = 4.4;
+    for (const u of [-L / 2 - 0.3, L / 2 + 0.3]) { const [tx, tz] = at(u, 0); seg(b, tx, y - 0.2, tz, tx, y + 7, tz, 0.22, '#5a4a40'); for (let k = 0; k < 6; k++) b.add(ball, matrix(tx + (r() - 0.5) * 3, y + 6.5 + r() * 2, tz + (r() - 0.5) * 3, 0, 0, 0, 1.4, 0.9, 1.4), { color: C(k % 2 ? '#4f7a34' : '#5f8a3a') }); }   // the two trees
+    { const [ax, az] = at(-L / 2 - 0.3, 0), [bx, bz] = at(L / 2 + 0.3, 0); seg(b, ax, y + H, az, bx, y + H + 0.08, bz, 0.08, '#6d5a46'); }        // the ridgepole
+    for (let i = 0; i < 26; i++) { const u = -L / 2 + (i + r() * 0.6) * L / 26, [px, pz] = at(u, 0), [gx, gz] = at(u + (r() - 0.5) * 0.3, 2.2 + r() * 0.4); seg(b, gx, y - 0.05, gz, px + (px - gx) * 0.12, y + H + 0.2 + r() * 0.3, pz + (pz - gz) * 0.12, 0.045 + r() * 0.035, BRANCH[i % BRANCH.length]); }
+  },
+  bigfort(b, x, y, z, yaw, r) {
+    const c = Math.cos(yaw), s = Math.sin(yaw), at = (u, v) => [x + c * u + s * v, z - s * u + c * v], L = 5.4, H = 2.4;
+    { const [tx, tz] = at(L / 2, 0); seg(b, tx, y - 0.2, tz, tx, y + 8, tz, 0.26, '#5a4a40'); seg(b, tx, y + H + 0.1, tz, tx + 0.6, y + H + 1.9, tz + 0.3, 0.12, '#5a4a40'); for (let k = 0; k < 7; k++) b.add(ball, matrix(tx + (r() - 0.5) * 3.4, y + 7.5 + r() * 2, tz + (r() - 0.5) * 3.4, 0, 0, 0, 1.5, 1, 1.5), { color: C(k % 2 ? '#4f7a34' : '#5f8a3a') }); }   // the tree with the fork
+    { const [ax, az] = at(-L / 2, 0); seg(b, ax - c * 0.4, y - 0.1, az + s * 0.4, ax, y + H, az, 0.09, '#6d5a46'); seg(b, ax + c * 0.4, y - 0.1, az - s * 0.4, ax, y + H, az, 0.09, '#6d5a46');   // the front bipod
+      const [bx, bz] = at(L / 2, 0); seg(b, ax, y + H, az, bx, y + H + 0.1, bz, 0.11, '#6d5a46'); }                                            // ridgepole
+    for (const side of [-1, 1]) for (let i = 0; i < 22; i++) {
+      const u = -L / 2 + 0.4 + (i + r() * 0.5) * (L - 0.4) / 22; if (side < 0 && u < -L / 2 + 1.3) continue;   // the doorway at the front, on one side
+      const [px, pz] = at(u, 0), [gx, gz] = at(u, side * (1.7 + r() * 0.3)); seg(b, gx, y - 0.05, gz, px - (gx - px) * 0.08, y + H + 0.25, pz - (gz - pz) * 0.08, 0.05 + r() * 0.04, BRANCH[(i + (side > 0 ? 3 : 0)) % BRANCH.length]);
+    }
+    { const [lx, lz] = at(0.6, 0); seg(b, ...at(-0.6, 0.55).flatMap((v, k) => k ? [y + 0.22, v] : [v]), ...at(1.6, 0.55).flatMap((v, k) => k ? [y + 0.22, v] : [v]), 0.18, '#5a4a3a'); void lx; void lz; }   // a log to sit on
   },
   geocache(b, x, y, z, yaw, r) {
     b.add(ball, matrix(x, y + 0.25, z, 0, yaw, 0, 0.9, 0.45, 0.7), { color: C('#8a8780') });
