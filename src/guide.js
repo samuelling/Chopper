@@ -67,6 +67,7 @@ for (const [id, of, name, hint] of [
   ['woodduck-flight', 'woodduck', 'Wood ducks taking off', 'Wood ducks spook from the water and climb away low. Day, warm months'],
   ['chipmunk-sit', 'chipmunk', 'Chipmunk, sitting up', 'A chipmunk stops dead and sits up to look around'],
   ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
+  ['skip-rings', 'skip', 'Ten skips, in rings', 'Skip a stone ten times or more at a skipping shore, then photograph the chain of rings before it fades'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets
 for (const [id, L] of Object.entries(LEGENDS)) ENTRIES.push({ id, cat: 'Legendary', name: L.name, blurb: L.blurb, hint: L.hint, legend: true });

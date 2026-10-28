@@ -51,6 +51,7 @@ import { Explore, ATTRACTION } from './explore.js';
 import { Drone } from './drone.js';
 import { Fire } from './fire.js';
 import { Poachers } from './poachers.js';
+import { Skipping } from './skipping.js';
 import { Legends, LEGENDS } from './legends.js';
 const DRONE_SHARE = 0.25;   // what a drone photo of a species is worth to the park's page, next to a close-up on foot
 import { Binoculars } from './binoculars.js';
@@ -322,6 +323,7 @@ async function boot() {
   player.events.interact = () => {
     if (player.boat) { disembark(); return; }
     if (nearBoat()) { embark(); return; }
+    if (!player.swimming && skipping.near(player.pos) && !skipping.holding) { fishing.reset(); player.setCarry('none'); skipping.pickUp(); ui.toast(MOBILE ? 'A flat stone. Hold THROW, and let go when the needle is near 20\u00b0 and the arm is full.' : 'A flat stone. Hold the mouse button, and let go when the needle is near 20\u00b0 and the arm is full.', 4.5); return; }
     if (landmarks.nearGate(player.pos)) {
       lake.gateOpen = !lake.gateOpen;
       audio.toggle();
@@ -391,7 +393,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -495,6 +497,7 @@ async function boot() {
     onSwing: (down) => {                                                    // the one big button: swing, cast and reel, or shutter
       if (!started || interludeOn || phone.isOpen) return;
       if (player.cameraMode) { if (down) player.events.photo?.(); }
+      else if (skipping.holding) { if (down) skipping.press(); else skipping.release(); }
       else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
       else if (player.carry === 'drone') { if (down) player.events.droneLaunch?.(); }
       else if (player.carry === 'binoculars') { if (down) player.events.binoc?.(); }
@@ -632,6 +635,17 @@ async function boot() {
   const jobQueue = [];
   const discoveries = new Discoveries(scene, chunks);
   const explore = new Explore(scene, discoveries);
+  // ---- skipping stones at the skipping shores (skipping.js)
+  const skipping = new Skipping(scene, camera, player, { audio, fx, spots: explore.skips });
+  skipping.onDone = (n, I) => {
+    const S = RUN.s.skip;
+    const tip = n >= 10 ? '' : I.landed === 'bank' ? ' It landed on the bank: face the open water.' : I.a > 38 ? ' Far too steep: it went straight in.' : I.a > 27 ? ' Too steep. Let go when the needle is lower, near 20\u00b0.' : I.a < 12 ? ' Too flat: it dug in. Let go when the needle is near 20\u00b0.' : I.pw < 0.75 ? ' Not enough arm: let the power fill (and not fade).' : '';
+    if (n >= 15 && !S.master) { S.master = S.ten = true; RUN.save?.(); audio.legend?.(); ui.toast(`${n} skips. You have mastered it: the angle, the arm, the spin. Very few people ever do this. Quick, photograph the rings (${MOBILE ? 'Phone \u2192 Camera' : 'V'}).`, 6); JOURNAL.add(`${n} skips at ${explore.list.find((q) => q.kind === 'skip' && Math.hypot(q.x - player.pos.x, q.z - player.pos.z) < 30)?.name || 'a skipping shore'}. Mastered. (The world record is 88, set by Kurt Steiner in Pennsylvania in 2013.)`, player.pos.x, player.pos.z); return; }
+    if (n >= 10 && !S.ten) { S.ten = true; RUN.save?.(); audio.notify?.(); ui.toast(`Ten skips and more: ${n}! A chain of rings across the water. Quick, the camera (${MOBILE ? 'Phone \u2192 Camera' : 'V'}): they make a good photo before they fade.`, 6); JOURNAL.add(`${n} skips: a chain of rings across the water.`, player.pos.x, player.pos.z); return; }
+    ui.toast(`${n === 0 ? 'Plunk. No skips.' : n === 1 ? 'One skip.' : `${n} skips.`}${n > I.prev && I.prev > 0 ? ' Your best yet.' : ''}${tip}`, tip ? 3.6 : 2.4);
+  };
+  addEventListener('mousedown', (e) => { if (e.button === 0 && player.locked && !player.cameraMode && skipping.holding) skipping.press(); });
+  addEventListener('mouseup', (e) => { if (e.button === 0) skipping.release(); });
   // a find goes on the park's page (Year Two): guests come out to see it, and that pays into the fund
   const featured = (id, cat, base, what) => {
     const paid = FUND.bounty(id, cat, base);
@@ -1077,6 +1091,7 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    skipping.update(dt, { ok: started && player.carry === 'none' && !player.boat && !player.swimming && !phone.isOpen && !interludeOn, cameraMode: player.cameraMode });
     legends.update(dt, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null, camera);
     poachers.update(dt * SPEED.v, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null);
     binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
@@ -1129,8 +1144,8 @@ async function boot() {
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained, credits: ending ? endingKind : null });
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
-    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
-    ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
+    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
+    ui.prompt(skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
     woodsAlive = Math.max(0, 1 - woodsDeadNow - cut / totalTrees());                       // a tree cut down shows at once
@@ -1140,7 +1155,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, poachers, legends, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, poachers, legends, skipping, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

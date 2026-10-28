@@ -26,6 +26,7 @@ const NAMES = {
   point: ['Birch Point', 'Windy Point', 'Ledge Point', 'Gull Point'],
   hill: ['Kettle Hill', 'Lookout Knoll', 'Oak Rise'],
   wetland: ['Alder Swamp', 'Peeper Marsh', 'Red Maple Swamp'],
+  skip: ['Flat Stone Shore', 'The Skipping Ledge', 'Slate Beach'],
 };
 const NOTE = {
   cove: 'A sheltered bend of the shore where the water lies flat.', point: 'A finger of land out into the reservoir, open to the wind.',
@@ -38,9 +39,10 @@ const NOTE = {
   skiff: 'A wooden rowboat on the bottom, half full of silt. Nobody remembers whose it was.',
   road: 'Under the water: a straight bed of gravel between two stone walls. A farm road that ran down this valley before the dam.',
   wreck: 'On the bottom: the wreck of a small ultralight helicopter, rotor blades bent.',
+  skip: 'A shelf of thin, flat stones at the water\u2019s edge, with open water in front: the best skipping stones on the reservoir. E picks one up.',
 };
 // what a find is worth on the park's page (Year Two): ordinary places pay a little, the ones guests come out to see more
-export const ATTRACTION = { lodge: 500, osprey: 600, skiff: 450, road: 700, wreck: 550, island: 300 };
+export const ATTRACTION = { skip: 350, lodge: 500, osprey: 600, skiff: 450, road: 700, wreck: 550, island: 300 };
 const WATER = new Set(['lodge', 'osprey', 'island']), UNDER = new Set(['skiff', 'road', 'wreck', 'anchor']);
 
 // rumours: where someone says something is (no names until you have been there)
@@ -50,7 +52,7 @@ const RUMOUR = {
   island: 'there is an island out here you can only reach by boat', lodge: 'beavers have a lodge in this part of the lake, best seen from a boat',
   osprey: 'ospreys are nesting on a dead tree out in the water here. Best seen from a boat', skiff: 'an old rowboat sank around here; you would have to swim out and dive for it',
   road: 'the road that ran down this valley before the dam is still down there, under the water. Dive for it', wreck: 'a small helicopter went into the water around here, and part of it is said to lie on the bottom',
-  cellar: 'there is an old cellar hole somewhere off the trail here', well: 'there is a stone well in the woods here', marker: 'there is an old boundary stone somewhere around here',
+  skip: 'the flattest skipping stones on the whole reservoir are along this shore', cellar: 'there is an old cellar hole somewhere off the trail here', well: 'there is a stone well in the woods here', marker: 'there is an old boundary stone somewhere around here',
 };
 const WHO = ['Overheard at the boat ramp:', 'A man fishing off the beach says', 'Someone at the parking lot says', 'A woman walking her dog says'];
 const HIDDEN = ['lodge', 'osprey', 'skiff', 'road', 'wreck', 'cellar', 'well', 'marker', ...Object.keys(HIDDEN_KINDS)];
@@ -93,6 +95,21 @@ export class Explore {
     }
     const pick = (arr, n, gap, kind) => { const out = []; for (const c of arr) { if (out.length >= n) break; if (out.some((q) => Math.hypot(q.x - c.x, q.z - c.z) < gap) || this.list.some((q) => Math.hypot(q.x - c.x, q.z - c.z) < Math.min(gap, 75)) || Math.hypot(c.x - SPAWN.x, c.z - SPAWN.z) < 90) continue; out.push(c); } out.forEach((c, i) => add({ kind, name: NAMES[kind][i], x: c.x, z: c.z, r: 28 })); return out; };
     const coves = pick([...shore].filter((s) => s.w < 0.34).sort((a, b) => a.w - b.w), 3, 110, 'cove');
+    // ---- skipping shores: a gentle bank of flat stones with a long run of open water straight out in front
+    const skipC = [];
+    for (const c of shore) {
+      if (lakeSdf(c.x, c.z) > 4) continue;
+      const gx = lakeSdf(c.x + 2, c.z) - lakeSdf(c.x - 2, c.z), gz = lakeSdf(c.x, c.z + 2) - lakeSdf(c.x, c.z - 2), l = Math.hypot(gx, gz) || 1, ox = -gx / l, oz = -gz / l;
+      // where the full lake's edge actually is along that line (the bank shelves out past the mapped shoreline)
+      let wl = -1; for (let r = 0; r <= 30; r += 0.5) if (lake.originalLevel - groundY(c.x + ox * r, c.z + oz * r) > 0.05) { wl = r; break; }
+      if (wl < 0) continue;
+      const x = c.x + ox * (wl - 2.5), z = c.z + oz * (wl - 2.5), gy = groundY(x, z) - lake.originalLevel;
+      if (gy < 0.05 || gy > 1.2 || Math.abs(groundY(x + 3, z) - groundY(x - 3, z)) > 1 || Math.abs(groundY(x, z + 3) - groundY(x, z - 3)) > 1) continue;
+      let run = 0; for (let r = 4; r <= 70; r += 3) { const px = x + ox * r, pz = z + oz * r; if (lake.originalLevel - groundY(px, pz) < (r < 10 ? 0.25 : 0.6) || islandSdf(px, pz) < 8) break; run = r; }
+      if (run >= 52) skipC.push({ x, z, w: c.w, ox, oz, run });
+    }
+    this.skips = pick(skipC.sort((a, b) => b.run - a.run || a.w - b.w), 3, 150, 'skip');
+    this.skips.forEach((sp, i) => { sp.id = 'skip' + i; sp.name = NAMES.skip[i]; });
     const points = pick([...shore].filter((s) => s.w > 0.57).sort((a, b) => b.w - a.w), 3, 110, 'point');
     // ---- hilltops and wetlands
     const hills = [];
@@ -113,6 +130,17 @@ export class Explore {
       return best || [x, z];
     };
     const props = new GeoBuilder();
+    // the skipping shores: a scatter of thin, flat stones, slate-grey and rust, on the bank
+    for (const sp of this.skips) {
+      const srng = mulberry32(Math.round(sp.x * 7 + sp.z * 13)), disc = new THREE.CylinderGeometry(1, 1, 1, 9), cols = ['#7d7f86', '#6a6d74', '#8a8478', '#a07a5a', '#5d6066', '#94918a'];
+      for (let k = 0; k < 70; k++) {
+        const a = srng() * 6.283, r = Math.sqrt(srng()) * 3.6, x = sp.x + Math.cos(a) * r - sp.ox * 0.8, z = sp.z + Math.sin(a) * r - sp.oz * 0.8, w = 0.06 + srng() * 0.07;
+        props.add(disc, matrix(x, groundY(x, z) + 0.012, z, (srng() - 0.5) * 0.25, srng() * 6, (srng() - 0.5) * 0.25, w, 0.018, w * (0.75 + srng() * 0.25)), { color: new THREE.Color(cols[k % cols.length]) });
+      }
+      // a little stack someone left
+      const bx = sp.x - sp.ox * 2.6 + sp.oz * 1.2, bz = sp.z - sp.oz * 2.6 - sp.ox * 1.2; let h = groundY(bx, bz);
+      for (let k = 0; k < 5; k++) { const w = 0.16 - k * 0.022; props.add(disc, matrix(bx, h + 0.02, bz, 0, srng() * 6, 0, w, 0.04, w * 0.85), { color: new THREE.Color(cols[(k * 2) % cols.length]) }); h += 0.042; }
+    }
     const c0 = coves[0] || shore[0];
     if (c0) { const [x, z] = out(c0.x, c0.z, 1.3); const y = groundY(x, z); this.lodge = add({ kind: 'lodge', name: 'The beaver lodge', x, z, r: 20 });
       stickGeo(props, x, lake.originalLevel - 0.5, z, 2.7, 1.9, 2.4, 150, rng, BARK);
