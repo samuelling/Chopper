@@ -703,6 +703,15 @@ async function boot() {
   const explore = new Explore(scene, discoveries);
   // the branch forts stand in their own little clearings
   for (const it of explore.list) if (it.kind === 'teepee' || it.kind === 'leanto' || it.kind === 'bigfort' || it.kind === 'camp') chunks.clearArea(it.x, it.z, it.kind === 'camp' ? 18 : it.kind === 'teepee' ? 3.4 : 4.2);   // the old camp is still a clearing
+  // ---- the phone's flashlight (L, or Phone -> Tools): a spot of light ahead of you, for the long nights.  The light is
+  // always in the scene (at zero) so switching it on never recompiles anything
+  const torch = new THREE.SpotLight('#fff2d8', 0, 38, 0.48, 0.6, 1.4); torch.position.set(0.15, -0.25, 0); camera.add(torch); torch.target.position.set(0.1, -0.35, -6); camera.add(torch.target);
+  let torchOn = false;
+  const toggleTorch = () => { torchOn = !torchOn; audio.toggle?.(); ui.toast(torchOn ? 'Flashlight on.' : 'Flashlight off.', 1.2); };
+  // ---- go to bed: at night, skip on to the next season instead of staying up
+  const nightNow = () => started && !manual && dayProgress() >= 0.66;
+  const goToBed = () => { if (!nightNow() || interludeOn) { ui.toast('Not yet: bed is for after dark.', 2); return; } torchOn = false; ui.toast('You head home to bed.', 2.5); RUN.s.played = RUN.len; };
+  addEventListener('keydown', (e) => { if (!started || e.repeat || interludeOn || phone.isOpen) return; if (e.code === 'KeyL') toggleTorch(); if (e.code === 'KeyN') goToBed(); });
   // the Q kit, in order (skis only in winter, the drone once you own it)
   const nextCarry = (c) => { const L = ['phone', 'axe', 'rod', 'binoculars', ...(IS_WINTER ? ['skis'] : []), ...(RUN.s.drone ? ['drone'] : []), 'none']; return L[(L.indexOf(c) + 1) % L.length] || 'phone'; };
   // cross-country skis (winter): long planks at the bottom of the view and a pole in each hand that plants as you go
@@ -952,6 +961,7 @@ async function boot() {
   };
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player), fire: () => fire }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', binoculars: 'Binoculars in hand. The big button raises them.', drone: 'Drone in hand. The big button throws it up.', skis: 'Skis on.', none: 'Hands free.' }[c], 1.8); },
+      torch: () => toggleTorch(), torchOn: () => torchOn, bed: () => goToBed(), night: () => nightNow(),
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
@@ -1222,6 +1232,8 @@ async function boot() {
     if (started && !interludeOn) { const cr = caches.update(player.pos); if (cr) cacheFound(cr); }
     if (islandSwim && !RUN.s.swamIsland && started && !player.boat && Math.hypot(player.pos.x - islandSwim.x, player.pos.z - islandSwim.z) < islandSwim.r * 0.6 && !player.swimming && waterDepthAt(player.pos.x, player.pos.z) < 0.1 && player.wasSwimRecent) { RUN.s.swamIsland = true; RUN.save?.(); audio.notify?.(); ui.toast('You swam all the way out to the little island. Dripping, and pleased with yourself.', 5); JOURNAL.add('Swam out to the little island.', player.pos.x, player.pos.z); }
     if (player.swimming) player.wasSwimRecent = true; else if (player.boat) player.wasSwimRecent = false;
+    torch.intensity += ((torchOn && !droneOn ? 55 : 0) - torch.intensity) * Math.min(1, dt * 12);
+    if (nightNow() && !RUN.s.nightHint && !interludeOn) { RUN.s.nightHint = true; RUN.save?.(); ui.toast(MOBILE ? 'Night. Phone \u2192 Tools has a flashlight, or sit back and watch the stars. Tools \u2192 Go to bed moves on to the next season.' : 'Night. L for the flashlight, or B to sit back and watch the stars. N goes to bed, on to the next season.', 7); }
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
     player.skis = player.carry === 'skis' && !player.boat;

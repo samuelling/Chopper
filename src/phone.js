@@ -109,6 +109,8 @@ export class Phone {
       if (RUN.s.drone) mk(p.carry === 'drone' ? '\u2713 Drone' : 'Drone', 'Throw it up with the big button and fly it from your phone.', () => A.carry('drone'));
       mk(p.carry === 'none' ? '\u2713 Hands free' : 'Hands free', 'Put everything away.', () => A.carry('none'));
       h('Out in the park');
+      mk(A.torchOn?.() ? '\u2713 Flashlight' : 'Flashlight', 'The phone\u2019s light, ahead of you. For the long nights.', () => A.torch(), true);
+      if (A.night?.()) mk('Go to bed', 'Skip the rest of the night: on to the next season.', () => A.bed());
       mk(p.sitting ? 'Stand up' : 'Sit and wait', 'Stay still and the park carries on around you. Any step stands you up.', () => A.sit());
       mk('Pick up litter', 'Whatever is within reach.', () => A.pickUp());
       mk((RUN.s.saplingStock || 0) > 0 ? 'Plant a sapling' : 'Plant a seed', `In front of you. You have ${RUN.s.saplingStock || 0} saplings and ${RUN.s.seeds || 0} seeds; the Park Fund app sells more.`, () => A.plant());

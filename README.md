@@ -21,7 +21,9 @@ Not shipped yet, but prepared: the game is self-contained (no CDN), `npm run bui
 | E | get in or out of the rowboat when you are next to it; pick up litter; at the gatehouse on the dam (and only there) it works the drawdown gate instead |
 | 1 / 2 / 3 / 4, 0 | each season is one day, morning to night, on its own clock (sitting makes it pass 4x faster); 1-4 hold a light of your choosing (4 is night), 0 goes back to following the day |
 | Pause menu | Spring / Summer / Autumn / Winter buttons jump to a season (`?season=winter` does too; **T** cycles seasons in dev mode only) |
-| B | sit and wait: stay still and the woods come closer |
+| B | sit and wait: stay still and the woods come closer (the day passes faster, but not the night) |
+| L | the phone's flashlight |
+| N | go to bed: at night, skip the rest of it and go on to the next season |
 | G | plant a seed (collected from litter) |
 | H | hide or bring back the dashboard |
 | Esc | pause menu with every control |
