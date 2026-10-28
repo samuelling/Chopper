@@ -58,6 +58,15 @@ export class Fire {
     }
     return null;
   }
+  /** start a fire now (the secret code): in thick woods a little way off from (near.x, near.z), so you see the smoke */
+  ignite(near) {
+    if (this.s.phase === 'burning' || this.s.phase === 'located') return false;
+    let spot = null;
+    for (let i = 0; i < 300 && !spot; i++) { const q = this._spot(); if (q && (!near || Math.hypot(q.x - near.x, q.z - near.z) > 90 && Math.hypot(q.x - near.x, q.z - near.z) < 260 - i * 0.4)) spot = q; }
+    spot ||= this._spot(); if (!spot) return false;
+    Object.assign(this.s, { start: true, x: spot.x, z: spot.z, phase: 'burning', r: R0, age: 0, located: null, foundAt: 0, kindle: this.kindleDev ? 1 : Math.min(1, woodsDead() * 4) });
+    this._slowSaid = false; this.slow = 1; RUN.save?.(); this.onStart?.(); return true;
+  }
   /** someone has found it: the fire service is on the way */
   locate(how) {
     if (this.s.phase !== 'burning') return false;

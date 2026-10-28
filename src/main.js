@@ -750,11 +750,12 @@ async function boot() {
     player.setCarry('phone'); player.raise = 1; player.raiseTo = 0;
     setTimeout(() => { if (player.carry === 'phone' && !phone.isOpen) player.setCarry('none'); }, 650);
   };
-  // secret: type d-r-o-n-e during play for the drone and its AI spotter, in hand
+  // secrets: type d-r-o-n-e during play for the drone and its AI spotter, in hand; f-i-r-e starts a forest fire nearby
   { let typed = '';
     addEventListener('keydown', (e) => {
       if (!started || e.repeat || !/^Key[A-Z]$/.test(e.code)) return;
       typed = (typed + e.code[3]).slice(-5);
+      if (typed.endsWith('FIRE')) { typed = ''; if (!fire.ignite(player.pos)) ui.toast('A fire is already burning.', 2.5); }
       if (typed === 'DRONE') { typed = ''; RUN.s.drone = true; RUN.s.droneai = true; RUN.save?.(); if (!drone.active && !player.cameraMode && !phone.isOpen) { fishing.reset(); player.setCarry('drone'); } ui.toast('Drone and AI spotter unlocked. Click to throw it up.', 3.5); }
     }); }
   player.events.droneLaunch = () => { if (!started || interludeOn || phone.isOpen || player.cameraMode) return; drone.launch(); };
