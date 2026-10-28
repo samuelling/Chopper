@@ -104,6 +104,7 @@ export class Phone {
       h('In your hands');
       mk(p.carry === 'axe' ? '\u2713 Axe' : 'Axe', 'Chop. Swing with the big button.', () => A.carry('axe'));
       mk(p.carry === 'rod' ? '\u2713 Fishing rod' : 'Fishing rod', 'Cast with the big button, hold it to reel, steer the joystick to counter a run.', () => A.carry('rod'));
+      mk(p.carry === 'binoculars' ? '\u2713 Binoculars' : 'Binoculars', 'Raise them with the big button: birds across the water, smoke on the horizon.', () => A.carry('binoculars'));
       if (RUN.s.drone) mk(p.carry === 'drone' ? '\u2713 Drone' : 'Drone', 'Throw it up with the big button and fly it from your phone.', () => A.carry('drone'));
       mk(p.carry === 'none' ? '\u2713 Hands free' : 'Hands free', 'Put everything away.', () => A.carry('none'));
       h('Out in the park');
@@ -259,6 +260,12 @@ export class Phone {
       c.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); if (done || FUND.balance < price) return; const r = onBuy(); this.fundCtx?.toast?.(r.msg, 3.2); this._fund(body); });
       body.appendChild(c);
     };
+    { const f = this.fundCtx?.fire?.();
+      if (f?.burning) {
+        sect('Fire');
+        card('Park', 'Send out a lookout crew', '<div class="cone">Rangers and volunteers walk the woods and climb the fire tower until they find the smoke\u2019s source, then call it in. It takes them a few minutes. (Or fly the drone with its AI spotter.)</div>', 3000, !!f.s.crew, () => { if (FUND.balance < 3000) return { ok: false, msg: 'Not enough in the fund.' }; RUN.s.fund -= 3000; f.s.crew = true; RUN.save?.(); setTimeout(() => f.locate('crew'), 25000); return { ok: true, msg: 'The lookout crew is out. They will call it in when they find it.' }; }, 'Crew out searching');
+      }
+    }
     sect('To plant');
     const p = this.player;
     for (const it of SUPPLIES.filter((x) => !x.fun)) card('Park', it.title, `<div class="cone">${it.gain}</div>`, it.price, false, () => FUND.buySupply(it.id));

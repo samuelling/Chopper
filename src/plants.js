@@ -10,6 +10,8 @@ import { wetlandAt } from './ashland_wetlands.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { SEASON } from './season.js';
 import { PRESSURE } from './pressure.js';
+import { BURNS } from './burns.js';
+import { RUN } from './run.js';
 
 const C = (h) => new THREE.Color(h), _c = new THREE.Color();
 const ball = new THREE.SphereGeometry(1, 7, 5), cyl = new THREE.CylinderGeometry(1, 1, 1, 5), cone = new THREE.ConeGeometry(1, 1, 5), disc = new THREE.CylinderGeometry(1, 1, 1, 9);
@@ -113,6 +115,9 @@ const BUILD = {
     for (let k = 0; k < 6; k++) leaf(b, x, 0.4 + k * 0.12, z, 0.2, 0.08, k * 2.3, -0.2, '#5a8a3a');
     for (let k = 0; k < 3; k++) { const fa = a + k * 2.1, fx = x + Math.cos(fa) * 0.1, fz = z + Math.sin(fa) * 0.1, fy = h - 0.1 - k * 0.1; stem(b, fx, fz, 0.0001, 0, 0);
       for (let q = 0; q < 9; q++) b.add(ball, matrix(fx + (r() - 0.5) * 0.025, fy - q * 0.022, fz + (r() - 0.5) * 0.025, 0, 0, 0, 0.012, 0.011, 0.012), { color: C(SEASON === 'summer' && q < 3 ? '#8aa86a' : '#3a1a3a') }); } } },
+  fireweed(b) { const r = R(131); for (let s = 0; s < 5; s++) { const a = r() * 6.28, x = Math.cos(a) * 0.1, z = Math.sin(a) * 0.1, h = 0.8 + r() * 0.4; stem(b, x, z, h, 0.05, a, '#7a3a4a', 0.007);
+    for (let k = 0; k < 6; k++) leaf(b, x, 0.2 + k * 0.1, z, 0.12, 0.025, k * 2.4, -0.3, '#4f7a34');
+    for (let k = 0; k < 9; k++) b.add(ball, matrix(x + Math.sin(k * 2.4) * 0.03, h - 0.25 + k * 0.035, z + Math.cos(k * 2.4) * 0.03, 0, 0, 0, 0.022, 0.018, 0.022), { color: C(k > 6 ? '#c84a8a' : '#e0589a') }); } },
   // ---- all year
   princesspine(b) { const r = R(109); for (let i = 0; i < 7; i++) { const a = r() * 6.28, d = r() * 0.14, x = Math.cos(a) * d, z = Math.sin(a) * d, h = 0.12 + r() * 0.08; stem(b, x, z, h, 0, 0, '#3f6a2c', 0.005);
     for (let k = 0; k < 4; k++) for (let q = 0; q < 4; q++) { const qa = q * 1.57 + k * 0.6; b.add(cone, matrix(x + Math.cos(qa) * 0.02, h * (0.4 + k * 0.17), z + Math.sin(qa) * 0.02, Math.sin(qa) * 1.1, 0, -Math.cos(qa) * 1.1, 0.012, 0.05 - k * 0.008, 0.012), { color: C(k % 2 ? '#2f5a2c' : '#3f6a34') }); } } },
@@ -156,11 +161,12 @@ export const PLANTS = [
   { id: 'pokeweed', name: 'Pokeweed', seasons: ['summer', 'autumn'], hab: 'edge', w: 0.7, h: 1.3, blurb: 'Tall magenta stems with hanging clusters of dark purple berries. Birds eat them; for people every part is poisonous.' },
   { id: 'princesspine', name: 'Princess Pine', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'pine', w: 0.9, h: 0.18, blurb: 'Not a pine but a clubmoss: little evergreen trees a hand tall, from a group of plants older than the dinosaurs, spreading by runners under the leaves.' },
   { id: 'partridgeberry', name: 'Partridgeberry', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'forest', w: 0.9, h: 0.04, blurb: 'A creeping evergreen with paired round leaves. Each red berry comes from two flowers fused together: look for its two dimples.' },
+  { id: 'fireweed', name: 'Fireweed', seasons: ['summer', 'autumn'], hab: 'burn', w: 1, h: 1, blurb: 'Tall magenta spikes that come up after a fire, often among the first plants back on burned ground.' },
   { id: 'soldiers', name: 'British Soldiers', seasons: ['spring', 'summer', 'autumn', 'winter'], hab: 'pine', w: 0.5, h: 0.05, blurb: 'Not a plant at all but a lichen, a fungus and an alga living as one: scarlet caps on grey-green stalks on old stumps and dry ground.' },
 ];
 const ACTIVE = PLANTS.filter((p) => p.seasons.includes(SEASON));
 const CELL = 5, RAD = 75, CAP = 180;
-const DENS = { water: 0.22, shallows: 0.35, wet: 0.16, shore: 0.3, forest: 0.1, pine: 0.14, edge: 0.4 };
+const DENS = { water: 0.22, shallows: 0.35, wet: 0.16, shore: 0.3, forest: 0.1, pine: 0.14, edge: 0.4, burn: 0.5 };
 const hash = (x, z, k) => { let h = (x * 374761393 + z * 668265263 + k * 2147483647) >>> 0; h = ((h ^ (h >>> 13)) * 1274126177) >>> 0; return (h ^ (h >>> 16)) / 4294967296; };
 
 /** which habitats a point offers */
@@ -175,6 +181,8 @@ function habitats(x, z) {
   const lc = landcoverAt(x, z), dens = lc ? lc.dens : 0.6, pine = lc ? lc.pine : 0.3;
   if (sd > 8 && dens > 0.45) out.push('forest');
   if (sd > 8 && pine > 0.45) out.push('pine');
+  // a burn from an earlier season: fireweed country
+  if (BURNS.at(x, z) > 0.5) { const b = BURNS.find(x, z); if (b && RUN.n - (b.n ?? RUN.n) >= 1) return ['burn']; }
   const tr = trailDistAt(x, z);
   if (sd > 5 && (tr > 1.4 && tr < 11 || dens < 0.35)) out.push('edge');
   return out;
@@ -184,7 +192,7 @@ export class Plants {
   constructor(scene, chunks) {
     this.chunks = chunks; this.cells = new Map(); this.seen = []; this.t = 9;
     this.mesh = {};
-    const fill = fillMaterial({ sway: true }), line = outlineMaterial({ sway: true, color: new THREE.Color(0.14, 0.18, 0.12) });
+    const fill = fillMaterial({ sway: true, burnHide: true }), line = outlineMaterial({ sway: true, burnHide: true, color: new THREE.Color(0.14, 0.18, 0.12) });
     for (const p of ACTIVE) {
       const b = new GeoBuilder(); BUILD[p.id](b); const geo = b.build();
       const f = new THREE.InstancedMesh(geo, fill, CAP), l = new THREE.InstancedMesh(geo, line, CAP);

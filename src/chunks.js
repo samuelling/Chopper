@@ -55,7 +55,8 @@ export class ChunkManager {
     // shared materials
     const fill = fillMaterial({ sway: true, dieback: true });
     const fillStatic = fillMaterial({ sway: false });
-    const fillDouble = fillMaterial({ sway: false, side: THREE.DoubleSide });
+    const fillDouble = fillMaterial({ sway: false, side: THREE.DoubleSide, burnHide: true });
+    const fillShrub = fillMaterial({ sway: false, burnHide: true }), outlineShrub = outlineMaterial({ sway: false, burnHide: true });
     const outline = outlineMaterial({ sway: true, dieback: true });
     const treeDepth = dieDepthMaterial();
     const outlineStatic = outlineMaterial({ sway: false });
@@ -72,7 +73,7 @@ export class ChunkManager {
       });
     }
     this.defs.fern = { geoNear: propModels.fern.geo, geoFar: propModels.fern.geoFar, matFill: fillDouble, matOutline: null, castShadow: false, nearDist: 40, farDist: 95 };
-    this.defs.shrub = { geoNear: propModels.shrub.geo, geoFar: propModels.shrub.geoFar, matFill: fillStatic, matOutline: outlineStatic, castShadow: false, nearDist: 55, farDist: 115 };
+    this.defs.shrub = { geoNear: propModels.shrub.geo, geoFar: propModels.shrub.geoFar, matFill: fillShrub, matOutline: outlineShrub, castShadow: false, nearDist: 55, farDist: 115 };
     propModels.boulders.forEach((g, i) => {
       this.defs[`boulder:${i}`] = { geoNear: g, geoFar: null, matFill: fillStatic, matOutline: outlineStatic, castShadow: true, nearDist: 120, farDist: 240 };
     });

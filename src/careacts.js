@@ -10,6 +10,7 @@ import { SEASON } from './season.js';
 import { RUN } from './run.js';
 import { CARE } from './care.js';
 import { JOURNAL } from './places.js';
+import { BURNS } from './burns.js';
 
 const C = (h) => new THREE.Color(h);
 const cyl = new THREE.CylinderGeometry(1, 1, 1, 8), box = new THREE.BoxGeometry(1, 1, 1), ball = new THREE.SphereGeometry(1, 7, 6);
@@ -93,12 +94,13 @@ export class CareActs {
     if (RUN.s.saplings.some((s) => Math.hypot(s.x - x, s.z - z) < 1.2)) return this.onToast?.('There is already one here.');
     const now = RUN.n + RUN.s.played / Math.max(1, RUN.len);
     if (stock > 0) RUN.s.saplingStock--; else RUN.s.seeds--;
-    RUN.s.planted++; RUN.s.saplings.push({ x, z, yaw: Math.random() * 6.28, age0: now - (stock > 0 ? 3 : 0) });
-    this._plantedCare();
+    const ash = BURNS.at(x, z) > 0.5;          // burned ground is fertile: a tree planted in the ash grows fast and counts double
+    RUN.s.planted++; RUN.s.saplings.push({ x, z, yaw: Math.random() * 6.28, age0: now - (stock > 0 ? 3 : 0) - (ash ? 3 : 0) });
+    this._plantedCare(); if (ash) this._plantedCare();
     if (RUN.s.planted === 1 || RUN.s.planted % 25 === 0) JOURNAL.add(RUN.s.planted === 1 ? 'Planted a tree. It will take many seasons.' : `${RUN.s.planted} trees planted now.`, x, z);
     RUN.save?.(); this._dirty = true;
     const left = (RUN.s.saplingStock || 0) + (RUN.s.seeds || 0);
-    this.onToast?.(stock > 0 ? `Sapling planted. ${left} left to plant.` : `Seed planted. Trees do not hurry. ${left} left.`, 1.8);
+    this.onToast?.(ash ? `Planted in the ash, where it will grow fast. ${left} left to plant.` : stock > 0 ? `Sapling planted. ${left} left to plant.` : `Seed planted. Trees do not hurry. ${left} left.`, 1.8);
   }
   // every tree planted adds a little care, and many of them speed the park's healing (a planted forest is a funded recovery)
   // every tree planted makes the woods a little more resilient (harm shows less on the land); a hundred trees is a lot

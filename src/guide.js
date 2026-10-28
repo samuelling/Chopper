@@ -54,7 +54,7 @@ export const ENTRIES = [
   { id: 'cricket', cat: 'Sounds', name: 'Field Cricket', blurb: 'The ticking chorus of late summer and early autumn.', song: 'cricket', songOnly: true },
 ];
 // wild plants (plants.js): a hint of when and where for the ones you have not found yet
-const HAB = { wet: 'wet ground', shore: 'the water\u2019s edge', shallows: 'the shallows', water: 'on the water', forest: 'the forest floor', pine: 'dry pine woods', edge: 'sunny trail edges' };
+const HAB = { burn: 'burned ground, a season after a fire', wet: 'wet ground', shore: 'the water\u2019s edge', shallows: 'the shallows', water: 'on the water', forest: 'the forest floor', pine: 'dry pine woods', edge: 'sunny trail edges' };
 for (const p of PLANTS) ENTRIES.push({ id: p.id, cat: 'Plants', name: p.name, blurb: p.blurb, hint: `${p.seasons.length === 4 ? 'All year' : p.seasons.map((s) => s[0].toUpperCase() + s.slice(1)).join(', ')} \u00b7 ${HAB[p.hab]}` });
 // moments: a species doing the thing it does.  Each is its own photo to get (and, from Year Two, its own page feature)
 for (const [id, of, name, hint] of [

@@ -154,7 +154,8 @@
   #dronefpv .dlock i:nth-child(3) { --sx:-1; --sy:1; border-right:0; border-top:0; } #dronefpv .dlock i:nth-child(4) { --sx:1; --sy:1; border-left:0; border-top:0; }
   @keyframes dlockin { from { transform:translate(calc(var(--sx) * 60px - 7px), calc(var(--sy) * 60px - 7px)); opacity:.4; } 60% { opacity:1; } to { transform:translate(calc(var(--sx) * 22px - 7px), calc(var(--sy) * 22px - 7px)); } }
   #dronefpv .dlock span { position:absolute; left:0; top:34px; transform:translateX(-50%); white-space:nowrap; font-size:11px; letter-spacing:.12em; color:#ffd24a; background:rgba(20,18,24,.6); padding:2px 6px; border-radius:4px; animation:dscan .5s steps(2) infinite; }
-  #dronefpv .dlock.locked i { border-color:#7cf07a; } #dronefpv .dlock.locked span { color:#9cf59a; animation:none; }
+  #dronefpv .dlock.fire i { border-color:#ff5a3a; } #dronefpv .dlock.fire span { color:#ff8a6a; }
+  #dronefpv .dlock.locked:not(.fire) i { border-color:#7cf07a; } #dronefpv .dlock.locked:not(.fire) span { color:#9cf59a; } #dronefpv .dlock.locked span { animation:none; }
   @keyframes dscan { 50% { opacity:.4; } }
   #dronefpv .dmsg { position:absolute; left:50%; bottom:92px; transform:translateX(-50%); max-width:min(640px, 70%); padding:8px 14px; border-radius:12px; background:rgba(20,18,24,.72); text-align:center; font-size:13px; line-height:1.4; opacity:0; transition:opacity .3s; }
   #dronefpv .dmsg.on { opacity:1; }
@@ -163,6 +164,8 @@
   #dronefpv .dcam { position:absolute; inset:0; border-radius:26px; background:#fff; opacity:0; pointer-events:none; } #dronefpv .dcam.on { animation:dflash .35s ease-out; } @keyframes dflash { from { opacity:.85; } to { opacity:0; } }
   body:not(.mobile) #dronefpv .dstick { pointer-events:none; }
   @media (max-width: 700px) { #dronefpv .dtop { gap:10px; padding:8px 90px; font-size:11px; } #dronefpv .dstick { width:100px; height:100px; } #dronefpv .dstick i { width:40px; height:40px; } }
+  #binoview { position:fixed; inset:0; z-index:20; pointer-events:none; } body.binos #hud .card, body.binos #minimap, body.binos #hint { visibility:hidden; } #binoview svg rect { filter:blur(.6px); } #binoview.hidden { display:none; } #binoview svg { position:absolute; inset:0; }
+  #binoview .bhint { position:absolute; left:50%; bottom:12%; transform:translateX(-50%); color:#f4e6c8; font-size:13px; letter-spacing:.1em; text-shadow:0 1px 4px #000; }
   .ifund { display:block; margin:6px 2px 2px; font-size:12px; opacity:.75; line-height:1.4; }
   #fundline { margin-top:8px; font-size:11px; letter-spacing:.08em; opacity:.85; color:#c7e39a; }
   #scname { transition:opacity .8s ease; } #scname.dim { opacity:0; }
@@ -385,7 +388,7 @@
     <div class="r"><span class="k"><kbd>B</kbd></span><span class="t">sit and wait (time runs 4× faster)</span></div>
     </div>
     <div class="cg"><h4>Doing</h4>
-    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">switch tools: phone, axe, rod</span></div>
+    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">tools: phone, axe, rod, binoculars</span></div>
     <div class="r"><span class="k"><kbd>Click</kbd></span><span class="t">swing, cast, reel</span></div>
     <div class="r"><span class="k"><kbd>V</kbd></span><span class="t">camera (click to shoot)</span></div>
     <div class="r"><span class="k"><kbd>E</kbd></span><span class="t">litter, the dam gate, the boat</span></div>
@@ -425,7 +428,7 @@
     <div class="r"><span class="k"><kbd>B</kbd></span><span class="t">sit and wait (time runs 4× faster)</span></div>
     </div>
     <div class="cg"><h4>Doing</h4>
-    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">switch tools: phone, axe, rod</span></div>
+    <div class="r"><span class="k"><kbd>Q</kbd></span><span class="t">tools: phone, axe, rod, binoculars</span></div>
     <div class="r"><span class="k"><kbd>Click</kbd></span><span class="t">swing, cast, reel</span></div>
     <div class="r"><span class="k"><kbd>V</kbd></span><span class="t">camera (click to shoot)</span></div>
     <div class="r"><span class="k"><kbd>E</kbd></span><span class="t">litter, the dam gate, the boat</span></div>

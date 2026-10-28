@@ -9,6 +9,7 @@ export const shared = {
   resY: { value: 720 },
   outlinePx: { value: 1.5 },
   harm: { value: 0 },
+  burns: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },   // burned ground (burns.js): x, z, radius, on
   // the terrain texture (R height, G distance from the reservoir's shore) so trees know how far they stand from the water
   heightTex: { value: null }, heightInfo: { value: new THREE.Vector4() }, gridDim: { value: new THREE.Vector2(1, 1) },
 };
@@ -50,36 +51,48 @@ float treeLuck(vec2 p) { vec3 p3 = fract(vec3(p.x, p.y, p.x) * 0.1031); p3 += do
 // Same maths as dieAt() in pressure.js.
 const DIE_DECL = /* glsl */ `
 uniform sampler2D uHeightTex; uniform vec4 uHeightInfo; uniform vec2 uGridDim;
-varying float vDie; varying float vFol; varying vec3 vLp;
+varying float vDie; varying float vFol; varying vec3 vLp; varying vec2 vInst;
 float shoreDist(vec2 xz) { vec2 t = clamp((xz - uHeightInfo.xy) / uHeightInfo.z, vec2(0.0), uGridDim - 1.001); return texelFetch(uHeightTex, ivec2(t + 0.5), 0).g; }
 float dieAt(vec2 xz, float harm) { float th = 0.06 + 0.9 * clamp(shoreDist(xz) / 350.0, 0.0, 1.0) + 0.3 * (treeLuck(xz) - 0.5); return smoothstep(th, th + 0.18, harm); }
+uniform vec4 uBurns[8];
+float burnAt(vec2 xz) { float b = 0.0; for (int i = 0; i < 8; i++) { if (uBurns[i].w > 0.5) b = max(b, clamp((uBurns[i].z - distance(xz, uBurns[i].xy)) / 6.0, 0.0, 1.0)); } return b; }
 `;
 const DIE_MAIN = /* glsl */ `
-vDie = 0.0; vFol = smoothstep(0.1, 0.5, aTint); vLp = position;
+vDie = 0.0; vFol = smoothstep(0.1, 0.5, aTint); vLp = position; float burnL = 0.0; vInst = vec2(1e6);
 #ifdef USE_INSTANCING
   if (uHarm > 0.001) vDie = dieAt(instanceMatrix[3].xz, uHarm);
+  burnL = burnAt(instanceMatrix[3].xz); vDie = max(vDie, burnL); vInst = instanceMatrix[3].xz;   // burned ground: bare, and charred in the fragment shader
   vLp = position + instanceMatrix[3].xyz * 0.37;
 #endif
 `;
 const DIE_COLOR = /* glsl */ `
   if (vDie > 0.0) {
-    float lum = dot(vColor.rgb, vec3(0.333));
-    vColor.rgb = mix(vColor.rgb, mix(vec3(0.74, 0.58, 0.27), vec3(0.55, 0.38, 0.2), smoothstep(0.2, 0.6, vDie)) * (0.5 + lum), smoothstep(0.0, 0.45, vDie) * vFol * 0.9);
-    vColor.rgb = mix(vColor.rgb, vec3(0.56, 0.54, 0.52) * (0.55 + lum), vDie * (1.0 - vFol) * 0.7);   // the bark greys
+    float lum = dot(vColor.rgb, vec3(0.333)), vd = min(vDie, 1.0);
+    vColor.rgb = mix(vColor.rgb, mix(vec3(0.74, 0.58, 0.27), vec3(0.55, 0.38, 0.2), smoothstep(0.2, 0.6, vd)) * (0.5 + lum), smoothstep(0.0, 0.45, vd) * vFol * 0.9);
+    vColor.rgb = mix(vColor.rgb, vec3(0.56, 0.54, 0.52) * (0.55 + lum), vd * (1.0 - vFol) * 0.7);   // the bark greys
   }
 `;
 const DIE_FRAG_DECL = /* glsl */ `
-varying float vDie; varying float vFol; varying vec3 vLp;
+varying float vDie; varying float vFol; varying vec3 vLp; varying vec2 vInst;
+uniform vec4 uBurns[8];
+float burnAtF(vec2 xz) { float b = 0.0; for (int i = 0; i < 8; i++) { if (uBurns[i].w > 0.5) b = max(b, clamp((uBurns[i].z - distance(xz, uBurns[i].xy)) / 6.0, 0.0, 1.0)); } return b; }
 float dieHash(vec3 p) { return fract(sin(dot(floor(p), vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 `;
 // leaves fall in clumps: each ~30 cm cell of a crown drops at its own moment, from a third of the way to fully dead
 const DIE_DISCARD = /* glsl */ `
 if (vFol > 0.5 && dieHash(vLp * 3.0) < smoothstep(0.3, 1.0, vDie)) discard;
 `;
+// ground plants (ferns, shrubs, flowers) are gone from a burn the season it happens; they come back after
+const BURN_HIDE = /* glsl */ `
+#ifdef USE_INSTANCING
+{ float bh = 0.0; for (int i = 0; i < 8; i++) { if (uBurns[i].w > 0.5 && uBurns[i].w < 1.5) bh = max(bh, clamp((uBurns[i].z - distance(instanceMatrix[3].xz, uBurns[i].xy)) / 4.0, 0.0, 1.0)); } transformed *= 1.0 - bh; }
+#endif
+`;
 const addDie = (mat, shader) => {
-  shader.uniforms.uHeightTex = shared.heightTex; shader.uniforms.uHeightInfo = shared.heightInfo; shader.uniforms.uGridDim = shared.gridDim;
+  shader.uniforms.uHeightTex = shared.heightTex; shader.uniforms.uHeightInfo = shared.heightInfo; shader.uniforms.uGridDim = shared.gridDim; shader.uniforms.uBurns = shared.burns;
   shader.vertexShader = shader.vertexShader.replace(/(float treeLuck[^\n]*\n)/, '$1' + DIE_DECL).replace('void main() {', 'void main() {\n' + DIE_MAIN);
-  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n' + DIE_FRAG_DECL).replace('void main() {', 'void main() {\n' + DIE_DISCARD);
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n' + DIE_FRAG_DECL).replace('void main() {', 'void main() {\n' + DIE_DISCARD)
+    .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.01, 0.009), burnAtF(vInst) * 0.96);   // charred in a burn (linear colour: this is near black on screen)');
 };
 
 // Per-vertex colour = vertex-colour * (instance/uniform tint blended by aTint).
@@ -156,7 +169,8 @@ export function fillMaterial(opts = {}) {
     side: opts.side ?? THREE.FrontSide,
   });
   mat.userData.uTreeColor = { value: new THREE.Color(1, 1, 1) };
-  mat.customProgramCacheKey = () => `fill-${sway ? 1 : 0}-${die ? 1 : 0}`;
+  const hide = !!opts.burnHide;
+  mat.customProgramCacheKey = () => `fill-${sway ? 1 : 0}-${die ? 1 : 0}-${hide ? 1 : 0}`;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = shared.time;
     shader.uniforms.uWind = shared.wind;
@@ -167,6 +181,7 @@ export function fillMaterial(opts = {}) {
       .replace('#include <color_vertex>', COLOR_TINT)
       .replace('#include <begin_vertex>', sway ? SWAY : '#include <begin_vertex>');
     if (die) addDie(mat, shader);
+    if (hide) { shader.uniforms.uBurns = shared.burns; shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nuniform vec4 uBurns[8];').replace(/(#include <morphtarget_vertex>)/, BURN_HIDE + '$1'); }
   };
   if (die) mat.defines = { DIEBACK: '' };
   return mat;
@@ -184,7 +199,8 @@ export function outlineMaterial(opts = {}) {
     color: opts.color ?? new THREE.Color(0.34, 0.27, 0.31),
   });
   mat.userData.uTreeColor = { value: new THREE.Color(1, 1, 1) };
-  mat.customProgramCacheKey = () => `outline-${sway ? 1 : 0}-${die ? 1 : 0}`;
+  const hide = !!opts.burnHide;
+  mat.customProgramCacheKey = () => `outline-${sway ? 1 : 0}-${die ? 1 : 0}-${hide ? 1 : 0}`;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = shared.time;
     shader.uniforms.uWind = shared.wind;
@@ -198,6 +214,7 @@ export function outlineMaterial(opts = {}) {
       .replace('#include <begin_vertex>', sway ? SWAY : '#include <begin_vertex>')
       .replace('#include <project_vertex>', OUTLINE_PROJECT);
     if (die) addDie(mat, shader);
+    if (hide) { shader.uniforms.uBurns = shared.burns; shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nuniform vec4 uBurns[8];').replace(/(#include <morphtarget_vertex>)/, BURN_HIDE + '$1'); }
   };
   if (die) mat.defines = { DIEBACK: '' };
   return mat;

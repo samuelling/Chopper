@@ -48,6 +48,9 @@ import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { Explore, ATTRACTION } from './explore.js';
 import { Drone } from './drone.js';
+import { Fire } from './fire.js';
+import { Binoculars } from './binoculars.js';
+import { landcoverAt } from './ashland_landcover.js';
 import { Usage, LEVELS } from './usage.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
@@ -424,7 +427,7 @@ async function boot() {
       { text: '<span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
       { text: '<kbd>Shift</kbd> to hurry &nbsp; <kbd>Space</kbd> to hop', ok: () => tut.hopped, max: 25 },
       { text: '<kbd>P</kbd> raises your phone to your face: the map, your journal, the field guide, the Park Fund and more. <kbd>P</kbd> again puts it down', ok: () => tut.phoned, max: 40 },
-      { text: '<kbd>Q</kbd> changes what is in your hands: the phone, the axe, the fishing rod, or nothing. Click uses what you hold', ok: () => tut.tooled, max: 30 },
+      { text: '<kbd>Q</kbd> changes what is in your hands: the phone, the axe, the fishing rod, the binoculars, or nothing. Click uses what you hold', ok: () => tut.tooled, max: 30 },
       { text: '<kbd>V</kbd> raises the camera. Click to photograph birds, animals and trees', ok: () => tut.shot, max: 30 },
       { text: '<kbd>B</kbd> to sit and wait: stay still, and the woods come closer. While you sit, the day goes by four times faster', ok: () => tut.sat, max: 22 },
       { text: '<kbd>Q</kbd> again brings out a fishing rod: click to cast into open water, and click when the bobber dips', ok: () => tut.fished, max: 25 },
@@ -475,6 +478,7 @@ async function boot() {
       if (player.cameraMode) { if (down) player.events.photo?.(); }
       else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
       else if (player.carry === 'drone') { if (down) player.events.droneLaunch?.(); }
+      else if (player.carry === 'binoculars') { if (down) player.events.binoc?.(); }
       else if (down && !player.boat) player.startSwing();
     } });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
@@ -617,6 +621,30 @@ async function boot() {
   explore.onShipment = () => setTimeout(() => ui.toast('Something new seems to have turned up in the park. Ask around.', 5.5), 7500);
   explore.onLead = (l) => ui.toast(`A lead: ${l.text} Circled on your map.`, 6);
   let leadT = 0;
+  // ---- forest fire (fire.js): rare, likelier as the woods die; found by the drone's spotter or a paid lookout crew
+  const fire = new Fire(scene, { force: params.has('fire') }); fire.kindleDev = params.get('fire') === 'kindle';
+  fire.onStart = () => { audio.notify?.(); ui.toast('You smell smoke. A fire has started somewhere in the park. Find it and call it in: follow the smoke, look with the binoculars (Q), fly the drone with its AI spotter, or send a lookout crew from the Park Fund.', 9); JOURNAL.add('Smoke over the trees: a fire somewhere in the park.'); };
+  fire.onLocated = (how) => { setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', drone: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
+    if (how === 'kindling') JOURNAL.add('The dying woods caught like kindling. A big fire, seen from town.', fire.x, fire.z); };
+  // walking into it: stopped at the edge, like the winter water
+  player.hotAt = (x, z, px, pz) => { if (!fire.s.start || !(fire.s.phase === 'burning' || fire.s.phase === 'located') || fire.fierce < 0.1) return false; const d = Math.hypot(x - fire.x, z - fire.z); return d < fire.s.r + 4 && d < Math.hypot(px - fire.x, pz - fire.z) - 1e-4; };
+  player.events.hot = () => ui.toast('It\u2019s too hot. You can\u2019t get any closer to the fire.', 3.2);
+  fire.onSlow = () => ui.toast('The trees you cut down around it are slowing the fire.', 4);
+  // a firebreak: trees cut down in a ring just outside the burning front slow its spread
+  fire.slowFn = () => {
+    const r = fire.s.r; let cut = 0; for (const rec of chunks.felled.values()) { const d = Math.hypot(rec.x - fire.x, rec.z - fire.z); if (d > r - 2 && d < r + 14) cut++; }
+    if (!cut) return 1;
+    const live = chunks.treesNear(fire.x, fire.z, r + 14).filter((t) => Math.hypot(t.x - fire.x, t.z - fire.z) > r - 2).length;
+    return Math.max(0.15, 1 - 0.85 * cut / (cut + live));
+  };
+  const binos = new Binoculars(camera, player);
+  player.events.binoc = () => { if (!started || interludeOn || phone.isOpen || player.cameraMode || drone.active) return; binos.toggle(); };
+  fire.onOut = (r, unfound) => {
+    const across = Math.round(r * 2);
+    ui.toast(unfound ? `Nobody found the fire in time. It burned itself out over a patch about ${across} m across.` : `The fire is out. It burned a patch about ${across} m across. Ash is fertile: trees planted there grow fast.`, 7);
+    JOURNAL.add(unfound ? `The fire burned itself out, about ${across} m across. Nobody found it in time.` : `The fire service put the fire out. It left a burn about ${across} m across, ash and black snags.`, fire.x, fire.z);
+    if (unfound) PRESSURE.bump(0.02);
+  };
   // ---- the drone (bought from the Park Fund): thrown from the hand, flown first-person from the phone held sideways
   let droneOn = false;
   const drone = new Drone({ scene, camera, player, audio, mobile: MOBILE });
@@ -660,6 +688,11 @@ async function boot() {
     const v = new THREE.Vector3(), open = new Set(explore.openLeads().map((l) => l.target));
     if ((spotT -= dt) <= 0) {
       spotT = 0.5;
+      // a fire in view is the first thing it looks for, from a long way off
+      if (fire.burning && !locks.some((L) => L.t.kind === 'fire')) {
+        const d = Math.hypot(fire.x - drone.pos.x, fire.z - drone.pos.z); v.set(fire.x, groundY(fire.x, fire.z) + 4, fire.z).project(camera);
+        if (d < 650 && v.z < 1 && Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85 && Math.random() < 0.7) { const el = document.createElement('div'); el.className = 'dlock fire'; el.innerHTML = '<i></i><i></i><i></i><i></i><span>SCANNING</span>'; lockLayer().appendChild(el); locks.push({ t: { id: 'fire', kind: 'fire', x: fire.x, z: fire.z }, el, age: 0, done: false, gone: 0 }); }
+      }
       for (const t of explore.targets()) {
         if (!LOCKNAME[t.kind] || open.has(t.id) || locks.some((L) => L.t.id === t.id)) continue;   // hidden things only, not named places
         const d = Math.hypot(t.x - drone.pos.x, t.z - drone.pos.z); if (d > 230) continue;
@@ -674,6 +707,7 @@ async function boot() {
       L.age += dt; v.set(L.t.x, groundY(L.t.x, L.t.z) + 0.6, L.t.z).project(camera);
       const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05; L.gone = vis ? 0 : L.gone + dt;
       L.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * scr.width}px, ${(-v.y * 0.5 + 0.5) * scr.height}px)`; L.el.style.opacity = vis ? '' : '0';
+      if (!L.done && L.age > 1.3 && L.t.kind === 'fire') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'FIRE'; PRESSURE.bump(0.003); fire.locate('drone'); continue; }
       if (!L.done && L.age > 1.3) {
         L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = `POSSIBLE ${(LOCKNAME[L.t.kind] || 'find').toUpperCase()}`;
         PRESSURE.bump(0.003); explore.addLead('drone', { r: 25, quiet: true, only: L.t.id });
@@ -718,8 +752,8 @@ async function boot() {
       ui.toast(`The Park Fund has ${fmt(bal)} to spend on seeds, saplings and the lake. ${howTo}.`, 5);
     }
   };
-  const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
-    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', drone: 'Drone in hand. The big button throws it up.', none: 'Hands free.' }[c], 1.8); },
+  const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player), fire: () => fire }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
+    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', binoculars: 'Binoculars in hand. The big button raises them.', drone: 'Drone in hand. The big button throws it up.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
@@ -729,7 +763,7 @@ async function boot() {
     if (phone.isOpen) phone.close();
     else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 520); }
   };
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: RUN.s.drone ? 'drone' : 'none', drone: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', drone: 'Drone in hand. Click to throw it up and fly it.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: 'binoculars', binoculars: RUN.s.drone ? 'drone' : 'none', drone: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', binoculars: 'Binoculars in hand. Click to look through them.', drone: 'Drone in hand. Click to throw it up and fly it.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) togglePhone(); if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
@@ -855,7 +889,7 @@ async function boot() {
   }
   let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0, woodsHudT = 0, woodsAlive = 1, woodsDeadNow = 0;
   function beginInterlude() {
-    drone.forceOff();
+    fire.endSeason(); drone.forceOff();
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
     showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
@@ -983,6 +1017,20 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
+    fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
+    // finding the fire yourself: close enough to see the flames, or the smoke's source in the middle of the binoculars
+    if (fire.burning && started && !interludeOn) {
+      if (Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < fire.s.r + 30 && !droneOn) fire.locate('you');
+      else if (binos.looking) {
+        // the smoke column, some way up, in the middle of the view, and no hill in between
+        const sy = groundY(fire.x, fire.z) + 25, v = new THREE.Vector3(fire.x, sy, fire.z).project(camera), c = camera.position;
+        // (and no forest canopy: under the trees you see nothing far; find a shore, a hilltop or open water)
+        let clear = true; for (let i = 1; i < 60 && clear; i++) { const f = i / 60, x = c.x + (fire.x - c.x) * f, z = c.z + (fire.z - c.z) * f, ly = c.y + (sy - c.y) * f, g = groundY(x, z);
+          if (g > ly || (f < 0.9 && ly < g + 12 && sdfAt(x, z) > 3 && (landcoverAt(x, z)?.dens ?? 0) > 0.45)) clear = false; }
+        if (clear && v.z < 1 && Math.abs(v.x) < 0.4 && Math.abs(v.y) < 0.6 && Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < 1300) fire.locate('binoculars');
+      }
+    }
     drone.showHand(player.carry === 'drone' && !player.cameraMode && !player.carryHidden && !phone.isOpen); drone.update(dt); spotter(dt);   // in flight the camera is the drone's
     fishing.update(dt, { life: PRESSURE.life * (FUND.has('shade') ? 0.7 : 1), full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
@@ -1020,7 +1068,7 @@ async function boot() {
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained, credits: ending ? endingKind : null });
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
-    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
+    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
@@ -1031,7 +1079,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

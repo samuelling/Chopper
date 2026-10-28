@@ -38,13 +38,14 @@ export class Player {
     addEventListener('keyup', (e) => { this.keys[e.code] = false; });
     addEventListener('mousemove', (e) => {
       if (!this.locked) return;
-      this.yaw -= e.movementX * 0.0022;
-      this.pitch = clamp(this.pitch - e.movementY * 0.0022, -1.45, 1.45);
+      const k = 0.0022 * (this.lookScale ?? 1);                       // slower through the binoculars
+      this.yaw -= e.movementX * k;
+      this.pitch = clamp(this.pitch - e.movementY * k, -1.45, 1.45);
     });
     addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     addEventListener('mousedown', (e) => {
       if (e.button === 0 && this.locked) this.mouseDown = true;
-      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'drone') this.events.droneLaunch?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
+      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'drone') this.events.droneLaunch?.(); else if (this.carry === 'binoculars') this.events.binoc?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === dom; if (!this.locked) this.mouseDown = false;
@@ -128,6 +129,7 @@ export class Player {
 
   _blockedAt(x, z) {
     if (sdfAt(x, z) > PLAY_SDF) return true;
+    if (this.hotAt?.(x, z, this.pos.x, this.pos.z)) { this._hot = true; return true; }   // a fire: you can back away, not walk in
     if (x < WORLD.minX + 12 || x > WORLD.maxX - 12 || z < WORLD.minZ + 12 || z > WORLD.maxZ - 12) return true;
     if (!this.swimOK && waterDepthAt(x, z) > WADE_MAX && groundY(x, z) < this.pos.y + 0.2) return true;   // deep water is for swimming; in winter it is simply too cold
     return false;
@@ -191,8 +193,11 @@ export class Player {
 
     let nx = this.pos.x + this.vx * dt, nz = this.pos.z + this.vz * dt;
     // axis-separated boundary checks so we slide along limits
+    this._hot = false;
     if (this._blockedAt(nx, this.pos.z)) nx = this.pos.x;
     if (this._blockedAt(nx, nz)) nz = this.pos.z;
+    this.hotCool = (this.hotCool || 0) - dt;
+    if (this._hot && (fx || fz) && this.hotCool <= 0) { this.hotCool = 5; this.events.hot?.(); }
     // circle colliders
     for (let it = 0; it < 2 && !(this.sitting && this.seatLift); it++) {             // seated at a table: stay on the bench
       this.colliders.query(nx, nz, RADIUS + 3, (c) => {
