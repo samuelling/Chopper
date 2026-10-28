@@ -5,6 +5,7 @@ import { PLANTS } from './plants.js';
 import { LEGENDS } from './legends.js';
 import { FORAGE } from './forage.js';
 import { SKY_ENTRIES } from './sky.js';
+import { NIGHT } from './nightlife.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -72,12 +73,18 @@ for (const [id, of, name, hint] of [
   ['peak-maple', 'maple', 'A red maple at its peak', 'In autumn a few red maples by the water flare brighter than all the rest. Find one and photograph it'],
   ['by-ear', null, 'A singer, found by ear', 'Follow a bird\u2019s song (louder on the side it is on) until you find the singer, and photograph it'],
   ['my-cairn', 'cairn', 'Your own cairn, seven high', 'Stack a cairn of seven stones at a skipping shore (E, when it stands still) and photograph it'],
+  ['eyeshine', null, 'Eyeshine', 'Shine your flashlight at a night animal and its eyes light up. Photograph that'],
+  ['possum-dead', 'night-opossum', 'Opossum, playing dead', 'Walk up close to an opossum at night and it may fall over and play dead. Photograph it, then leave it be'],
+  ['skunk-warn', 'night-skunk', 'Skunk, stamping a warning', 'Get too close to a skunk and it stamps and lifts its tail. Photograph it from there, and do not go closer'],
+  ['squirrel-glide', 'night-flyingsquirrel', 'Flying squirrel, mid-glide', 'At night a flying squirrel glides from one trunk to the next. Watch a trunk, and be ready'],
   ['skip-rings', 'skip', 'Ten skips, in rings', 'Skip a stone ten times or more at a skipping shore, then photograph the chain of rings before it fades'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 // things to pick (forage.js): found when you pick them, or photograph them
 for (const [k, F] of Object.entries(FORAGE)) ENTRIES.push({ id: 'forage-' + k, cat: 'Foraged', name: F.name, blurb: F.blurb, hint: F.hint });
 // the night sky (sky.js): found by looking
 for (const [k, E] of Object.entries(SKY_ENTRIES)) ENTRIES.push({ id: 'sky-' + k, cat: 'Sky', name: E.name, blurb: E.blurb, hint: k === 'meteor' ? 'Night, most of all in summer' : 'Night: sit back (B) and look up' });
+// night life (nightlife.js): only after dark
+for (const [k, N] of Object.entries(NIGHT)) ENTRIES.push({ id: 'night-' + k, cat: 'Night', name: N.name, blurb: N.blurb, hint: N.hint });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets
 for (const [id, L] of Object.entries(LEGENDS)) ENTRIES.push({ id, cat: 'Legendary', name: L.name, blurb: L.blurb, hint: L.hint, legend: true });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));

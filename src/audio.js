@@ -138,6 +138,11 @@ export class Audio {
   peep() { this._tone(2800 + Math.random() * 300, 0.09, 0.022, 'sine', 3300); }
   cricket() { for (let i = 0; i < 3; i++) setTimeout(() => this._tone(3900 + Math.random() * 100, 0.026, 0.012, 'sine'), i * 34); }
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
+  // night voices that come from one place (panned by songAt, so they are built with _seq)
+  trill() { const L = []; for (let i = 0; i < 16; i++) L.push([i * 0.045, 1250 + Math.random() * 40, 0.03, 0.035, 1180, 'triangle']); this._seq(L); }
+  hoot() { this._seq([[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].map(([d, l]) => [d, l > 0.4 ? 330 : 400, l, 0.07, l > 0.4 ? 260 : 390])); }
+  yip() { const n = 4 + ((Math.random() * 4) | 0), L = []; for (let i = 0; i < n; i++) L.push([i * 0.2, 700 + Math.random() * 500, 0.22, 0.035, 900 + Math.random() * 400, 'sawtooth']); L.push([n * 0.2, 620, 1.4, 0.045, 980]); this._seq(L); }
+  chitter() { const L = []; for (let i = 0; i < 6; i++) L.push([i * 0.07, 1900 + Math.random() * 600, 0.05, 0.02, 1500, 'square']); this._seq(L); }
   owl() { if (!this.ready) return; [[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].forEach(([d, l]) => setTimeout(() => this._tone(l > 0.4 ? 330 : 400, l, 0.06, 'sine', l > 0.4 ? 260 : 390), d * 1000)); }
   coyote() { if (!this.ready) return; const n = 5 + ((Math.random() * 5) | 0); for (let i = 0; i < n; i++) setTimeout(() => this._tone(700 + Math.random() * 500, 0.22, 0.03, 'sawtooth', 900 + Math.random() * 400), i * 190 + Math.random() * 80); setTimeout(() => this._tone(620, 1.4, 0.04, 'sine', 980), n * 190); }
   thunder() { if (!this.ready) return; this._burst(110, 0.7, 2.6, 0.35, 'lowpass', 0.4); setTimeout(() => this._burst(70, 0.6, 2.2, 0.25, 'lowpass', 0.5), 600); }
@@ -226,7 +231,7 @@ export class Audio {
 
 // Every voice reports itself so the Field Guide can log songs you actually hear.  Replays from the guide use the raw originals.
 export const RAW_VOICES = {};
-for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog', 'owl', 'coyote']) {
+for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog', 'owl', 'coyote', 'trill', 'hoot', 'yip']) {
   const f = RAW_VOICES[v] = Audio.prototype[v];
   Audio.prototype[v] = function (...a) { if (this.ready) this.onHeard?.(v); return f.apply(this, a); };
 }

@@ -29,15 +29,15 @@ const ball = new THREE.SphereGeometry(1, 12, 9), cyl = new THREE.CylinderGeometr
 const OL = simpleToon('#120f0d', { side: THREE.BackSide });
 const mats = {}; const M = (c) => (mats[c] ||= simpleToon(c));
 /** a part with its outline hull */
-function part(par, geo, col, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, outline = 1.07) {
+export function part(par, geo, col, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, outline = 1.07) {
   const m = new THREE.Mesh(geo, M(col)); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.scale.set(sx, sy, sz); m.castShadow = true; par.add(m);
   if (outline) { const o = new THREE.Mesh(geo, OL); o.position.copy(m.position); o.rotation.copy(m.rotation); o.scale.set(sx * outline + 0.012, sy * outline + 0.012, sz * outline + 0.012); par.add(o); }
   return m;
 }
-const G = (par, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); par.add(g); return g; };
+export const G = (par, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); par.add(g); return g; };
 
 // ---- a four-legged animal: body, head on a neck pivot, four two-part legs, a tail.  Faces +z, feet on y = 0.
-function quad(o) {
+export function quad(o) {
   const root = new THREE.Group(), body = G(root, 0, o.hip, 0), legs = [];
   o.bodyFn(body);
   for (const [sx, sz, fr] of [[-1, o.len * 0.36, 1], [1, o.len * 0.36, 1], [-1, -o.len * 0.34, 0], [1, -o.len * 0.34, 0]]) {

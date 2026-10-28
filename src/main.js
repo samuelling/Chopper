@@ -55,6 +55,7 @@ import { Skipping } from './skipping.js';
 import { Forage, FORAGE } from './forage.js';
 import { Sky, SKY_ENTRIES } from './sky.js';
 import { Birding } from './birding.js';
+import { NightLife, NIGHT } from './nightlife.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
 import { RopeSwing } from './ropeswing.js';
@@ -423,7 +424,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught' || kind === 'foraged') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen, ...cairns.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen, ...cairns.seen, ...nightlife.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -444,7 +445,7 @@ async function boot() {
     // what a photo is worth to the park's page: an animal close up is worth the most (full value within 8 m, down to a
     // quarter at 60 m); from the drone it is a speck (a quarter at most).  A better shot later pays the difference.
     const $ = (n) => `$${n.toLocaleString('en-US')}`, fromAir = droneOn, dist = Math.round(camera.position.distanceTo(new THREE.Vector3(pick.x, pick.y, pick.z)));
-    const animal = (e) => e && (['Animals', 'Birds', 'Legendary'].includes(e.cat) || (e.cat === 'Moments' && !['skip-rings', 'peak-maple'].includes(e.id)));
+    const animal = (e) => e && (['Animals', 'Birds', 'Legendary', 'Night'].includes(e.cat) && e.id !== 'night-foxfire' || (e.cat === 'Moments' && !['skip-rings', 'peak-maple'].includes(e.id)));
     const shareOf = (e) => { const near = !animal(e) || dist <= 8 ? 1 : dist >= 60 ? 0.25 : Math.round((1 - 0.75 * (dist - 8) / 52) * 20) / 20; return fromAir ? Math.min(DRONE_SHARE, near) : near; };
     const rest = (k, cat) => Math.max(0, Math.round(FUND.rate(k, cat) / 10) * 10 - FUND.paid(k));
     const pay = (k, cat) => { const e = BY_ID[k], was = FUND.paid(k), part = FUND.partial(k), share = shareOf(e), pa = FUND.bounty(k, cat, undefined, share); return { e, pa, share, topped: was > 0 && part }; };
@@ -725,6 +726,16 @@ async function boot() {
   const sky = new Sky(scene, camera);
   sky.onFound = (id, C) => { if (GUIDE.addSeen('sky-' + id)) { audio.notify?.(); ui.toast(`${C.name}. ${C.blurb}`, 7); JOURNAL.add(`Found ${C.name} in the night sky.`, player.pos.x, player.pos.z); } };
   sky.onMeteor = () => { const first = GUIDE.addSeen('sky-meteor'); ui.toast(first ? `A shooting star! ${SEASON === 'summer' ? 'The Perseids are on: stay out and watch for more.' : 'Make a wish.'}` : 'Another shooting star.', first ? 5 : 1.6); if (first) JOURNAL.add('Saw a shooting star over the reservoir.', player.pos.x, player.pos.z); };
+  // ---- night life (nightlife.js): bats, raccoons, an opossum, a skunk, owls, peepers, foxfire... only after dark
+  const nightlife = new NightLife(scene, chunks, camera, audio);
+  const skunkEl = document.createElement('div'); skunkEl.id = 'skunked'; document.body.appendChild(skunkEl);
+  let skunkT = 0;
+  nightlife.onEvent = (what, a) => {
+    if (what === 'opossum-dead') { if (!RUN.s.possumHint) { RUN.s.possumHint = true; RUN.save?.(); ui.toast('The opossum keels over and lies still, tongue out. It is playing dead: it will get up once you leave.', 5.5); } }
+    else if (what === 'skunk-warn') ui.toast('The skunk stamps its front feet and lifts its tail. That is a warning.', 3.2);
+    else if (what === 'skunk-spray') { skunkT = 45; skunkEl.classList.add('on'); audio.splash?.(0.2); ui.toast('Too close. The skunk turns and sprays you. Your eyes water; that smell will be with you a while.', 5); JOURNAL.add('Got too close to a skunk, and paid for it.', player.pos.x, player.pos.z); }
+  };
+  const nightSeen = new Set();
   // ---- birding by ear (birding.js): a singer somewhere close, to find by its song
   const birding = new Birding(scene, camera, audio, chunks);
   birding.onArrive = () => { if (!RUN.s.byEarHint) { RUN.s.byEarHint = true; RUN.save?.(); setTimeout(() => ui.toast('A bird is singing close by. Follow the song (it is louder in the ear it is on) and find the singer with the camera.', 6), 2500); } };
@@ -1236,6 +1247,13 @@ async function boot() {
     if (nightNow() && !RUN.s.nightHint && !interludeOn) { RUN.s.nightHint = true; RUN.save?.(); ui.toast(MOBILE ? 'Night. Phone \u2192 Tools has a flashlight, or sit back and watch the stars. Tools \u2192 Go to bed moves on to the next season.' : 'Night. L for the flashlight, or B to sit back and watch the stars. N goes to bed, on to the next season.', 7); }
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
+    { const dark = started && !interludeOn && (nightNow() || mood === 3), tp = camera.getWorldPosition(new THREE.Vector3()), td = camera.getWorldDirection(new THREE.Vector3());
+      nightlife.update(dt, dark ? 1 : 0, player.pos, { on: torchOn && !droneOn, pos: tp, dir: td });
+      // the first time you set eyes on each one (in view and fairly close), it is noted; the Field Guide still wants a photo
+      if (dark) for (const q of nightlife.seen) { if (nightSeen.has(q.kind)) continue; const d = Math.hypot(q.x - tp.x, q.z - tp.z), v = new THREE.Vector3(q.x, q.y, q.z).project(camera);
+        if (d < (q.kind === 'night-bat' || q.kind === 'night-owl' ? 30 : 16) && v.z < 1 && Math.abs(v.x) < 0.7 && Math.abs(v.y) < 0.7) { nightSeen.add(q.kind); const N = NIGHT[q.kind.slice(6)]; if (N && !GUIDE.photographed(q.kind)) ui.toast(`${N.name}. ${N.blurb}`, 6); } }
+      if (skunkT > 0 && (skunkT -= dt) <= 0) skunkEl.classList.remove('on');
+      if (!RUN.s.nightLifeHint && dark && RUN.s.nightHint && torchOn) { RUN.s.nightLifeHint = true; RUN.save?.(); setTimeout(() => ui.toast('The woods are busy at night. Sweep the flashlight: eyes shine back. And listen: some of them you will hear first.', 6), 4000); } }
     player.skis = player.carry === 'skis' && !player.boat;
     skiModel.g.visible = player.skis && !player.cameraMode && !player.carryHidden && !droneOn;
     if (skiModel.g.visible) { const ph = player.bob * 1.2; skiModel.poles.forEach((p, i) => { p.rotation.x = -0.35 + 0.35 * Math.sin(ph + i * Math.PI) * Math.min(1, player.speed / 3); }); }
@@ -1305,7 +1323,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
