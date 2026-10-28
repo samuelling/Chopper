@@ -22,6 +22,8 @@ Not shipped yet. This is what is in place, and the steps for when it is time.
   is remembered.
 - **Icons.** `assets/icons/`: an SVG master, a 1024 px PNG for app stores and installers, and the web sizes (512,
   maskable 512, 192, 180 for iOS, 32 favicon).
+- **Apple builds ready to sign.** The Mac app is set up for Developer ID signing and notarization, and an iPad Xcode project
+  is generated (below).
 - **Notices.** `THIRD_PARTY.md` lists every licence (three.js MIT, fonts OFL, OpenStreetMap ODbL, and public-domain
   USGS, USFWS and MassGIS data). All of them allow free redistribution with attribution, and the credits already carry
   it.
@@ -47,32 +49,48 @@ errors.
 
 The installer is about 100 MB, mostly Chromium. The game itself is 4 MB.
 
-**Signing, so people are not warned off:**
-- *Mac.* Without signing and notarization, macOS refuses to open the app until the player overrides it in System
-  Settings. Signing needs an Apple Developer Program membership ($99 a year). electron-builder signs and notarizes once
-  the certificate and credentials are in the environment.
-- *Windows.* An unsigned installer gets a SmartScreen warning ("Windows protected your PC"). A code-signing
-  certificate, or Azure Trusted Signing, removes it. The Microsoft Store is another route: registration is now free for
-  individual developers, and the Store signs the package.
+**Signing (Mac).** You have an Apple Developer membership, so the Mac build can be signed and notarized and open with no
+warning. The config is in place: hardened runtime, the entitlements Electron needs (`build/entitlements.mac.plist`),
+and `notarize: true`. On your Mac:
+1. In Xcode, Settings, Accounts, create a **Developer ID Application** certificate, so it is in your keychain.
+2. Make an app-specific password at account.apple.com, and note your Team ID (developer.apple.com, Membership).
+3. Build. electron-builder finds the certificate, signs, uploads to Apple's notary service and staples the ticket:
 
-**Where to give it away:** itch.io and GitHub Releases (free, any build), the Microsoft Store (free for individuals),
-and the Mac App Store (needs the $99 membership and sandboxing). Steam charges $100 per game.
+       export APPLE_ID=you@example.com APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx APPLE_TEAM_ID=XXXXXXXXXX
+       cd packaging/electron && npm install && npm run dist:mac
 
-## iPad
+**Signing (Windows).** An unsigned installer gets a SmartScreen warning ("Windows protected your PC") until it has been
+downloaded enough times. A code-signing certificate (or Azure's signing service) removes it. The Microsoft Store is the
+free way round it: registration is free for individual developers, and the Store signs the package.
 
-1. **Now, free:** the home-screen web app above. There is no store, review or fee. It updates itself whenever there is
-   a connection.
-2. **App Store, later:** wrap `dist/` with Capacitor (`npx cap add ios`; set `window.ashlandApp` with `kind:
-   'capacitor'` and an `openExternal` that uses the Browser plugin). It needs a Mac with Xcode and the $99 Apple
-   membership. The game is free, so there is no in-app purchase work to do.
+**Where to give it away:** itch.io and GitHub Releases (free, any build, and the signed Mac build opens cleanly from
+either), the Microsoft Store (free for individuals), and the Mac App Store (covered by your membership; it needs a
+separate sandboxed `mas` build target, which can come later). Steam charges $100 per game.
 
-Things to check on a real iPad before either: frame rate on older models (`setPixelRatio` in `main.js` caps tablets at
-1.4), audio starting on the first tap, and pointer lock with a trackpad in keyboard-and-mouse mode.
+## iPad (and iPhone)
+
+1. **Now, free:** the home-screen web app above. There is no store, review or fee, and it updates itself whenever there
+   is a connection.
+2. **The App Store: the Xcode project is ready** in `packaging/ipad/` (Capacitor 8). It is landscape only, fullscreen,
+   with the status bar hidden, the Ashland icon and a dark launch screen. Its bundle ID is `org.megazine.ashland` (change
+   it in Xcode if you want your own), and it declares no non-exempt encryption, so there is no export paperwork. Links
+   open in an in-app Safari sheet. On your Mac:
+
+       cd packaging/ipad && npm install
+       npm run sync        # builds dist/ and copies it into the Xcode project
+       npm run open        # opens it in Xcode: pick your team under Signing, then run it on an iPad or archive it
+
+   The project was generated and checked here, but not built: that needs Xcode. Run `npm run sync` again whenever the
+   game changes. The game is free, so there is no in-app purchase work.
+
+Things to check on a real iPad: frame rate on older models (`setPixelRatio` in `main.js` caps tablets at 1.4), audio
+starting on the first tap, and pointer lock with a trackpad in keyboard-and-mouse mode.
 
 ## Before a release
 
 - Choose a licence for the game's own code and art (the repo has none yet; the third-party licences above are fine
   for any choice).
-- Bump `version` in `package.json` and `packaging/electron/package.json`.
+- Bump `version` in `package.json`, `packaging/electron/package.json` and `packaging/ipad/package.json` (and the build
+  number in Xcode).
 - The dev and testing aids (`?dev=1`, `?skipto=`, `?fire=`, the 9-1-1 and d-r-o-n-e codes) do no harm in a release.
   An app has no address bar, so the URL ones cannot be reached anyway.

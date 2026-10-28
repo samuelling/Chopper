@@ -35,6 +35,7 @@ export function setControlsPref(v) { try { localStorage.setItem(CONTROLS_KEY, v)
 /** open a link outside the game: the system browser in an app, a new tab on the web */
 export function openExternal(url) {
   if (bridge?.openExternal) { bridge.openExternal(url); return; }
+  const cap = W.Capacitor?.Plugins?.Browser; if (cap) { cap.open({ url }); return; }   // the iPad app: an in-app Safari sheet
   W.open?.(url, '_blank', 'noopener');
 }
 /** close the app (only offered inside a packaged app) */

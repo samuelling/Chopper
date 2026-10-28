@@ -1,0 +1,10 @@
+{
+  "appId": "org.megazine.ashland",
+  "appName": "Ashland",
+  "webDir": "../../dist",
+  "backgroundColor": "#1c1517",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false
+  }
+}

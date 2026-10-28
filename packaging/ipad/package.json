@@ -1,0 +1,20 @@
+{
+  "name": "ashland-ipad",
+  "version": "0.9.0",
+  "private": true,
+  "description": "Ashland for iPad (and iPhone) through the App Store, with Capacitor. Needs a Mac with Xcode.",
+  "scripts": {
+    "build-game": "cd ../.. && node tools/build.mjs",
+    "setup": "npm run build-game && npx cap add ios",
+    "sync": "npm run build-game && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/browser": "^8.0.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

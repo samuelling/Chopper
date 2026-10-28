@@ -18,11 +18,41 @@
   "build": {
     "appId": "org.megazine.ashland",
     "productName": "Ashland",
-    "files": ["main.cjs", "preload.cjs"],
-    "extraResources": [{ "from": "../../dist", "to": "game" }],
+    "files": [
+      "main.cjs",
+      "preload.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "../../dist",
+        "to": "game"
+      }
+    ],
     "icon": "../../assets/icons/icon-1024.png",
-    "mac": { "category": "public.app-category.games", "target": [{ "target": "dmg", "arch": ["universal"] }] },
-    "win": { "target": ["nsis"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
