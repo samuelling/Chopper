@@ -29,14 +29,14 @@ export function initFullscreen({ mobile, onChange }) {
   if (!fullscreenSupported && mobile) {
     const n = document.getElementById('fsnote'); if (n) n.classList.add('show');
   }
-  addEventListener('keydown', (e) => { if (e.code === 'KeyF' && !e.repeat) toggleFullscreen(); });
+  // (no key for it: F sat too close to the season and light keys; the buttons on the title and pause screens do it)
   // a season turn reloads the page, and a browser always drops fullscreen on reload and only lets it back after a click or key.
   // So remember it on the way out, and take the first click or key of the new season (the one that captures the mouse anyway) to restore it.
   addEventListener('beforeunload', () => { try { sessionStorage.setItem('ashland.fs', isFullscreen() ? '1' : '0'); } catch {} });
   let want = false; try { want = sessionStorage.getItem('ashland.fs') === '1'; } catch {}
   if (want && fullscreenSupported && !mobile) {
     const back = (e) => {
-      if (e.type === 'keydown' && (e.code === 'Escape' || e.code === 'KeyF')) return;
+      if (e.type === 'keydown' && e.code === 'Escape') return;
       removeEventListener('mousedown', back, true); removeEventListener('keydown', back, true);
       if (!isFullscreen()) reqFn.call(root)?.catch?.(() => {});
     };

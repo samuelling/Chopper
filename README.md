@@ -25,7 +25,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | V | camera: narrows the view; click to photograph a tree, bird or animal in the frame |
 | M | optional minimap: off, nearby, or whole park (also a Map button on the pause screen; north is up, the dam at the top) |
 | C | make choices (from Year Two, once the AI phase begins) |
-| F | toggle fullscreen (also a button on the title/pause screens, and on the phone HUD) |
+| Fullscreen | a button on the title and pause screens, and on the phone HUD (no key) |
 
 ## On a phone
 

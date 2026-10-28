@@ -91,7 +91,7 @@ export class Drone {
     // while the drone is up, the keyboard and mouse belong to it (caught before the walking controls see them)
     const keyEv = (down) => (e) => {
       if (this.state === 'off') return;
-      if (e.code === 'Escape' || e.code === 'KeyF' || /^Digit/.test(e.code)) return;     // the menu, fullscreen and the light still work
+      if (e.code === 'Escape' || /^Digit/.test(e.code)) return;     // the menu and the light still work
       this.keys[e.code] = down;
       if (down && !e.repeat && e.code === 'KeyQ' && this.state === 'fly') this.exit();
       if (down && !e.repeat && e.code === 'KeyR' && this.state === 'fly') this.toggleSpot();
