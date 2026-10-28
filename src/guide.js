@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { PLANTS } from './plants.js';
 import { LEGENDS } from './legends.js';
 import { FORAGE } from './forage.js';
+import { SKY_ENTRIES } from './sky.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -74,6 +75,8 @@ for (const [id, of, name, hint] of [
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 // things to pick (forage.js): found when you pick them, or photograph them
 for (const [k, F] of Object.entries(FORAGE)) ENTRIES.push({ id: 'forage-' + k, cat: 'Foraged', name: F.name, blurb: F.blurb, hint: F.hint });
+// the night sky (sky.js): found by looking
+for (const [k, E] of Object.entries(SKY_ENTRIES)) ENTRIES.push({ id: 'sky-' + k, cat: 'Sky', name: E.name, blurb: E.blurb, hint: k === 'meteor' ? 'Night, most of all in summer' : 'Night: sit back (B) and look up' });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets
 for (const [id, L] of Object.entries(LEGENDS)) ENTRIES.push({ id, cat: 'Legendary', name: L.name, blurb: L.blurb, hint: L.hint, legend: true });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
@@ -98,7 +101,9 @@ export const GUIDE = {
   heard(id) { return !!this.d[id]?.heard; },
   caught(id) { return !!this.d[id]?.caught; },
   foraged(id) { return !!this.d[id]?.foraged; },
-  found(id) { return this.photographed(id) || this.heard(id) || this.caught(id) || this.foraged(id); },
+  sawIt(id) { return !!this.d[id]?.saw; },
+  addSeen(id) { const r = (this.d[id] ||= {}), first = !r.saw; r.saw = (r.saw || 0) + 1; this.save(); return first; },
+  found(id) { return this.photographed(id) || this.heard(id) || this.caught(id) || this.foraged(id) || this.sawIt(id); },
   addForaged(id) { const r = (this.d[id] ||= {}), first = !r.foraged; r.foraged = (r.foraged || 0) + 1; this.save(); if (first) this.onNew?.('foraged', BY_ID[id]); },
   count() { return ENTRIES.filter((e) => this.found(e.id)).length; },
   addPhoto(id, thumb, season, big) {

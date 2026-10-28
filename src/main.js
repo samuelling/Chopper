@@ -53,6 +53,8 @@ import { Fire } from './fire.js';
 import { Poachers } from './poachers.js';
 import { Skipping } from './skipping.js';
 import { Forage, FORAGE } from './forage.js';
+import { Sky, SKY_ENTRIES } from './sky.js';
+import { Birding } from './birding.js';
 const FORAGE_WHAT = Object.fromEntries(Object.entries(FORAGE).map(([k, F]) => [k, F.what]));
 import { Legends, LEGENDS } from './legends.js';
 const DRONE_SHARE = 0.25;   // what a drone photo of a species is worth to the park's page, next to a close-up on foot
@@ -409,7 +411,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught' || kind === 'foraged') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -424,6 +426,7 @@ async function boot() {
     bg.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 320);
     const had = BY_ID[id] && GUIDE.photographed(id), hadAct = act && GUIDE.photographed(act), thumb = cv.toDataURL('image/jpeg', 0.7), big = bg.toDataURL('image/jpeg', 0.72);
     // a moment (a fox mid-pounce, a beaver's tail-slap) files the photo under the moment, and still counts for the species
+    if (pick.act === 'by-ear') birding.photographed();
     if (BY_ID[id]) GUIDE.addPhoto(id, thumb, SEASON, act ? null : big);
     if (act) GUIDE.addPhoto(act, thumb, SEASON, big);
     // from the drone a species is a speck: the park's page pays a quarter, and a close-up on foot later pays the rest
@@ -662,6 +665,13 @@ async function boot() {
     const poles = [-1, 1].map((sd) => { const p = new THREE.Group(); const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 1.3, 6), pole); sh.position.y = -0.65; p.add(sh); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.01, 8), basket); b.position.y = -1.2; p.add(b); p.position.set(sd * 0.36, -0.28, -0.42); g.add(p); return p; });
     g.traverse((o) => { o.frustumCulled = false; }); g.visible = false; camera.add(g); return { g, poles };
   })();
+  // ---- the night sky (sky.js): stars, constellations, shooting stars
+  const sky = new Sky(scene, camera);
+  sky.onFound = (id, C) => { if (GUIDE.addSeen('sky-' + id)) { audio.notify?.(); ui.toast(`${C.name}. ${C.blurb}`, 7); JOURNAL.add(`Found ${C.name} in the night sky.`, player.pos.x, player.pos.z); } };
+  sky.onMeteor = () => { const first = GUIDE.addSeen('sky-meteor'); ui.toast(first ? `A shooting star! ${SEASON === 'summer' ? 'The Perseids are on: stay out and watch for more.' : 'Make a wish.'}` : 'Another shooting star.', first ? 5 : 1.6); if (first) JOURNAL.add('Saw a shooting star over the reservoir.', player.pos.x, player.pos.z); };
+  // ---- birding by ear (birding.js): a singer somewhere close, to find by its song
+  const birding = new Birding(scene, camera, audio, chunks);
+  birding.onArrive = () => { if (!RUN.s.byEarHint) { RUN.s.byEarHint = true; RUN.save?.(); setTimeout(() => ui.toast('A bird is singing close by. Follow the song (it is louder in the ear it is on) and find the singer with the camera.', 6), 2500); } };
   // ---- foraging (forage.js): something to pick in every season
   const forage = new Forage(scene);
   const pickForage = (p) => {
@@ -1127,6 +1137,8 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
+    birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
     player.skis = player.carry === 'skis' && !player.boat;
     skiModel.g.visible = player.skis && !player.cameraMode && !player.carryHidden && !droneOn;
     if (skiModel.g.visible) { const ph = player.bob * 1.2; skiModel.poles.forEach((p, i) => { p.rotation.x = -0.35 + 0.35 * Math.sin(ph + i * Math.PI) * Math.min(1, player.speed / 3); }); }
@@ -1195,7 +1207,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, poachers, legends, skipping, forage, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, poachers, legends, skipping, forage, sky, birding, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

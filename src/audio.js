@@ -56,7 +56,7 @@ export class Audio {
     const s = ctx.createBufferSource(); s.buffer = this.noiseBuf; s.playbackRate.value = 0.8 + Math.random() * 0.5;
     const f = ctx.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(40, freq * sweep), t + dur); f.Q.value = q;
     const g = ctx.createGain(); g.gain.setValueAtTime(gain * (this._fv || 1), t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    s.connect(f); f.connect(g); g.connect(this.master); s.start(t, Math.random()); s.stop(t + dur + 0.05);
+    s.connect(f); f.connect(g); g.connect(this._dest || this.master); s.start(t, Math.random()); s.stop(t + dur + 0.05);
   }
   _tone(freq, dur, gain, type = 'sine', endFreq = null) {
     if (!this.ready) return;
@@ -64,7 +64,7 @@ export class Audio {
     const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t);
     if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
     const g = ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g); g.connect(this._dest || this.master); o.start(t); o.stop(t + dur + 0.05);
   }
   /** one footfall; kind is the surface underfoot, loud > 1 when hurrying */
   footstep(kind, loud = 1) {
@@ -117,7 +117,14 @@ export class Audio {
   splash() { this._burst(1800, 0.5, 0.5, 0.35, 'bandpass', 0.3); }
   toggle() { this._tone(200, 0.15, 0.3, 'square', 120); this._burst(2000, 2, 0.1, 0.25); }
   // ---- voices ----
-  _seq(list) { list.forEach(([dt, f, d, g, f2, type]) => setTimeout(() => this._tone(f, d, g, type || 'sine', f2 || null), dt * 1000)); }
+  _seq(list) { const dest = this._dest; list.forEach(([dt, f, d, g, f2, type]) => setTimeout(() => { const was = this._dest; this._dest = dest; this._tone(f, d, g, type || 'sine', f2 || null); this._dest = was; }, dt * 1000)); }
+  /** a song from one side and a distance: pan -1 (left) .. 1 (right), vol 0..1 */
+  songAt(name, pan, vol) {
+    if (!this.ready || !this[name]) return;
+    const ctx = this.ctx, p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.gain.value = vol; p.connect(g); g.connect(this.master);
+    const was = this._dest; this._dest = p; try { this[name](); } finally { this._dest = was; }
+    setTimeout(() => { try { p.disconnect(); g.disconnect(); } catch {} }, 4000);
+  }
   chickadee() { this._seq([[0, 3750, 0.2, 0.05, 3700], [0.26, 3050, 0.34, 0.05, 3000]]); }
   cardinal() { for (let i = 0; i < 3; i++) this._seq([[i * 0.24, 3500, 0.2, 0.05, 2000]]); if (Math.random() < 0.6) this._seq([[0.9, 2600, 0.07, 0.04, 3000], [1.0, 2600, 0.07, 0.04, 3000], [1.1, 2600, 0.07, 0.04, 3000]]); }
   robin() { const l = []; let t = 0; for (let i = 0; i < 5 + ((Math.random() * 3) | 0); i++) { const f = 2100 + Math.random() * 1300; l.push([t, f, 0.1, 0.045, f * (0.8 + Math.random() * 0.5)]); t += 0.1 + Math.random() * 0.12; } this._seq(l); }
