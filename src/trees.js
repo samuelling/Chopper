@@ -334,7 +334,10 @@ export function buildTreeModels() {
  * red maples crowd the wet ground around the reservoir where they colour first.
  * wet: 0..1 how close to the water, rng: () => [0,1)
  */
+/** a handful of red maples by the water that flare brighter than all the rest in autumn (the leaf-peeping prize) */
+export function isPeakMaple(x, z) { const h = Math.abs(Math.sin(Math.round(x * 10) * 12.9898 + Math.round(z * 10) * 78.233) * 43758.5453) % 1; return h > 0.985; }
 export function treeColor(sp, x, z, wet, rng) {
+  if (sp === 'maple' && IS_AUTUMN && wet > 0.35 && isPeakMaple(x, z)) return new THREE.Color('#ff3018').multiplyScalar(1.1);
   let pal = SEASON_DEF.palette?.[sp] ?? SPECIES[sp].palette;
   if (sp === 'maple' && IS_AUTUMN) {
     // red maples (wet) run scarlet/crimson; sugar maples (dry) run orange/gold

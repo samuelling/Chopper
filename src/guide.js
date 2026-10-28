@@ -68,6 +68,8 @@ for (const [id, of, name, hint] of [
   ['woodduck-flight', 'woodduck', 'Wood ducks taking off', 'Wood ducks spook from the water and climb away low. Day, warm months'],
   ['chipmunk-sit', 'chipmunk', 'Chipmunk, sitting up', 'A chipmunk stops dead and sits up to look around'],
   ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
+  ['peak-maple', 'maple', 'A red maple at its peak', 'In autumn a few red maples by the water flare brighter than all the rest. Find one and photograph it'],
+  ['by-ear', null, 'A singer, found by ear', 'Follow a bird\u2019s song (louder on the side it is on) until you find the singer, and photograph it'],
   ['skip-rings', 'skip', 'Ten skips, in rings', 'Skip a stone ten times or more at a skipping shore, then photograph the chain of rings before it fades'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 // things to pick (forage.js): found when you pick them, or photograph them
@@ -136,5 +138,5 @@ export function pickSubject(camera, candidates, maxDist = 90) {
 }
 
 export function treeCandidates(chunks, pos, r = 70) {
-  return chunks.treesNear(pos.x, pos.z, r).map((t) => ({ kind: t.sp, x: t.x, y: t.y + t.H * 0.5, z: t.z, r: Math.max(t.radius * 2.2, t.H * 0.32) }));
+  return chunks.treesNear(pos.x, pos.z, r).map((t) => ({ kind: t.sp, act: t.peak ? 'peak-maple' : null, x: t.x, y: t.y + t.H * 0.5, z: t.z, r: Math.max(t.radius * 2.2, t.H * 0.32) }));
 }

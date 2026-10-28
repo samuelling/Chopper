@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { InstanceBatch } from './instances.js';
-import { treeColor, SPECIES, buildStump } from './trees.js';
+import { treeColor, SPECIES, buildStump, isPeakMaple } from './trees.js';
 import { fillMaterial, outlineMaterial, dieDepthMaterial } from './toon.js';
 import { wetlandAt } from './ashland_wetlands.js';
 import { standAt, SPECIES_W } from './ashland_species.js';
 import { canopyAt } from './ashland_canopy.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
-import { IS_WINTER, SEASON_DEF } from './season.js';
+import { IS_WINTER, SEASON_DEF, SEASON } from './season.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
 import { treeLuck, treeGone } from './pressure.js';
 import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline, BEACH_CREEK, SPILL_CREEK } from './ashland.js';
@@ -353,7 +353,7 @@ export class ChunkManager {
         if (this.felled.has(id)) continue; // already chopped down: stump handled separately
 
         const tree = {
-          ...base, color, geo: g, alive: true, chunk: ch,
+          ...base, color, geo: g, alive: true, chunk: ch, peak: sp === 'maple' && SEASON === 'autumn' && wet > 0.35 && isPeakMaple(x, z),
           hp: Math.max(3, Math.round(SPECIES[sp].hpBase + g.rBase * s * 9)),
         };
         tree.maxHp = tree.hp;

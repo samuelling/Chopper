@@ -219,7 +219,7 @@ async function boot() {
   player.events.swing = () => audio.swing();
   player.swimOK = SEASON !== 'winter';
   // a season turned while you were swimming (or rowing) into one too cold for it: come back on the nearest shore, looking out at the water
-  if (!player.swimOK && waterDepthAt(player.pos.x, player.pos.z) > 0.85) {
+  if (!player.swimOK && waterDepthAt(player.pos.x, player.pos.z) > 0.85 && !iceAt(player.pos.x, player.pos.z)) {
     const ox = player.pos.x, oz = player.pos.z; let best = null;
     for (let r = 2; r <= 400 && !best; r += 2) for (let a = 0; a < 48; a++) {
       const an = a / 48 * Math.PI * 2, x = ox + Math.cos(an) * r, z = oz + Math.sin(an) * r;
@@ -268,6 +268,13 @@ async function boot() {
       for (d += 1.5; d < 90; d += 1) { B.x = RAMP.x + RAMP.dx * d; B.z = RAMP.z + RAMP.dz * d; if (boat._clear(B.x, B.z, B.h)) break; }
     }
     boat.place(B.x, B.z, B.h);
+    // a season turned while you were out in the boat: you are still in it (in winter it is frozen in, and you are on the ice beside it)
+    if (sv?.aboard && boat._wet(B.x, B.z)) {
+      if (!IS_WINTER) { player.boat = boat; player.yaw = B.h; player.pitch = -0.12; }
+      else { const sx = B.x + Math.cos(B.h) * 1.6, sz = B.z - Math.sin(B.h) * 1.6; player.teleport(sx, sz, B.h, -0.05); player.pos.y = lake.level; setTimeout(() => ui.toast('Winter: the lake froze around the boat. You climb out onto the ice.', 4.5), 4500); }
+    }
+    // remember whether you were aboard when the page turns (the season changes by reloading)
+    addEventListener('beforeunload', () => { if (player.boat) { RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h, aboard: true }; } else if (RUN.s.boat) RUN.s.boat.aboard = false; RUN.save?.(); });
     if (params.has('ramp')) player.teleport(B.x - RAMP.dx * 5, B.z - RAMP.dz * 5, Math.atan2(-RAMP.dx, -RAMP.dz), -0.12);   // ?ramp=1 starts you at the boat ramp, facing the lake
   }
   const fishing = new Fishing(scene, camera, {
@@ -537,7 +544,7 @@ async function boot() {
     }
     setTimeout(() => {
       card.classList.add('hidden');
-      if (spawnFromDrone) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
+      if (spawnFromDrone && !player.boat && !player.onIce) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
         audio.init(); started = true; autoCard = false;
         if (needKnob()) { ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
