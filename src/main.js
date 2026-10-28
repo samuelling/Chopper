@@ -640,7 +640,7 @@ async function boot() {
   };
   const enter = () => { try { sessionStorage.setItem('ashland.inplay', '1'); } catch {} if (RUN.dev) return begin(); showCard(); if (!params.has('noflyover') && flyover.active) autoSeason(!(params.has('x') || params.has('ramp'))); };
   // the first time you press begin, ask for the birth year (a reset keeps it)
-  const finishBirth = () => { birthEl.hidden = true; ensureBorn(); enter(); };
+  const finishBirth = () => { birthIn.blur(); birthEl.hidden = true; ensureBorn(); enter(); };
   document.getElementById('birthgo').addEventListener('click', finishBirth);
   document.getElementById('birthskip').addEventListener('click', () => { birthIn.value = ''; finishBirth(); });
   birthIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') finishBirth(); });

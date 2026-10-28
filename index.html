@@ -107,6 +107,7 @@
   }
   #touch { position:fixed; inset:0; z-index:4; display:none; pointer-events:none; }
   body.mobile #touch.on { display:block; }
+  body.mobile { position:fixed; inset:0; }   /* iOS: the page itself can never scroll, so what is drawn and what is touched stay together */
   #stick { position:absolute; left:max(26px, env(safe-area-inset-left)); bottom:max(26px, env(safe-area-inset-bottom)); width:128px; height:128px; border-radius:50%; background:rgba(34,20,22,.35); border:2px solid rgba(244,230,200,.5); }
   #stick i { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px; border-radius:50%; background:rgba(244,230,200,.55); border:2px solid rgba(43,29,26,.5); }
   .tbtn { position:absolute; border-radius:50%; background:rgba(34,20,22,.5); border:2px solid rgba(244,230,200,.7); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:13px; letter-spacing:.12em; text-transform:uppercase; pointer-events:auto; }

@@ -11,12 +11,38 @@ export class TouchControls {
     this.home = null;   // the stick's resting place; it follows your thumb wherever it lands on the left
     const opts = { passive: false };
     const find = (e, id) => [...e.changedTouches].find((t) => t.identifier === id);
+    // iOS: after the on-screen keyboard closes (the birth year, a place name, field notes) Safari can leave the page
+    // scrolled a little, so the buttons are drawn in one place and hit in another.  Put it back whenever that can happen.
+    const unshift = () => {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+      for (const el of [document.scrollingElement, document.documentElement, document.body]) if (el && (el.scrollTop || el.scrollLeft)) { el.scrollTop = 0; el.scrollLeft = 0; }
+    };
+    this.unshift = unshift;
+    addEventListener('focusout', () => { setTimeout(unshift, 60); setTimeout(unshift, 450); });
+    window.visualViewport?.addEventListener('resize', unshift); window.visualViewport?.addEventListener('scroll', unshift);
+    addEventListener('scroll', unshift); addEventListener('orientationchange', () => setTimeout(unshift, 350)); addEventListener('resize', () => setTimeout(unshift, 100));
+    // which button a touch means: the one under it, else the nearest within a fingertip of its edge
+    const buttonAt = (x, y) => {
+      const el = document.elementFromPoint(x, y), hit = el && el.closest && el.closest('.tbtn');
+      if (hit) return hit;
+      let best = null, bd = 16;
+      for (const b of this.root.querySelectorAll('.tbtn')) {
+        if (!b.offsetParent) continue;
+        const r = b.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+        if (d < bd) { bd = d; best = b; }
+      }
+      return best;
+    };
+    // ?touchdebug=1: a dot where each touch lands, outlined in green if it hit a button
+    const dbg = new URLSearchParams(location.search).has('touchdebug');
+    const mark = (x, y, hit) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;left:${x - 9}px;top:${y - 9}px;width:18px;height:18px;border-radius:50%;z-index:9999;pointer-events:none;background:${hit ? 'rgba(80,220,120,.8)' : 'rgba(255,80,60,.8)'};box-shadow:0 0 0 2px #fff`; document.body.appendChild(d); setTimeout(() => d.remove(), 1200); };
     addEventListener('touchstart', (e) => {
       if (!this.root.classList.contains('on')) return;
       e.preventDefault();                 // also suppresses emulated mouse events
+      unshift();
       for (const t of e.changedTouches) {
-        const el = document.elementFromPoint(t.clientX, t.clientY);
-        const btn = el && el.closest && el.closest('.tbtn');
+        const btn = buttonAt(t.clientX, t.clientY);
+        if (dbg) mark(t.clientX, t.clientY, !!btn);
         if (btn) { if (!btn.hasAttribute('data-fullscreen')) this._button(btn, true); continue; }
         const r = this.stick.getBoundingClientRect();
         const inStick = t.clientX < innerWidth * 0.42 && t.clientY > innerHeight * 0.35;
