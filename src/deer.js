@@ -60,6 +60,19 @@ function antlerGeo() { // head-local, drawn once for the buck
   }
   return b.build();
 }
+// the grand stag's rack: two heavy main beams sweeping out and forward, a brow tine and five more on each side (12 points)
+function rackGeo() {
+  const b = new GeoBuilder(), col = C('#cbb894'), tip = C('#efe6d2'), A = new THREE.Vector3(), B = new THREE.Vector3(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+  const seg = (p0, p1, r, c) => { A.set(...p0); B.set(...p1); const len = A.distanceTo(B); q.setFromUnitVectors(up, B.clone().sub(A).normalize()); b.add(cyl, new THREE.Matrix4().compose(A.clone().add(B).multiplyScalar(0.5), q, new THREE.Vector3(r, len, r)), { color: c }); };
+  for (const s of [-1, 1]) {
+    const beam = [[s * 0.065, 0.58, 0.29], [s * 0.13, 0.68, 0.26], [s * 0.2, 0.77, 0.29], [s * 0.22, 0.83, 0.36], [s * 0.18, 0.86, 0.44], [s * 0.11, 0.87, 0.49]];
+    for (let i = 0; i < beam.length - 1; i++) seg(beam[i], beam[i + 1], 0.017 - i * 0.0018, col);
+    seg([s * 0.08, 0.62, 0.29], [s * 0.09, 0.72, 0.34], 0.009, tip);                                       // brow tine
+    for (let i = 1; i <= 4; i++) { const p = beam[i], h = 0.15 - Math.abs(i - 2.2) * 0.025; seg(p, [p[0] * 0.97, p[1] + h, p[2] - 0.02], 0.009, tip); }
+    seg(beam[5], [s * 0.08, 0.9, 0.52], 0.007, tip);
+  }
+  return b.build();
+}
 const L1 = 0.4, L2 = 0.43;   // upper and lower leg length
 function upperGeo(hind) {  // hangs from the shoulder/hip pivot; the knee is L1 below
   const b = new GeoBuilder(), w = hind ? 1.25 : 1;
@@ -95,14 +108,15 @@ const TAU = Math.PI * 2;
 const PH_WALK = [0.25, 0.75, 0, 0.5], PH_TROT = [0, 0.5, 0.5, 0], PH_GALLOP = [0.5, 0.58, 0, 0.08];
 
 export class Deer {
-  constructor(scene, chunks, { mobile = false } = {}) {
+  constructor(scene, chunks, { mobile = false, grand = false } = {}) {
+    this.grand = grand;   // this season the buck is a grand stag: big, with a twelve-point rack
     this.chunks = chunks; this.rng = mulberry32(1717); this.t = 0; this.seen = []; this.onMoment = null; this.onSnort = null;
     const cap = 2;
-    this.parts = { body: makeInstanced(bodyGeo(), cap), head: makeInstanced(headGeo(), cap), antler: makeInstanced(antlerGeo(), cap), ear: makeInstanced(earGeo(), cap * 2),
+    this.parts = { body: makeInstanced(bodyGeo(), cap), head: makeInstanced(headGeo(), cap), antler: makeInstanced(antlerGeo(), cap), rack: makeInstanced(rackGeo(), 1), ear: makeInstanced(earGeo(), cap * 2),
       upF: makeInstanced(upperGeo(false), cap * 2), upH: makeInstanced(upperGeo(true), cap * 2), low: makeInstanced(lowerGeo(), cap * 4), tail: makeInstanced(tailGeo(), cap) };
     for (const p of Object.values(this.parts)) { scene.add(p.fill); scene.add(p.line); }
     this.list = [];
-    for (let i = 0; i < (mobile ? 1 : 2); i++) this.list.push({ active: false, wait: 25 + i * 40, x: 0, z: 0, h: 0, st: 'graze', timer: 0, ph: this.rng() * 6, v: 0, gp: this.rng(), head: 1, headYaw: 0, tailUp: 0, buck: i === 0, calm: 0, tx: 0, tz: 0, sc: 0.95 + this.rng() * 0.15, moment: false, alertT: 0,
+    for (let i = 0; i < (mobile ? 1 : 2); i++) this.list.push({ active: false, wait: 25 + i * 40, x: 0, z: 0, h: 0, st: 'graze', timer: 0, ph: this.rng() * 6, v: 0, gp: this.rng(), head: 1, headYaw: 0, tailUp: 0, buck: i === 0, calm: 0, tx: 0, tz: 0, sc: i === 0 && grand ? 1.22 : 0.95 + this.rng() * 0.15, moment: false, alertT: 0,
       gait: 0, amp: 0, ears: 0, earFlick: [0, 0], earT: [2 + this.rng() * 4, 3 + this.rng() * 4], stepT: 0, stepH: 0, nextStep: 3 + this.rng() * 5, side: 1, px: 0, pz: 0, chkT: 0, stuck: 0, yb: 0 });
     this._root = new THREE.Matrix4(); this._a = new THREE.Matrix4(); this._b = new THREE.Matrix4(); this._u = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3(1, 1, 1); this._one = new THREE.Vector3(1, 1, 1);
   }
@@ -241,7 +255,7 @@ export class Deer {
       const look = d.st === 'alert' ? 0.18 * Math.sin(t * 0.7 + d.ph) : d.st === 'graze' ? 0.3 * Math.sin(t * 0.35 + d.ph) * (1 - d.head * 0.6) : 0;
       this._attach(this._a, body, NECK, grazeP - 0.1 * (1 - d.head) + nod, look, 0);
       const headM = this._a.clone();
-      this._put(P.head, n, headM); this._put(P.antler, n, headM);
+      this._put(P.head, n, headM); this._put(P.antler, n, headM); if (d.buck) this._put(P.rack, 0, headM);
       for (let s = 0; s < 2; s++) {
         d.earT[s] -= dt; if (d.earT[s] <= 0) { d.earFlick[s] = 1; d.earT[s] = 2 + this.rng() * 5; }
         d.earFlick[s] = Math.max(0, d.earFlick[s] - dt * 5);
@@ -264,14 +278,15 @@ export class Deer {
         this._attach(this._u, body, pivot, a1, 0, 0); this._put(hind ? P.upH : P.upF, n * 2 + s, this._u);
         this._attach(this._a, this._u, KNEE, a2, 0, 0); this._put(P.low, n * 4 + i, this._a);
       }
-      this.seen.push({ kind: 'deer', x: d.x, y: y + 1.0 * d.sc, z: d.z, r: 0.9, act: d.st === 'flee' && d.gait > 1.4 ? 'deer-bound' : d.st === 'alert' && stomp > 0.3 ? 'deer-stomp' : null });
+      this.seen.push({ kind: d.buck && this.grand ? 'stag' : 'deer', x: d.x, y: y + 1.0 * d.sc, z: d.z, r: 0.9, act: d.st === 'flee' && d.gait > 1.4 ? 'deer-bound' : d.st === 'alert' && stomp > 0.3 ? 'deer-stomp' : null });
       n++;
     }
     for (const [k, p] of Object.entries(P)) {
       const c = k === 'low' ? n * 4 : (k === 'ear' || k === 'upF' || k === 'upH') ? n * 2 : n;
       p.fill.count = p.line.count = c; p.fill.instanceMatrix.needsUpdate = p.line.instanceMatrix.needsUpdate = true; p.fill.visible = p.line.visible = c > 0;
     }
-    // only the first deer (the buck) carries antlers
-    P.antler.fill.count = P.antler.line.count = Math.min(P.antler.fill.count, 1);
+    // only the first deer (the buck) carries antlers; a grand stag carries the big rack instead
+    P.antler.fill.count = P.antler.line.count = this.grand ? 0 : Math.min(P.antler.fill.count, 1);
+    P.rack.fill.count = P.rack.line.count = this.grand && n > 0 && this.list[0].active ? 1 : 0; P.rack.fill.visible = P.rack.line.visible = P.rack.fill.count > 0;
   }
 }

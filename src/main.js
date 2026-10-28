@@ -163,7 +163,13 @@ async function boot() {
   const fox = new Fox(scene, chunks, { mobile: MOBILE });
   const plants = new Plants(scene, chunks);
   const flyers = new Flyers(scene, { mobile: MOBILE });
-  const deer = new Deer(scene, chunks, { mobile: MOBILE });
+  // a grand stag: some seasons the buck is a big one with a twelve-point rack (mostly in the autumn rut; never once the
+  // antlers have dropped, in winter and spring)
+  const grandStag = (() => {
+    const S = RUN.s; if (!S.stagS || S.stagS.n !== RUN.n || params.has('stag')) { S.stagS = { n: RUN.n, on: params.has('stag') || Math.random() < ({ autumn: 0.22, summer: 0.07 }[SEASON] || 0) }; RUN.save?.(); }
+    return S.stagS.on;
+  })();
+  const deer = new Deer(scene, chunks, { mobile: MOBILE, grand: grandStag });
 
   if (MOBILE) {
     chunks.loadR = 190; chunks.unloadR = 240;
@@ -429,17 +435,28 @@ async function boot() {
     if (pick.act === 'by-ear') birding.photographed();
     if (BY_ID[id]) GUIDE.addPhoto(id, thumb, SEASON, act ? null : big);
     if (act) GUIDE.addPhoto(act, thumb, SEASON, big);
-    // from the drone a species is a speck: the park's page pays a quarter, and a close-up on foot later pays the rest
-    const fromAir = droneOn, share = fromAir ? DRONE_SHARE : 1, $ = (n) => `$${n.toLocaleString('en-US')}`;
+    // what a photo is worth to the park's page: an animal close up is worth the most (full value within 8 m, down to a
+    // quarter at 60 m); from the drone it is a speck (a quarter at most).  A better shot later pays the difference.
+    const $ = (n) => `$${n.toLocaleString('en-US')}`, fromAir = droneOn, dist = Math.round(camera.position.distanceTo(new THREE.Vector3(pick.x, pick.y, pick.z)));
+    const animal = (e) => e && (['Animals', 'Birds', 'Legendary'].includes(e.cat) || (e.cat === 'Moments' && !['skip-rings', 'peak-maple'].includes(e.id)));
+    const shareOf = (e) => { const near = !animal(e) || dist <= 8 ? 1 : dist >= 60 ? 0.25 : Math.round((1 - 0.75 * (dist - 8) / 52) * 20) / 20; return fromAir ? Math.min(DRONE_SHARE, near) : near; };
     const rest = (k, cat) => Math.max(0, Math.round(FUND.rate(k, cat) / 10) * 10 - FUND.paid(k));
-    const topUp = (k) => !fromAir && FUND.partial(k);
-    if (act && (!hadAct || topUp(act))) { const up = topUp(act), pa = FUND.bounty(act, 'Moments', undefined, share); if (pa) setTimeout(() => ui.toast(fromAir ? `From the drone it is a speck, but the park\u2019s page takes it: +${$(pa)}. A close-up on foot would bring ${$(rest(act, 'Moments'))} more.` : up ? `A proper close-up, far better than the drone shot: +${$(pa)} more for the park fund.` : FUND.byHand() ? `You put the photo on the park\u2019s page yourself, weeks later: +${$(pa)} for the park fund.` : `Clyde puts your photo on the park\u2019s page. People come hoping to see that: +${$(pa)} for the park fund.`, 4.2), 2600); }
+    const pay = (k, cat) => { const e = BY_ID[k], was = FUND.paid(k), part = FUND.partial(k), share = shareOf(e), pa = FUND.bounty(k, cat, undefined, share); return { e, pa, share, topped: was > 0 && part }; };
+    const say = (r, cat, first) => {
+      const { e, pa, share, topped } = r; if (!pa) return null;
+      const more = share < 1 ? rest(e.id, cat) : 0;
+      if (topped) return `${e.name}, ${fromAir ? 'from the air' : `closer this time (${dist} m)`}: +${$(pa)} more for the park fund.${more ? ` Closer still is worth ${$(more)} more.` : ''}`;
+      if (fromAir) return `${e.name}, from the air: a speck on the park\u2019s page, +${$(pa)}. A close-up on foot is worth ${$(more)} more.`;
+      if (share < 1) return `${e.name}, from ${dist} m: +${$(pa)} on the park\u2019s page. Get closer and the same photo is worth up to ${$(more)} more.`;
+      if (e.legend && first) return `${e.name} in Ashland State Park, and close! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +${$(pa)} for the park fund.`;
+      return FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +${$(pa)} for the park fund.` : `Clyde writes it up for the park\u2019s page. ${e.cat === 'Moments' ? 'People come hoping to see that' : 'Finds like this bring visitors'}: +${$(pa)} for the park fund.`;
+    };
+    if (act) { const r = pay(act, 'Moments'), t = say(r, 'Moments', !hadAct); if (t) setTimeout(() => ui.toast(t, 4.6), 2600); }
     if (!BY_ID[id]) return;
-    const upId = topUp(id), paid = FUND.bounty(id, BY_ID[id].cat, undefined, share);
-    if (paid && (fromAir || upId)) setTimeout(() => ui.toast(fromAir ? `${BY_ID[id].name}, from the air. A speck on the park\u2019s page: +${$(paid)}. Get a close-up on foot and it is worth ${$(rest(id, BY_ID[id].cat))} more.` : `${BY_ID[id].name}, up close at last: far better than the drone shot. +${$(paid)} more for the park fund.`, 5), had ? 0 : 3600);
-    else if (BY_ID[id].legend && !had) setTimeout(() => ui.toast(paid ? `${BY_ID[id].name} in Ashland State Park! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +$${paid.toLocaleString('en-US')} for the park fund.` : `You got it: ${BY_ID[id].name.toLowerCase()}, in Ashland State Park. A photo almost nobody has.`, 6.5), 1600);
-    else if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes it up for the park\u2019s page. Finds like this bring visitors: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
-    else if (had && !(act && !hadAct)) ui.toast(`${act ? BY_ID[act].name : BY_ID[id].name}. Another for the album.`, 1.8);
+    const r = pay(id, BY_ID[id].cat), t = say(r, BY_ID[id].cat, !had);
+    if (t) setTimeout(() => ui.toast(t, 4.6), had ? 0 : 3600);
+    else if (BY_ID[id].legend && !had) setTimeout(() => ui.toast(`You got it: ${BY_ID[id].name.toLowerCase()}, in Ashland State Park. A photo almost nobody has.`, 6), 1600);
+    else if (had && !act) ui.toast(`${BY_ID[id].name}${animal(BY_ID[id]) ? ` (${dist} m)` : ''}. Another for the album.`, 1.8);
   };
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
   const tutEl = document.createElement('div'); tutEl.id = 'tutorial'; document.body.appendChild(tutEl);
@@ -719,12 +736,13 @@ async function boot() {
   poachers.onFined = (amt) => { ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
   // ---- legendary animals (legends.js): a bear, a moose, a bobcat, an otter, an eagle; very rare, and a huge deal
   const legends = new Legends(scene, { force: params.get('legend'), life: PRESSURE.life });
+  let stagSaid = false;
   const legendBan = document.createElement('div'); legendBan.id = 'legendban'; document.body.appendChild(legendBan);
   legends.onSeen = (k, x, z) => {
     const L = LEGENDS[k], A = L.a.replace(/^./, (c) => c.toUpperCase()); audio.legend?.();
     legendBan.innerHTML = `<small>Legendary sighting</small><b>${L.name}</b>`; legendBan.classList.add('on'); setTimeout(() => legendBan.classList.remove('on'), 4800);
     setTimeout(() => ui.toast(`${A}, right there! Hardly anyone ever sees one here. ${GUIDE.photographed(k) ? '' : MOBILE ? 'Quick: Phone \u2192 Camera.' : 'Quick: the camera (V).'}`, 6), 900);
-    JOURNAL.add(`Saw ${L.a}. ${{ bear: 'It crossed in no hurry, then was gone into the trees.', moose: 'Huge, dark and long-legged, it stepped through the woods like they were nothing.', bobcat: 'A stubby tail and tufted ears, there and then not.', otter: 'It swam the shoreline in a run of dives.', eagle: 'White head, on a dead tree by the water.' }[k]}`, x, z);
+    JOURNAL.add(`Saw ${L.a}. ${{ stag: 'Twelve points, head up, watching me. Then the white flag of his tail, and gone.', bear: 'It crossed in no hurry, then was gone into the trees.', moose: 'Huge, dark and long-legged, it stepped through the woods like they were nothing.', bobcat: 'A stubby tail and tufted ears, there and then not.', otter: 'It swam the shoreline in a run of dives.', eagle: 'White head, on a dead tree by the water.' }[k]}`, x, z);
     RUN.s.legendsSeen = { ...(RUN.s.legendsSeen || {}), [k]: (RUN.s.legendsSeen?.[k] || 0) + 1 }; RUN.save?.();
   };
   // walking into it: stopped at the edge, like the winter water
@@ -1137,6 +1155,7 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    if (grandStag && !stagSaid) { const st = deer.seen.find((q) => q.kind === 'stag'); if (st && Math.hypot(st.x - camera.position.x, st.z - camera.position.z) < 80) { const v = new THREE.Vector3(st.x, st.y, st.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) { stagSaid = true; legends.onSeen?.('stag', st.x, st.z); } } }
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
     player.skis = player.carry === 'skis' && !player.boat;

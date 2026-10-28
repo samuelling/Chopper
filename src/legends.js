@@ -14,6 +14,7 @@ export const LEGENDS = {
   moose: { name: 'Moose', a: 'a moose', pay: 5000, hint: 'Very rare. Wet woods and swamp edges, mostly autumn to spring', blurb: 'A few moose wander down from the north every year, and turn up in surprising places. The biggest animal in New England: taller at the shoulder than you.' },
   bobcat: { name: 'Bobcat', a: 'a bobcat', pay: 4000, hint: 'Very rare. Any season, mostly at dawn and dusk', blurb: 'Twice the size of a house cat, with a stubby tail and tufted ears. Common enough across the state, and almost never seen.' },
   otter: { name: 'River otter', a: 'a river otter', pay: 3500, hint: 'Very rare. Along the shore, spring to autumn', blurb: 'Long, sleek and playful, an otter swims the shoreline in a run of dives and surfacings, and slides down muddy banks for fun.' },
+  stag: { name: 'Grand stag', a: 'a grand stag', pay: 4500, hint: 'Very rare. Mostly autumn, when the bucks are in the rut', blurb: 'A white-tailed buck in his prime, with a heavy rack of twelve points. Most bucks never live long enough to grow one.' },
   eagle: { name: 'Bald eagle', a: 'a bald eagle', pay: 4000, hint: 'Very rare. A dead tree by the water, mostly winter and spring', blurb: 'Gone from Massachusetts by 1905 and brought back from 1982; now dozens of pairs nest here again, and in winter they gather where water stays open.' },
 };
 const WEIGHT = {
