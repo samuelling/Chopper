@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PLATFORM, controlsPref, setControlsPref, canQuit, quitApp } from './platform.js';
-import { shared } from './toon.js';
+import { shared, simpleToon } from './toon.js';
 import { PRESSURE } from './pressure.js';
 import { woodsDead, totalTrees } from './woods.js';
 import { initUsageUI } from './usageui.js';
@@ -197,8 +197,13 @@ async function boot() {
   // ------------------------------------------------------------------ gameplay wiring
   const tmpDir = new THREE.Vector3();
   player.events.step = (k, loud) => audio.footstep(k, loud);
-  player.floorAt = (x, z) => landmarks.deckAt(x, z);
+  // winter: the reservoir is frozen, and you can walk out on it (you slide); footbridges stand over water all year
+  const iceAt = (x, z) => IS_WINTER && lake.level > lake.floor + 0.3 && waterDepthAt(x, z) > 0.04;
+  player.iceAt = iceAt;
+  player.floorAt = (x, z) => Math.max(landmarks.deckAt(x, z), iceAt(x, z) ? lake.level : -Infinity);
+  player.onTrail = (x, z) => trailDistAt(x, z) < 1.6;
   player.surfaceAt = (x, z) => {
+    if (iceAt(x, z)) return 'snow';
     if (landmarks.deckAt(x, z) > groundY(x, z)) return 'dam';                                                                                         // a wooden footbridge
     if (z < DAM_Z + 2 && z > DAM_Z - 12 && Math.abs(x) < DAM_HALF + 10) return 'pave';                                                              // the dam crest
     const g = gravelAt(x, z);
@@ -299,6 +304,7 @@ async function boot() {
   const nearBoat = () => !player.boat && Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) < 3.8;
   let boatT = 99;
   const embark = () => {
+    if (IS_WINTER) { ui.toast('The rowboat is frozen in until spring. Walk out on the ice instead.', 3.6); return; }
     if (!boat._wet(boat.x, boat.z)) { ui.toast('The boat is sitting on dry mud. The reservoir is too low to row.', 3.8); return; }
     fishing.reset(); const prev = camera.position.clone(); player.boat = boat; player.setCarry('none'); player.yaw = boat.h; player.pitch = -0.12; boatT = 0; player.blendFrom(prev);
     RUN.s.boat = { x: boat.x, z: boat.z, h: boat.h }; RUN.save?.(); ui.toast('You climb into the rowboat.', 2); audio.boardThump?.();
@@ -637,6 +643,15 @@ async function boot() {
   const explore = new Explore(scene, discoveries);
   // the branch forts stand in their own little clearings
   for (const it of explore.list) if (it.kind === 'teepee' || it.kind === 'leanto' || it.kind === 'bigfort' || it.kind === 'camp') chunks.clearArea(it.x, it.z, it.kind === 'camp' ? 18 : it.kind === 'teepee' ? 3.4 : 4.2);   // the old camp is still a clearing
+  // the Q kit, in order (skis only in winter, the drone once you own it)
+  const nextCarry = (c) => { const L = ['phone', 'axe', 'rod', 'binoculars', ...(IS_WINTER ? ['skis'] : []), ...(RUN.s.drone ? ['drone'] : []), 'none']; return L[(L.indexOf(c) + 1) % L.length] || 'phone'; };
+  // cross-country skis (winter): long planks at the bottom of the view and a pole in each hand that plants as you go
+  const skiModel = (() => {
+    const g = new THREE.Group(), ski = simpleToon('#b8322a'), pole = simpleToon('#2a2a2e'), basket = simpleToon('#1a1a1c');
+    for (const sx of [-0.13, 0.13]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.015, 1.6), ski); m.position.set(sx, -1.55, -0.9); g.add(m); const tip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.015, 0.18), ski); tip.position.set(sx, -1.5, -1.72); tip.rotation.x = 0.45; g.add(tip); }
+    const poles = [-1, 1].map((sd) => { const p = new THREE.Group(); const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 1.3, 6), pole); sh.position.y = -0.65; p.add(sh); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.01, 8), basket); b.position.y = -1.2; p.add(b); p.position.set(sd * 0.36, -0.28, -0.42); g.add(p); return p; });
+    g.traverse((o) => { o.frustumCulled = false; }); g.visible = false; camera.add(g); return { g, poles };
+  })();
   // ---- skipping stones at the skipping shores (skipping.js)
   const skipping = new Skipping(scene, camera, player, { audio, fx, spots: explore.skips });
   skipping.onDone = (n, I) => {
@@ -838,7 +853,7 @@ async function boot() {
     if (phone.isOpen) phone.close();
     else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 520); }
   };
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: 'binoculars', binoculars: RUN.s.drone ? 'drone' : 'none', drone: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', binoculars: 'Binoculars in hand. Click to look through them.', drone: 'Drone in hand. Click to throw it up and fly it.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry(nextCarry(player.carry)); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', binoculars: 'Binoculars in hand. Click to look through them.', drone: 'Drone in hand. Click to throw it up and fly it.', skis: 'Skis on. Quickest in the trail\u2019s track, and out on the ice.', disc: 'A disc in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) togglePhone(); if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
@@ -1093,6 +1108,10 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    player.skis = player.carry === 'skis' && !player.boat;
+    skiModel.g.visible = player.skis && !player.cameraMode && !player.carryHidden && !droneOn;
+    if (skiModel.g.visible) { const ph = player.bob * 1.2; skiModel.poles.forEach((p, i) => { p.rotation.x = -0.35 + 0.35 * Math.sin(ph + i * Math.PI) * Math.min(1, player.speed / 3); }); }
+    fishing.iceMode = !!player.onIce;
     skipping.update(dt, { ok: started && player.carry === 'none' && !player.boat && !player.swimming && !phone.isOpen && !interludeOn, cameraMode: player.cameraMode });
     legends.update(dt, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null, camera);
     poachers.update(dt * SPEED.v, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null);

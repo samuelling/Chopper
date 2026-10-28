@@ -131,7 +131,7 @@ export class Player {
     if (sdfAt(x, z) > PLAY_SDF) return true;
     if (this.hotAt?.(x, z, this.pos.x, this.pos.z)) { this._hot = true; return true; }   // a fire: you can back away, not walk in
     if (x < WORLD.minX + 12 || x > WORLD.maxX - 12 || z < WORLD.minZ + 12 || z > WORLD.maxZ - 12) return true;
-    if (!this.swimOK && waterDepthAt(x, z) > WADE_MAX && groundY(x, z) < this.pos.y + 0.2) return true;   // deep water is for swimming; in winter it is simply too cold
+    if (!this.swimOK && !this.iceAt?.(x, z) && waterDepthAt(x, z) > WADE_MAX && groundY(x, z) < this.pos.y + 0.2) return true;   // deep water is for swimming; in winter it is simply too cold
     return false;
   }
 
@@ -173,7 +173,9 @@ export class Player {
     this.coldCool -= dt;
     if (!this.swimming) { this.dive = 0; this.underwater = false; this.breath = Math.min(1, this.breath + dt / 4); }
     if (!this.swimOK && depth > 0.85 && (fx || fz) && this.coldCool <= 0) { this.coldCool = 7; this.events.cold?.(); }
+    this.onIce = onDeck && !!this.iceAt?.(this.pos.x, this.pos.z);
     let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
+    if (this.skis && !this.swimming) sp *= this.onIce ? 1.5 : (this.onTrail?.(this.pos.x, this.pos.z) ? 1.9 : 1.45);   // cross-country skis: quickest in the trail's track
     if (this.swimming) {
       const moving = !!(fx || fz);
       if (moving) { const prev = Math.floor(this.strokeT); this.strokeT += dt * (sprint ? 1.25 : 0.85); if (Math.floor(this.strokeT) !== prev) this.events.stroke?.(Math.floor(this.strokeT) % 2 ? 1 : -1); }
@@ -189,8 +191,9 @@ export class Player {
     let vz = (-cy * fz - sy * fx) / len * sp * mag;
     if (!fx && !fz) { vx = 0; vz = 0; }
     // slight smoothing
-    this.vx = (this.vx ?? 0) + (vx - (this.vx ?? 0)) * Math.min(1, dt * 12);
-    this.vz = (this.vz ?? 0) + (vz - (this.vz ?? 0)) * Math.min(1, dt * 12);
+    const grip = this.onIce ? (this.skis ? 1.4 : 1.1) : this.skis ? 3.2 : 12;   // ice is slippery: you slide; skis glide
+    this.vx = (this.vx ?? 0) + (vx - (this.vx ?? 0)) * Math.min(1, dt * grip);
+    this.vz = (this.vz ?? 0) + (vz - (this.vz ?? 0)) * Math.min(1, dt * grip);
 
     let nx = this.pos.x + this.vx * dt, nz = this.pos.z + this.vz * dt;
     // axis-separated boundary checks so we slide along limits

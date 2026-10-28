@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLSL_NOISE } from './noise.js';
 import { GLSL_HEIGHT, heightUniforms, lakes } from './world.js';
 import { shared } from './toon.js';
+import { IS_WINTER } from './season.js';
 
 const VERT = /* glsl */ `
 varying vec3 vWorld;
@@ -18,6 +19,8 @@ const FRAG = /* glsl */ `
 uniform float uLevel;
 uniform float uTime;
 uniform float uFade;
+uniform float uIce;
+uniform vec3 uIceA, uIceB, uIceDark, uSnow, uCrack;
 uniform vec3 uSunDir;
 uniform vec3 uSkyTop, uSkyMid, uSkyHorizon, uSunColor;
 uniform vec3 uShallow, uMid, uDeep, uWarm;
@@ -83,6 +86,21 @@ void main(){
   alpha = max(alpha, max(foam1, foam2 * 0.7));
   alpha *= uFade;
 
+  // winter: the reservoir frozen over.  Banded grey-blue ice, darker clear patches, drifts of snow, a few cracks, a
+  // bright rim along the shore, and sun glints
+  if (uIce > 0.5) {
+    float n1 = vnoise(w * 0.07), n2 = vnoise(w * 0.45 + 3.0);
+    vec3 ice = mix(uIceA, uIceB, step(0.5, n1));
+    ice = mix(ice, uIceDark, step(0.74, n2) * 0.7);
+    float snow = step(0.6, vnoise(w * 0.06 + 7.0) + 0.22 * vnoise(w * 0.3 + 2.0));
+    ice = mix(ice, uSnow, snow);
+    float ck = abs(vnoise(w * 0.22 + 11.0) - 0.5);
+    float dc = length(cameraPosition - vWorld);
+    ice = mix(ice, uCrack, step(ck, 0.012) * (1.0 - snow) * (1.0 - smoothstep(18.0, 45.0, dc)));   // cracks only up close (far off they alias)
+    ice = mix(ice, uSnow, step(depth, 0.18));
+    ice = mix(ice, vec3(1.15, 1.1, 1.0), glint * (1.0 - snow) * 0.6);
+    col = ice; alpha = uFade;
+  }
   gl_FragColor = vec4(col, alpha);
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -105,6 +123,8 @@ export class Water {
         uMid: { value: new THREE.Color('#2f6567') },
         uDeep: { value: new THREE.Color('#173f4d') },
         uWarm: { value: new THREE.Color('#c8662a') },
+        uIce: { value: IS_WINTER ? 1 : 0 }, uIceA: { value: new THREE.Color('#b9cdd6') }, uIceB: { value: new THREE.Color('#d3e1e8') },
+        uIceDark: { value: new THREE.Color('#7f9cab') }, uSnow: { value: new THREE.Color('#eef2f5') }, uCrack: { value: new THREE.Color('#5f7a88') },
       });
       const mat = new THREE.ShaderMaterial({
         uniforms: u, vertexShader: VERT, fragmentShader: FRAG,

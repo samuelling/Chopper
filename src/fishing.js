@@ -33,6 +33,7 @@ const RANGE = [4, 22], TIP = new THREE.Vector3(0, 1.75, 0);
 
 export class Fishing {
   constructor(scene, camera, hooks) {
+    this.scene = scene;
     this.scene = scene; this.camera = camera; this.hooks = hooks;
     this.state = 'idle'; this.t = 0; this.rng = Math.random; this.stats = hooks.loadStats?.() || { landed: 0, lost: 0, clean: 0, best: 0 };
     // the rod: a cork grip, a reel, a long thin flexing blank
@@ -75,6 +76,8 @@ export class Fishing {
   _aim() {
     const c = this.camera, d = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion), h = new THREE.Vector2(d.x, d.z);
     if (h.lengthSq() < 1e-4) return null; h.normalize();
+    // on the ice: drill a hole a step ahead and drop the line straight down
+    if (this.iceMode) { const x = c.position.x + h.x * 1.6, z = c.position.z + h.y * 1.6; return waterDepthAt(x, z) > 0.9 ? new THREE.Vector3(x, lake.level, z) : null; }
     const tries = [];
     if (d.y < -0.03) tries.push(THREE.MathUtils.clamp((c.position.y - lake.level) / -d.y, RANGE[0], RANGE[1]));
     tries.push(14, 18, 10, 22, 7, 5);
@@ -85,7 +88,11 @@ export class Fishing {
   click(ctx) {
     if (this.state === 'idle') {
       const t = this._aim();
-      if (!t) { this.hooks.toast?.('Cast toward open water.'); return; }
+      if (!t) { this.hooks.toast?.(this.iceMode ? 'Too shallow here. Walk out to deeper water to cut a hole.' : 'Cast toward open water.'); return; }
+      if (this.iceMode) {                                   // the hole: dark water in a rim of chipped ice
+        if (!this.hole) { this.hole = new THREE.Group(); const w = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#16303a' })); const rim = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.42, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#e8eef2' })); w.position.y = 0.035; rim.position.y = 0.04; this.hole.add(w, rim); this.scene?.add(this.hole); }
+        this.hole.position.set(t.x, lake.level, t.z); this.hole.visible = true; this.hooks.drill?.();
+      }
       this.rod.updateMatrixWorld(true); this.from.copy(TIP).applyMatrix4(this.blank.matrixWorld);
       this.tgt.copy(t); this.state = 'cast'; this.t = 0; this.depth = waterDepthAt(t.x, t.z);
       this.bobber.visible = true; this.line.visible = true; this.pos.copy(this.from); this.hooks.cast?.();
