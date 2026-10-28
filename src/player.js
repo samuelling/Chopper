@@ -36,19 +36,26 @@ export class Player {
       if (e.code === 'KeyB' && this.locked && !this.cameraMode && !this.boat) this.sitting = !this.sitting && waterDepthAt(this.pos.x, this.pos.z) < 0.2;
     });
     addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+    // the mouse looks only once it is captured (or, on a touch screen where capture is refused, while you drag with it)
+    const captured = () => document.pointerLockElement === dom;
     addEventListener('mousemove', (e) => {
-      if (!this.locked) return;
+      if (!this.locked || !(captured() || (this.touchMode && (e.buttons & 1)))) return;
       const k = 0.0022 * (this.lookScale ?? 1);                       // slower through the binoculars
       this.yaw -= e.movementX * k;
       this.pitch = clamp(this.pitch - e.movementY * k, -1.45, 1.45);
     });
     addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     addEventListener('mousedown', (e) => {
+      if (!captured()) return;   // the first click only takes hold of the mouse
       if (e.button === 0 && this.locked) this.mouseDown = true;
       if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'drone') this.events.droneLaunch?.(); else if (this.carry === 'binoculars') this.events.binoc?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === dom; if (!this.locked) this.mouseDown = false;
+      // softLock: in play without the mouse captured (touch controls, or a game controller); losing the mouse there
+      // keeps you in play on a touch screen, and pauses at a desk (that is what Esc does)
+      if (captured()) this.locked = true;
+      else if (!(this.touchMode && this.softLock)) { this.locked = false; this.softLock = false; }
+      if (!this.locked) this.mouseDown = false;
       this.onLockChange?.(this.locked);
     });
   }

@@ -41,6 +41,14 @@ Left thumb anywhere in the lower left: a floating stick. Drag the rest of the sc
 
 Phones and tablets are detected automatically (or force it with `?mobile=1`; `?desktop=1` forces the desktop version). You get an on-screen joystick (left thumb), drag-to-look (right side), SWING / HOP / USE buttons and a sun button for the light, plus a lighter renderer: smaller shadow map, shorter draw distance, less leaf litter, lower pixel ratio. The title screen says it is best played on a desktop. Landscape works best.
 
+## Game controllers and mice (`src/gamepad.js`)
+
+Any controller the browser reports in the standard layout (Xbox, PlayStation, MFi, Switch Pro), on a Mac, PC, iPad or iPhone. Left stick walks (all the way over hurries), right stick looks. A hop (Dive while swimming: hold to go under), X use, B sit, Y next tool, RT the action (swing, cast and reel, throw, shutter; with empty hands it raises the camera), LT camera, LB flashlight, RB goggles, Start the phone, View/Select the menu, D-pad up the map, R3 plant. Flying the drone: left stick flies, right stick turns and tilts the camera, RT/LT climb and descend, A photo, Y AI spotter, B brings it back. Anywhere else (the phone, the menus, the season screens) a gold highlight moves between what can be pressed: d-pad or left stick to move, A to press, B to go back, right stick to scroll; the usage knob turns with left and right. Playing with a controller at a desk does not need the mouse captured; a click takes it back, and Esc pauses. On a touch screen the on-screen buttons fade while a controller is in use.
+
+A mouse or trackpad on an iPad with touch controls works too: a click on the world captures it for looking (or drag to look if capture is refused), and clicking the on-screen buttons presses them.
+
+Sound on iPhone and iPad starts with the first tap (iOS only allows it inside a tap), silent until the game fades it in. The upright phone has a **Put away** button in its corner, and the minimap starts on (nearby) on touch screens, under the status card. `?touchdebug=1` marks where each touch lands.
+
 ## About the place (what is real, what is not)
 
 The map is built from **real OpenStreetMap data** (© OpenStreetMap contributors, ODbL), exported with Overpass Turbo and stored in `data/ashland_osm.json` / `src/ashland_data.js`:

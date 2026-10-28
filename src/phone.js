@@ -43,11 +43,12 @@ export class Phone {
   open(tab = 'home') {
     this.isOpen = true; this.tab = tab; this.onOpen?.();
     this.el.innerHTML = `<div class="phone"><div class="pbar"><button class="pback" data-home>\u2039</button><span class="pname" data-ph-name>Home</span><small data-ph-sub></small></div>
-      <div class="pscroll" data-ph-body></div><div class="phomebar"><i data-home></i></div></div>`;
+      <div class="pscroll" data-ph-body></div><div class="phomebar"><i data-home></i></div><button class="paway" data-away aria-label="Put the phone away">Put away \u2715</button></div>`;
     this._finish();                                         // a close still fading out is cut short
     this.el.classList.remove('hidden', 'closing'); this.el.classList.add('enter'); void this.el.offsetWidth;   // starts as the small raised phone, then swells to fill the view
     requestAnimationFrame(() => this.el.classList.remove('enter'));
     this.el.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.show('home'); }));
+    this.el.querySelector('[data-away]')?.addEventListener('click', (e) => { e.stopPropagation(); this.close(); });
     this.show(tab);
   }
   _release() {

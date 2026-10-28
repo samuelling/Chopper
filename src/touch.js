@@ -81,6 +81,16 @@ export class TouchControls {
       for (const b of this.root.querySelectorAll('.tbtn.on')) { b.classList.remove('on'); if (b.id === 'bSwing') this.onSwing?.(false); if (b.id === 'bHop') this.player.keys.Space = false; }
     };
     addEventListener('touchend', end, opts);
+    // a mouse or trackpad on a tablet presses the on-screen buttons too (and not the game behind them)
+    addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || !this.root.classList.contains('on')) return;
+      const btn = e.target.closest?.('.tbtn'); if (!btn) return;
+      e.preventDefault(); e.stopPropagation(); if (!btn.hasAttribute('data-fullscreen')) this._button(btn, true);
+    }, true);
+    addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      for (const b of this.root.querySelectorAll('.tbtn.on')) { b.classList.remove('on'); if (b.id === 'bSwing') this.onSwing?.(false); if (b.id === 'bHop') this.player.keys.Space = false; }
+    }, true);
     addEventListener('touchcancel', end, opts);
   }
   show() { this.root.classList.add('on'); }

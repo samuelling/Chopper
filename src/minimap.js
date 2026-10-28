@@ -10,9 +10,9 @@ const LOCAL_SPAN = 340;                                  // metres across in loc
 const hex = (c) => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
 export class Minimap {
-  constructor(lake, player) {
+  constructor(lake, player, { def = 'off' } = {}) {
     this.lake = lake; this.player = player;
-    let m = 'off'; try { m = localStorage.getItem('ashland.map') || 'off'; } catch {}
+    let m = def; try { m = localStorage.getItem('ashland.map') || def; } catch {}
     this.mode = MODES.includes(m) ? m : 'off';
     const W = WORLD.maxX - WORLD.minX, D = WORLD.maxZ - WORLD.minZ;
     const res = Math.min(1, 900 / Math.max(W, D) * 1.0) ;          // pixels per metre (capped so the base stays small)
@@ -41,7 +41,7 @@ export class Minimap {
   set(mode) {
     this.mode = mode; try { localStorage.setItem('ashland.map', mode); } catch {}
     this.cv.style.display = mode === 'off' ? 'none' : 'block';
-    this.cv.style.borderRadius = mode === 'full' ? '10px' : '50%';
+    this.cv.style.borderRadius = mode === 'full' ? '10px' : '50%'; this.cv.classList.toggle('full', mode === 'full');
     this.cv.style.height = mode === 'full' ? `${Math.round(220 * this.bh / this.bw) || 220}px` : '220px';
     if (mode === 'full') { this.cv.width = 260; this.cv.height = Math.round(260 * this.bh / this.bw); this.cv.style.width = '260px'; this.cv.style.height = `${this.cv.height}px`; }
     else { this.cv.width = this.cv.height = 220; this.cv.style.width = this.cv.style.height = '220px'; }

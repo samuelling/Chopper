@@ -57,6 +57,7 @@ import { Sky, SKY_ENTRIES } from './sky.js';
 import { Birding } from './birding.js';
 import { NightLife, NIGHT } from './nightlife.js';
 import { Goggles, GOGGLES, OWN_KEY, AI_SUB } from './goggles.js';
+import { Pad } from './gamepad.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
 import { RopeSwing } from './ropeswing.js';
@@ -186,6 +187,7 @@ async function boot() {
     for (const d of Object.values(chunks.defs)) { d.nearDist *= 0.7; d.farDist *= 0.72; }
   }
   const player = new Player(camera, colliders, renderer.domElement);
+  player.touchMode = MOBILE;
   const sx = parseFloat(params.get('x') ?? SPAWN.x), sz = parseFloat(params.get('z') ?? SPAWN.z);
   player.teleport(sx, sz, parseFloat(params.get('yaw') ?? SPAWN.yaw), parseFloat(params.get('pitch') ?? 0));
   player._applyCamera();
@@ -398,8 +400,13 @@ async function boot() {
     initUsageUI(knobEl, () => { if (!done && Usage.todayLevel() !== undefined) finish(); });
     knobEl.querySelector('[data-keep]')?.addEventListener('click', () => { Usage.checkin(Math.round(prev), 'kept'); finish(); });
   };
+  // in play without capturing the mouse: on a touch screen, or when a game controller started it
+  let pad = null, cardT = 0;   // the game controller (made further down)
+  const padLed = () => !!(pad?.synthetic || pad?.lastWasPad);
+  const softPlay = () => { player.softLock = true; player.locked = true; player.onLockChange?.(true); ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); };
   const intoPlay = () => {
-    if (MOBILE) { player.locked = true; ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); touch.show(); }
+    if (!MOBILE && padLed()) { softPlay(); return; }
+    if (MOBILE) { player.softLock = true; player.locked = true; ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); touch.show(); }
     else {
       grabMouse();
       // if the browser would not capture the mouse from that turn, fall back to the soft 'click to look around' line
@@ -411,11 +418,12 @@ async function boot() {
     started = true; flyover.stop();
     if (needKnob()) { ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
     if (MOBILE) {
-      player.locked = true;
+      player.softLock = true; player.locked = true;
       ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden');
       ui.els.hud.classList.add('on');
       touch.show();
-    } else grabMouse();
+    } else if (padLed()) softPlay();
+    else { player.softLock = false; grabMouse(); }
   };
   // ---- camera mode (V): a narrow view, click to photograph what is centred in the frame
   const vf = document.createElement('div'); vf.id = 'viewfinder'; vf.className = 'hidden';
@@ -485,7 +493,7 @@ async function boot() {
     steps: MOBILE ? [
       { text: 'Touch to begin', ok: () => player.locked, max: 1e9, always: true },
       { text: 'Left thumb: <b>walk</b> (push to the edge to hurry) &nbsp; drag the right side of the screen to <b>look</b>', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
-      { text: 'The <b>Hop</b> button jumps. In deep water, hold it to dive', ok: () => tut.hopped || player.vy > 1, max: 25 },
+      { text: 'The <b>Hop</b> button jumps. Swimming, it turns to <b>Dive</b>: hold it to go under', ok: () => tut.hopped || player.vy > 1, max: 25 },
       { text: 'The <b>Phone</b> button (top right) opens your phone: map, journal, field guide, and <b>Tools</b>', ok: () => tut.phoned, max: 35 },
       { text: 'In the phone, open <b>Camera</b>. Tap <b>Shoot</b> to photograph birds, animals and trees; <b>Put away</b> closes it', ok: () => tut.shot, max: 30 },
       { text: 'Phone \u2192 <b>Tools</b> \u2192 <b>Sit and wait</b>: stay still, and the woods come closer. While you sit, the day goes by four times faster', ok: () => player.sitting, max: 27 },
@@ -564,7 +572,7 @@ async function boot() {
   };
   addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(sitDown, 0); });
   const stepSit = () => {};                                   // sitting now lets the day itself pass faster (see the season clock)
-  const touch = new TouchControls(player, {
+  const touchActs = {
     onUse: () => { const L = useLabel(); if (L === 'Sit' || L === 'Stand') { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); } else if (L === 'Litter') careActs.pickUp(); else player.events.interact?.(); },
     onTool: () => { if (!started || interludeOn || phone.isOpen || player.cameraMode || player.boat) return; fishing.reset(); skipping.drop(); player.setCarry(nextCarry(player.carry)); ui.toast(TOOLNAME[player.carry] + '.', 1.4); },
     onMood: () => { if (manual && mood === PRESETS.length - 1 && !RUN.dev) followDay(); else handLight(manual ? (mood + 1) % PRESETS.length : 0); },
@@ -581,7 +589,8 @@ async function boot() {
       else if (player.carry === 'binoculars') { if (down) player.events.binoc?.(); }
       else if (down && (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone')) setCameraMode(true);   // hands free: the big button is the camera
       else if (down && !player.boat) player.startSwing();
-    } });
+    } };
+  const touch = new TouchControls(player, touchActs);
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
   // the first season of each year opens with "Year One", which dissolves into the season's name
   const WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
@@ -611,7 +620,8 @@ async function boot() {
       flyover.glideTo(() => {
         audio.init(); started = true; autoCard = false;
         if (needKnob()) { ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
-        if (MOBILE) { player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
+        if (MOBILE) { player.softLock = true; player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
+        else if (padLed()) { softPlay(); tut.start(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
       });
     }, hold);
@@ -656,9 +666,13 @@ async function boot() {
   // the pause menu by hand (Esc does it on desktop by releasing the mouse); on a touch screen the game's touch layer steps aside so the menu takes taps and scrolls
   function openMenu() {
     document.exitPointerLock?.();
+    if (!MOBILE && player.softLock) { player.softLock = false; player.locked = false; player.onLockChange?.(false); }
     if (MOBILE) { player.locked = false; player.touch.x = player.touch.y = 0; touch.root.classList.remove('on'); }
     ui.els.paused.classList.remove('hidden'); ui.els.paused.scrollTop = 0;
   }
+  addEventListener('keydown', (e) => { if (e.code === 'Escape' && e.isTrusted && !MOBILE && player.softLock && player.locked && !phone.isOpen && document.pointerLockElement !== renderer.domElement) openMenu(); });
+  // a mouse in play that is not captured yet (after a controller, or on an iPad with touch controls): a click takes it
+  renderer.domElement.addEventListener('mousedown', (e) => { if (started && player.locked && !interludeOn && !phone.isOpen && document.pointerLockElement !== renderer.domElement) grabMouse(); });
   // ---- each season is one day: morning, midday, golden light and dusk, and night as the season ends.  The light follows
   // the season's clock; 1-4 (or the sun button) take the light into your own hands and hold it there; 0 gives it back.
   const ARC = { autumn: [1, 0, 2, 3], winter: [1, 0, 2, 3], spring: [1, 0, 2, 3], summer: [0, 1, 2, 3] }[SEASON] || [1, 0, 2, 3];
@@ -708,7 +722,7 @@ async function boot() {
     b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.season !== SEASON) goToSeason(b.dataset.season, player); });
   });
   const flyover = new Flyover(camera, player);
-  const minimap = new Minimap(lake, player);
+  const minimap = new Minimap(lake, player, { def: MOBILE ? 'local' : 'off' });   // on a touch screen it starts on (there is no M key to find)
   const gauge = new Gauge(document.getElementById('hud'));
   initHud();
   const jobQueue = [];
@@ -723,6 +737,22 @@ async function boot() {
   const toggleTorch = () => { torchOn = !torchOn; audio.toggle?.(); ui.toast(torchOn ? 'Flashlight on.' : 'Flashlight off.', 1.2); };
   // ---- go to bed: at night, skip on to the next season instead of staying up
   const nightNow = () => started && !manual && dayProgress() >= 0.66;
+  // sound on iOS: unlocked by the first real tap, click or key (it stays silent until the game starts it)
+  for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, (e) => { if (e.isTrusted) audio.unlock(); }, { capture: true, passive: true });
+  // ---- game controllers (gamepad.js): the sticks and buttons drive the same actions as the keys and the touch buttons
+  const tap = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true })); dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); };
+  const pausedUp = () => !ui.els.paused.classList.contains('hidden');
+  pad = new Pad({
+    player, get drone() { return drone; },
+    mode: () => droneOn ? 'drone' : (started && player.locked && !phone.isOpen && !interludeOn && !knobOn && !pausedUp()) ? 'play' : 'ui',
+    hop: (d) => dispatchEvent(new KeyboardEvent(d ? 'keydown' : 'keyup', { code: 'Space', bubbles: true })),
+    use: () => touchActs.onUse(), sit: () => tap('KeyB'), tool: () => touchActs.onTool(), primary: (d) => touchActs.onSwing(d),
+    camera: () => { if (!phone.isOpen && !droneOn) setCameraMode(!player.cameraMode); },
+    torch: () => tap('KeyL'), goggles: () => tap('KeyO'), phone: () => touchActs.onPhone(), menu: () => openMenu(), map: () => tap('KeyM'), plant: () => tap('KeyG'),
+    back: () => { if (phone.isOpen) { if (phone.tab && phone.tab !== 'home') phone.show('home'); else phone.close(); } else if (pausedUp() && started && !interludeOn) { pad.synthetic = true; begin(); setTimeout(() => { pad.synthetic = false; }, 0); } },
+    start: () => { if (phone.isOpen) phone.close(); else if (pausedUp() && started && !interludeOn) { pad.synthetic = true; begin(); setTimeout(() => { pad.synthetic = false; }, 0); } else if (!ui.els.title.classList.contains('hidden')) { pad.synthetic = true; ui.els.title.click(); setTimeout(() => { pad.synthetic = false; }, 0); } else pad._press(pad.focus); },
+    onConnect: () => ui.toast('Controller connected. Left stick walks, right stick looks; A hop, X use, B sit, Y tools, RT the action (with empty hands, the camera), LT camera, LB flashlight, RB goggles, Start the phone. In menus, the d-pad moves and A presses.', 9),
+  });
   // ---- goggles (goggles.js): thermal, night vision, Clyde Vision.  O cycles; each has a battery
   const gog = new Goggles(renderer, camera);
   gog.canAI = () => {
@@ -1005,7 +1035,7 @@ async function boot() {
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
-    onOpen: () => { phoneOn = true; tut.phoned = true; phone._upright = matchMedia('(orientation: portrait)').matches; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
+    onOpen: () => { phoneOn = true; if (!MOBILE && player.softLock) player.locked = false; tut.phoned = true; phone._upright = matchMedia('(orientation: portrait)').matches; if (MOBILE) { player.locked = false; touch.root.classList.remove('on'); player.touch.x = player.touch.y = 0; } setTimeout(() => { if (phoneOn) { player.carryHidden = true; player.refreshCarry(); } }, 170); document.exitPointerLock?.(); ui.els.paused.classList.add('hidden'); },
     onClose: () => { phoneOn = false; player.raiseTo = 0; player.carryHidden = false; player.refreshCarry(); if (started && !interludeOn) begin(); } });
   const togglePhone = () => {
     if (phone.isOpen) phone.close();
@@ -1269,6 +1299,8 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
+    pad.update(dt);
+    if (MOBILE && (cardT = (cardT || 0) - dt) <= 0) { cardT = 0.5; const cd = document.querySelector('#hud .card'); if (cd) document.documentElement.style.setProperty('--cardh', `${(cd.offsetHeight || 130) + 12}px`); }
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
     if (grandStag && !stagSaid) { const st = deer.seen.find((q) => q.kind === 'stag'); if (st && Math.hypot(st.x - camera.position.x, st.z - camera.position.z) < 80) { const v = new THREE.Vector3(st.x, st.y, st.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) { stagSaid = true; legends.onSeen?.('stag', st.x, st.z); } } }
@@ -1348,7 +1380,7 @@ async function boot() {
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained, credits: ending ? endingKind : null });
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
-    if (MOBILE && (useT = (useT || 0) - dt) <= 0) { useT = 0.2; const ub = document.getElementById('bUse'), ul = useLabel(); if (ub.textContent !== (ul || 'Use')) ub.textContent = ul || 'Use'; ub.classList.toggle('idle', !ul); const tb = document.getElementById('bTool'), tl = TOOLSHORT[player.carry] || 'Hands'; if (tb.textContent !== tl) tb.textContent = tl; }
+    if (MOBILE && (useT = (useT || 0) - dt) <= 0) { useT = 0.2; const ub = document.getElementById('bUse'), ul = useLabel(); if (ub.textContent !== (ul || 'Use')) ub.textContent = ul || 'Use'; ub.classList.toggle('idle', !ul); const tb = document.getElementById('bTool'), tl = TOOLSHORT[player.carry] || 'Hands'; if (tb.textContent !== tl) tb.textContent = tl; const hb = document.getElementById('bHop'), hl = rope.state === 'swing' ? 'Let go' : player.swimming || player.underwater ? 'Dive' : 'Hop'; if (hb.textContent !== hl) hb.textContent = hl; }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone') && !skipping.holding && !disc.holding ? 'Photo' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(rope.state === 'swing' ? (MOBILE ? 'HOP: let go' : 'SPACE: let go') : !player.boat && !player.swimming && rope.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  take the rope swing` : disc.holding ? (disc.state === 'wind' ? '' : MOBILE ? 'Hold THROW to wind up, let go to throw' : 'Hold the mouse button to wind up, let go to throw') : !player.boat && !player.swimming && disc.canPick(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${disc.canPick(player.pos) === 'tee' ? `disc golf: start hole ${disc.S.hole + 1}` : 'pick up your disc'}` : !player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
@@ -1360,7 +1392,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

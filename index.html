@@ -74,6 +74,9 @@
   #tutorial { position:fixed; left:50%; bottom:11%; transform:translateX(-50%); z-index:4; padding:10px 20px; background:rgba(34,20,22,.62); border:2px solid rgba(244,230,200,.55); border-radius:8px; font-size:17px; letter-spacing:.02em; opacity:0; transition:opacity .6s; pointer-events:none; text-align:center; max-width:86vw; }
   #tutorial.quiet { background:none; border-color:transparent; font-size:13px; opacity:.75; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 1px 3px rgba(0,0,0,.6); }
   #tutorial.on { opacity:1; } #tutorial kbd { margin:0 2px; }
+  #padring { position:fixed; z-index:2147483000; pointer-events:none; border:3px solid #ffd36a; border-radius:12px; box-shadow:0 0 0 2px rgba(30,20,10,.6), 0 0 18px rgba(255,211,106,.55); opacity:0; transition:left .12s, top .12s, width .12s, height .12s, opacity .15s; }
+  #padring.on { opacity:1; }
+  body.padmode #touch { opacity:.22; }
   #goggles { position: fixed; top: calc(14px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: none; font: 700 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; color: #e8f4e0; text-shadow: 0 1px 2px #000; display: flex; align-items: center; gap: 8px; }
   #goggles.hidden { display: none; }
   #goggles i { display: block; width: 54px; height: 7px; border: 1px solid rgba(232,244,224,.7); border-radius: 2px; padding: 1px; }
@@ -284,6 +287,14 @@
   .app .lbl { font-size:12px; text-shadow:0 1px 2px rgba(0,0,0,.5); }
   .phomebar { display:grid; place-items:center; height:24px; background:#1d1b22; } .phomebar i { width:110px; height:5px; border-radius:3px; background:rgba(255,255,255,.55); cursor:pointer; }
   .pbar { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:16px 22px 10px; background:#25222c; border-bottom:1px solid rgba(255,255,255,.07); }
+  .paway { position:absolute; top:12px; right:16px; z-index:3; font:inherit; font-size:11px; font-weight:700; letter-spacing:.06em; color:#ffd9a0; background:rgba(37,34,44,.92); border:1px solid rgba(255,217,160,.45); border-radius:999px; padding:5px 11px; cursor:pointer; }
+  .paway:active { transform:scale(.96); }
+  body:not(.mobile) .paway { display:none; }   /* a desk has P and Esc */
+  body.mobile .phone .pbar:not(.home) { padding-right:112px !important; }   /* room for Put away */
+  body.mobile.phoneup .paway { top:calc(env(safe-area-inset-top) + 8px); right:max(14px, env(safe-area-inset-right)); }
+  /* touch screens: the map sits under the status card, clear of the joystick */
+  body.mobile #minimap { left:max(18px, env(safe-area-inset-left)) !important; top:calc(max(18px, env(safe-area-inset-top)) + var(--cardh, 150px)) !important; bottom:auto !important; width:150px !important; height:150px !important; }
+  body.mobile #minimap.full { width:min(220px, 30vw) !important; height:auto !important; }
   .pname { font-size:20px; font-weight:800; letter-spacing:.04em; color:#ffd9a0; } .pbar small { font-size:11px; opacity:.7; letter-spacing:.08em; }
   .ptabs { display:flex; background:#25222c; } .ptabs button { flex:1; font:inherit; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); background:none; border:0; border-bottom:3px solid transparent; padding:10px 0; cursor:pointer; opacity:.6; } .ptabs button.on { opacity:1; border-color:#ffd9a0; }
   .pscroll { overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:14px 16px 20px; flex:1; min-height:0; }
@@ -455,6 +466,7 @@
     <div class="r"><span class="k"><kbd>L</kbd></span><span class="t">flashlight</span></div>
     <div class="r"><span class="k"><kbd>N</kbd></span><span class="t">go to bed (at night)</span></div>
     <div class="r"><span class="k"><kbd>O</kbd></span><span class="t">goggles, if you own any: thermal, night vision, Clyde Vision, off</span></div>
+    <div class="r"><span class="k">🎮</span><span class="t">a game controller: left stick walk, right stick look · A hop, X use, B sit, Y tools · RT the action, LT camera · LB flashlight, RB goggles · Start phone, View menu · in menus the d-pad moves, A presses, B goes back</span></div>
     </div>
     </div>
   <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone or iPad: Share &rarr; Add to Home Screen, then open Ashland from there. It plays offline after that, too.</div>
@@ -497,6 +509,7 @@
     <div class="r"><span class="k"><kbd>L</kbd></span><span class="t">flashlight</span></div>
     <div class="r"><span class="k"><kbd>N</kbd></span><span class="t">go to bed (at night)</span></div>
     <div class="r"><span class="k"><kbd>O</kbd></span><span class="t">goggles, if you own any: thermal, night vision, Clyde Vision, off</span></div>
+    <div class="r"><span class="k">🎮</span><span class="t">a game controller: left stick walk, right stick look · A hop, X use, B sit, Y tools · RT the action, LT camera · LB flashlight, RB goggles · Start phone, View menu · in menus the d-pad moves, A presses, B goes back</span></div>
     </div>
     </div></div>
 
