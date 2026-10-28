@@ -49,6 +49,7 @@ import { Discoveries } from './discoveries.js';
 import { Explore, ATTRACTION } from './explore.js';
 import { Drone } from './drone.js';
 import { Fire } from './fire.js';
+import { Poachers } from './poachers.js';
 import { Binoculars } from './binoculars.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { Usage, LEVELS } from './usage.js';
@@ -626,6 +627,11 @@ async function boot() {
   fire.onStart = () => { audio.notify?.(); ui.toast('You smell smoke. A fire has started somewhere in the park. Find it and call it in: follow the smoke, look with the binoculars (Q), fly the drone with its AI spotter, or send a lookout crew from the Park Fund.', 9); JOURNAL.add('Smoke over the trees: a fire somewhere in the park.'); };
   fire.onLocated = (how) => { setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', drone: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
     if (how === 'kindling') JOURNAL.add('The dying woods caught like kindling. A big fire, seen from town.', fire.x, fire.z); };
+  // ---- poachers (poachers.js): only the drone's AI spotter can pick them out; the fine goes to the park fund
+  const poachers = new Poachers(scene, { force: params.has('poachers') });
+  poachers.onShot = () => { audio.shot?.(); if (!RUN.s.shotHeard) { RUN.s.shotHeard = true; RUN.save?.(); ui.toast('A shot, somewhere off in the woods. Hunting isn\u2019t allowed in the park.', 5); } };
+  poachers.onFled = () => ui.toast('Someone crashes off through the brush ahead of you, fast. Whoever it was is gone.', 4.5);
+  poachers.onFined = (amt) => { ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
   // walking into it: stopped at the edge, like the winter water
   player.hotAt = (x, z, px, pz) => { if (!fire.s.start || !(fire.s.phase === 'burning' || fire.s.phase === 'located') || fire.fierce < 0.1) return false; const d = Math.hypot(x - fire.x, z - fire.z); return d < fire.s.r + 4 && d < Math.hypot(px - fire.x, pz - fire.z) - 1e-4; };
   player.events.hot = () => ui.toast('It\u2019s too hot. You can\u2019t get any closer to the fire.', 3.2);
@@ -693,6 +699,11 @@ async function boot() {
         const d = Math.hypot(fire.x - drone.pos.x, fire.z - drone.pos.z); v.set(fire.x, groundY(fire.x, fire.z) + 4, fire.z).project(camera);
         if (d < 650 && v.z < 1 && Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85 && Math.random() < 0.7) { const el = document.createElement('div'); el.className = 'dlock fire'; el.innerHTML = '<i></i><i></i><i></i><i></i><span>SCANNING</span>'; lockLayer().appendChild(el); locks.push({ t: { id: 'fire', kind: 'fire', x: fire.x, z: fire.z }, el, age: 0, done: false, gone: 0 }); }
       }
+      // poachers: hard to make out under the trees, so only fairly close and fairly often
+      if (poachers.active && !locks.some((L) => L.t.kind === 'poachers')) {
+        const d = Math.hypot(poachers.x - drone.pos.x, poachers.z - drone.pos.z); v.set(poachers.x, groundY(poachers.x, poachers.z) + 1, poachers.z).project(camera);
+        if (d < 200 && v.z < 1 && Math.abs(v.x) < 0.85 && Math.abs(v.y) < 0.8 && Math.random() < 0.15 + 0.4 * (1 - d / 200)) { const el = document.createElement('div'); el.className = 'dlock fire'; el.innerHTML = '<i></i><i></i><i></i><i></i><span>SCANNING</span>'; lockLayer().appendChild(el); locks.push({ t: { id: 'poachers', kind: 'poachers', x: poachers.x, z: poachers.z }, el, age: 0, done: false, gone: 0 }); }
+      }
       for (const t of explore.targets()) {
         if (!LOCKNAME[t.kind] || open.has(t.id) || locks.some((L) => L.t.id === t.id)) continue;   // hidden things only, not named places
         const d = Math.hypot(t.x - drone.pos.x, t.z - drone.pos.z); if (d > 230) continue;
@@ -708,6 +719,7 @@ async function boot() {
       const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05; L.gone = vis ? 0 : L.gone + dt;
       L.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * scr.width}px, ${(-v.y * 0.5 + 0.5) * scr.height}px)`; L.el.style.opacity = vis ? '' : '0';
       if (!L.done && L.age > 1.3 && L.t.kind === 'fire') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'FIRE'; PRESSURE.bump(0.003); fire.locate('drone'); continue; }
+      if (!L.done && L.age > 1.3 && L.t.kind === 'poachers') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'POACHERS'; PRESSURE.bump(0.003); if (poachers.catch()) drone.note('Clyde flags two people with rifles, off-trail in the thick woods. The Environmental Police are on their way. (+0.3% lasting harm)', 5); continue; }
       if (!L.done && L.age > 1.3) {
         L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = `POSSIBLE ${(LOCKNAME[L.t.kind] || 'find').toUpperCase()}`;
         PRESSURE.bump(0.003); explore.addLead('drone', { r: 25, quiet: true, only: L.t.id });
@@ -741,7 +753,7 @@ async function boot() {
     const live = RUN.phaseTwo || RUN.dev; fundEl.hidden = !live || !!RUN.s.end; if (!live) return;
     const bal = FUND.balance, fmt = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
     ui.set(fundEl, 'fundline', `Park Fund ${fmt(bal)} \u00b7 ${howTo}`);
-    if (!started || !player.locked || interludeOn || ui._toastT > 0 || player.cameraMode) return;
+    if (!started || !player.locked || interludeOn || ui._toastT > 0 || player.cameraMode || droneOn) return;
     const st = RUN.s; st.afford ||= {};
     // a lake measure the fund has just come to afford
     const m = MEASURES.find((x) => !FUND.has(x.id) && x.price <= bal && !st.afford[x.id]);
@@ -1018,6 +1030,7 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    poachers.update(dt * SPEED.v, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null);
     binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
     // finding the fire yourself: close enough to see the flames, or the smoke's source in the middle of the binoculars
     if (fire.burning && started && !interludeOn) {
@@ -1079,7 +1092,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, poachers, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
