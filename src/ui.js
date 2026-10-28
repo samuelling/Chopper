@@ -13,6 +13,7 @@ export const ui = {
     this.els.prompt.classList.toggle('on', !!text);
   },
   toast(text, secs = 3.2) {
+    if (this.mirror) { this.mirror(text, secs); return; }     // (while flying the drone, messages show on its screen)
     this.els.toast.textContent = text; this.els.toast.classList.add('on'); this._toastT = secs;
   },
   tick(dt) {

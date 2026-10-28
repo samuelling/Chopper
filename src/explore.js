@@ -15,6 +15,8 @@ import { wetlandAt } from './ashland_wetlands.js';
 import { mulberry32 } from './noise.js';
 import { JOURNAL } from './places.js';
 import { SEASON } from './season.js';
+import { RUN } from './run.js';
+import { placeHidden, HIDDEN_KINDS, shipmentsIn, shipmentSeason } from './hidden.js';
 
 const KEY = 'ashland.explore';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
@@ -39,7 +41,7 @@ const NOTE = {
 };
 // what a find is worth on the park's page (Year Two): ordinary places pay a little, the ones guests come out to see more
 export const ATTRACTION = { lodge: 500, osprey: 600, skiff: 450, road: 700, wreck: 550, island: 300 };
-const WATER = new Set(['lodge', 'osprey', 'island']), UNDER = new Set(['skiff', 'road', 'wreck']);
+const WATER = new Set(['lodge', 'osprey', 'island']), UNDER = new Set(['skiff', 'road', 'wreck', 'anchor']);
 
 // rumours: where someone says something is (no names until you have been there)
 const RUMOUR = {
@@ -51,7 +53,8 @@ const RUMOUR = {
   cellar: 'there is an old cellar hole somewhere off the trail here', well: 'there is a stone well in the woods here', marker: 'there is an old boundary stone somewhere around here',
 };
 const WHO = ['Overheard at the boat ramp:', 'A man fishing off the beach says', 'Someone at the parking lot says', 'A woman walking her dog says'];
-const HIDDEN = ['lodge', 'osprey', 'skiff', 'road', 'wreck', 'cellar', 'well', 'marker'];
+const HIDDEN = ['lodge', 'osprey', 'skiff', 'road', 'wreck', 'cellar', 'well', 'marker', ...Object.keys(HIDDEN_KINDS)];
+for (const [k, K] of Object.entries(HIDDEN_KINDS)) { NOTE[k] = K.note; RUMOUR[k] = K.rumour; ATTRACTION[k] = K.pay; }
 
 function stickGeo(b, cx, cy, cz, rx, ry, rz, n, rng, col) {
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 5);
@@ -151,6 +154,9 @@ export class Explore {
       if (pts.length > 4) this.road = add({ kind: 'road', name: 'The old road', x: rd[0], z: rd[1], r: 14, pts });
     }
     if (WRECK) add({ kind: 'wreck', name: 'The helicopter wreck', x: WRECK.x, z: WRECK.z, r: 14 });
+    // more hidden things, arriving in three shipments over a life (hidden.js)
+    this.shipped = shipmentsIn(RUN);
+    for (const h of placeHidden(props, mulberry32(9090), this.shipped, [...this.list, ...(discoveries?.items || [])])) add({ ...h, id: 'h-' + h.kind });
     if (props.pos.length) { const geo = props.build(); const m = makeInstanced(geo, 1); m.fill.count = m.line.count = 1; m.fill.setMatrixAt(0, new THREE.Matrix4()); m.line.setMatrixAt(0, new THREE.Matrix4()); scene.add(m.fill); scene.add(m.line); this.mesh = m; }
     // an osprey on the nest in the warm months
     if (this.osprey && (SEASON === 'spring' || SEASON === 'summer')) this.bird = this._osprey(scene);
@@ -178,13 +184,13 @@ export class Explore {
   }
   isFound(id) { return this.found.has(id) || !!this.discoveries?.found.has(id); }
   /** adds a lead toward `prefer` (a list of kinds) or anything not yet found; returns it or null */
-  addLead(src, { prefer = null, r = 70, text = null, quiet = false } = {}) {
+  addLead(src, { prefer = null, r = 70, text = null, quiet = false, near = null, only = null } = {}) {
     const open = new Set(this.leads.filter((l) => !l.done).map((l) => l.target));
-    let ts = this.targets().filter((t) => !open.has(t.id)); if (!ts.length) return null;
-    if (!prefer && src === 'clyde') prefer = HIDDEN;
+    let ts = this.targets().filter((t) => !open.has(t.id) && (!only || t.id === only) && (!near || Math.hypot(t.x - near.x, t.z - near.z) < near.r)); if (!ts.length) return null;
+    if (!prefer && (src === 'clyde' || src === 'drone')) prefer = HIDDEN;
     if (prefer) { const p = ts.filter((t) => prefer.includes(t.kind)); if (p.length) ts = p; }
     const rng = Math.random, t = ts[(rng() * ts.length) | 0], a = rng() * 6.283, off = r * (0.2 + rng() * 0.45);
-    const who = src === 'clyde' ? 'Clyde, from old maps, aerial photos and lidar:' : src === 'note' ? 'A note pinned to the trailhead board, in pencil:' : src === 'ruin' ? 'The farm you just found is on an 1850s map in the town library, and so is more:' : WHO[(rng() * WHO.length) | 0];
+    const who = src === 'drone' ? 'Clyde, from your drone\u2019s camera:' : src === 'clyde' ? 'Clyde, from old maps, aerial photos and lidar:' : src === 'note' ? 'A note pinned to the trailhead board, in pencil:' : src === 'ruin' ? 'The farm you just found is on an 1850s map in the town library, and so is more:' : WHO[(rng() * WHO.length) | 0];
     const l = { id: `L${Date.now().toString(36)}${(rng() * 1e4) | 0}`, target: t.id, kind: t.kind, cx: t.x + Math.cos(a) * off, cz: t.z + Math.sin(a) * off, r, src, season: SEASON, text: text || `${who} ${(RUMOUR[t.kind] || 'there is something worth finding here').replace(/^./, (ch) => (who.endsWith(':') ? ch.toUpperCase() : ch))}.`, done: false };
     this.leads.push(l); this.save();
     JOURNAL.add(`Lead: ${l.text} (Circled on your map.)`);
@@ -198,6 +204,11 @@ export class Explore {
     if (!this.leads.length) this.addLead('note', { prefer: ['osprey'], r: 80 });
     else this.addLead('talk', { r: 75 });
     if (clyde) this.addLead('clyde', { prefer: ['road', 'skiff', 'wreck', 'cellar', 'well'], r: 32 });
+    // a new shipment of hidden things has arrived this season: say so, and point at one of them
+    if (this.shipped > 0 && n === shipmentSeason(RUN, this.shipped)) {
+      const kinds = Object.keys(HIDDEN_KINDS).filter((k) => HIDDEN_KINDS[k].ship === this.shipped);
+      this.onShipment?.(); this.addLead('talk', { prefer: kinds, r: 70 });
+    }
   }
   /** a ruin you find hints at the next thing */
   ruinFound() { if (Math.random() < 0.7) this.addLead('ruin', { prefer: ['road', 'cellar', 'well', 'marker'], r: 65, text: null }); }

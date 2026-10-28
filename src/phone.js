@@ -104,6 +104,7 @@ export class Phone {
       h('In your hands');
       mk(p.carry === 'axe' ? '\u2713 Axe' : 'Axe', 'Chop. Swing with the big button.', () => A.carry('axe'));
       mk(p.carry === 'rod' ? '\u2713 Fishing rod' : 'Fishing rod', 'Cast with the big button, hold it to reel, steer the joystick to counter a run.', () => A.carry('rod'));
+      if (RUN.s.drone) mk(p.carry === 'drone' ? '\u2713 Drone' : 'Drone', 'Throw it up with the big button and fly it from your phone.', () => A.carry('drone'));
       mk(p.carry === 'none' ? '\u2713 Hands free' : 'Hands free', 'Put everything away.', () => A.carry('none'));
       h('Out in the park');
       mk(p.sitting ? 'Stand up' : 'Sit and wait', 'Stay still and the park carries on around you. Any step stands you up.', () => A.sit());
@@ -252,21 +253,23 @@ export class Phone {
       <small>${Math.round(Math.min(1, W + F) * 100)}% installed${F ? ` (${Math.round(F * 100)}% of it works at any use)` : ''}. ${FUND.cap() >= 0.999 ? `At your current use (${lvName}) it all holds: enough of it can save the lake outright.` : `At ${lvName} use the lake leaks whatever is installed: protection can cover at most ${Math.round(FUND.cap() * 100)}% of the drop${holds < 0.999 ? `, and only ${Math.round(holds * 100)}% of the offsetting measures hold` : ''}. Ease off to Medium and enough of it saves the lake.`}</small>`;
     body.appendChild(lake);
     const sect = (t) => { const h = document.createElement('div'); h.className = 'uh'; h.style.margin = '16px 0 4px'; h.textContent = t; body.appendChild(h); };
-    const card = (kind, title, lines, price, done, onBuy) => {
+    const card = (kind, title, lines, price, done, onBuy, doneLabel = 'Installed') => {
       const c = document.createElement('div'); c.className = `ccard fcard ${kind === 'AI' ? 'ai' : 'park'}${done ? ' done' : ''}`;
-      c.innerHTML = `<div class="ctop"><span class="ctag">${kind === 'AI' ? 'AI' : 'PARK'}</span><b>${title}</b></div>${lines}<button class="cgo" ${done || FUND.balance < price ? 'disabled' : ''}>${done ? 'Installed' : `Buy \u00b7 ${fmt(price)}`}</button>`;
+      c.innerHTML = `<div class="ctop"><span class="ctag">${kind === 'AI' ? 'AI' : 'PARK'}</span><b>${title}</b></div>${lines}<button class="cgo" ${done || FUND.balance < price ? 'disabled' : ''}>${done ? doneLabel : `Buy \u00b7 ${fmt(price)}`}</button>`;
       c.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); if (done || FUND.balance < price) return; const r = onBuy(); this.fundCtx?.toast?.(r.msg, 3.2); this._fund(body); });
       body.appendChild(c);
     };
     sect('To plant');
     const p = this.player;
-    for (const it of SUPPLIES) card('Park', it.title, `<div class="cone">${it.gain}</div>`, it.price, false, () => FUND.buySupply(it.id));
+    for (const it of SUPPLIES.filter((x) => !x.fun)) card('Park', it.title, `<div class="cone">${it.gain}</div>`, it.price, false, () => FUND.buySupply(it.id));
     const have = document.createElement('small'); have.style.cssText = 'display:block;opacity:.7;margin:2px 2px 0'; have.textContent = `In your pocket: ${RUN.s.seeds || 0} seeds, ${RUN.s.saplingStock || 0} saplings. Planted so far: ${RUN.s.planted || 0}.`; body.appendChild(have);
     sect('For the lake');
     for (const m of MEASURES) {
       const lines = `<div class="cone">${m.gain}</div><div class="chips"><span class="chip fx">+${Math.round(m.w * 100)}% lake protection${m.delay ? ' (from next season)' : ''}${m.firm ? ', at any use' : ''}</span><span class="chip">${m.price < 2000 ? 'Small' : m.price < 10000 ? 'Medium' : 'Big'} project</span>${m.harm ? `<span class="chip harmchip">+${(m.harm * 100).toFixed(1)}% harm</span>` : ''}</div><div class="freal">${m.real}</div>`;
       card(m.kind, m.title, lines, m.price, FUND.has(m.id), () => FUND.buyMeasure(m.id, this.fundCtx));
     }
+    sect('Just for fun');
+    for (const it of SUPPLIES.filter((x) => x.fun)) { const need = it.needs && !RUN.s[it.needs]; card(it.ai ? 'AI' : 'Park', it.title, `<div class="cone">${it.gain}</div>${need ? '<div class="freal">Needs the drone first.</div>' : ''}`, it.price, !!RUN.s[it.id], () => FUND.buySupply(it.id), it.id === 'drone' ? 'Yours: Q to bring it out' : 'On your drone'); }
     const n = document.createElement('small'); n.style.cssText = 'display:block;opacity:.6;margin:12px 2px 0;line-height:1.45'; n.textContent = 'The practices are real. What each one does to this lake, and what it costs, is invented for the game.'; body.appendChild(n);
   }
   /** Places: names you give to spots, for you only (not official), plus the ruins you have found */

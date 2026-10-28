@@ -44,7 +44,7 @@ export class Player {
     addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     addEventListener('mousedown', (e) => {
       if (e.button === 0 && this.locked) this.mouseDown = true;
-      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
+      if (this.locked && e.button === 0) { if (this.cameraMode) this.events.photo?.(); else if (this.carry === 'rod') this.events.cast?.(); else if (this.carry === 'drone') this.events.droneLaunch?.(); else if (this.carry === 'axe' && !this.boat) this.startSwing(); }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === dom; if (!this.locked) this.mouseDown = false;

@@ -38,7 +38,7 @@ export function creditsHTML(kind, st) {
     '<p>Map and trails: OpenStreetMap contributors</p><p>Hills: USGS 3DEP lidar</p><p>Forest cover: NLCD 2021</p><p>Lake depth: MassWildlife and MassGIS</p>',
     '<div class="gap"></div>', '<h2>The invented part</h2>',
     '<p>The trees, rocks and benches, every animal and its habits, the data center over the ridge, the harm and care figures, and the end of the lake or of the woods.</p>',
-    '<p>The coves, points, hills and swamps by name, the beaver lodge, the osprey nest, the sunken skiff and the old road under the water, the leads and who gives them, the park\u2019s page and what it pays.</p>',
+    '<p>The coves, points, hills and swamps by name, the beaver lodge, the osprey nest, the sunken skiff and the old road under the water, the leads and who gives them, the rest of the hidden things and when they turn up, the park\u2019s page and what it pays.</p>',
     '<p class="dim">Life expectancy here is a rough population average used as a clock. It says nothing about you.</p>',
     '<div class="gap"></div>', '<p class="big">Thanks for walking it.</p>', '<div class="gap"></div>',
     '<h2>Part of</h2>', MEGAZINE_HTML,

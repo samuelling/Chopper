@@ -120,6 +120,49 @@
   #knobask .knobrow { justify-content:center; }
   .ckeep { display:block; width:100%; margin-top:12px; font:inherit; font-size:13px; color:inherit; background:rgba(255,255,255,.07); border:1px solid rgba(244,230,200,.35); border-radius:9px; padding:9px 10px; cursor:pointer; }
   .ckeep:hover { border-color:#8fbf5a; }
+  /* drone mode: the phone held sideways, filling the screen; the world shows through its glass */
+  #dronefpv { position:fixed; inset:0; z-index:45; pointer-events:none; }
+  #dronefpv.hidden { display:none; }
+  #dronefpv .dphone { position:absolute; inset:max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); border:16px solid #1c1a20; border-left-width:26px; border-radius:42px; box-shadow:0 0 0 2px #4a4652, 0 20px 60px rgba(0,0,0,.6); transform:translateY(105%) rotate(-90deg) scale(.35); opacity:0; transition:transform .6s cubic-bezier(.2,.8,.2,1), opacity .35s ease; }
+  #dronefpv.up .dphone { transform:none; opacity:1; }
+  #dronefpv.down .dphone { transform:translateY(110%) rotate(-25deg) scale(.5); opacity:0; transition:transform .55s cubic-bezier(.5,0,.8,.4), opacity .5s ease .1s; }
+  #dronefpv .dphone::before { content:''; position:absolute; left:-17px; top:50%; width:8px; height:56px; margin-top:-28px; border-radius:6px; background:#000; }   /* the camera island, now on the side */
+  #dronefpv .dscreen { position:absolute; inset:0; border-radius:26px; overflow:hidden; font:600 13px/1.2 ui-monospace, Menlo, Consolas, monospace; color:#f4f2ea; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #dronefpv .dtop { position:absolute; left:0; right:0; top:0; display:flex; gap:18px; justify-content:center; padding:10px 120px; background:linear-gradient(rgba(0,0,0,.45), transparent); letter-spacing:.06em; }
+  #dronefpv .drec i { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ff3a3a; margin-right:6px; animation:drec 1.2s steps(2) infinite; } @keyframes drec { 50% { opacity:.2; } }
+  #dronefpv [data-d="bat"].low { color:#ff8a6a; }
+  #dronefpv .dwarn { position:absolute; left:50%; top:52px; transform:translateX(-50%); padding:7px 16px; border-radius:20px; background:rgba(232,160,40,.88); color:#1e1406; text-shadow:none; font-size:14px; letter-spacing:.04em; opacity:0; transition:opacity .25s; }
+  #dronefpv .dwarn.on { opacity:1; animation:dwarn 1.1s ease-in-out infinite; } @keyframes dwarn { 50% { background:rgba(255,200,80,.95); } }
+  #dronefpv .dcross { position:absolute; left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border:1.5px solid rgba(255,255,255,.55); border-radius:50%; }
+  #dronefpv .dcross i { position:absolute; background:rgba(255,255,255,.55); } #dronefpv .dcross i:first-child { left:50%; top:-10px; bottom:-10px; width:1.5px; margin-left:-.75px; } #dronefpv .dcross i:last-child { top:50%; left:-10px; right:-10px; height:1.5px; margin-top:-.75px; }
+  #dronefpv .dstick { position:absolute; bottom:26px; width:124px; height:124px; border-radius:50%; background:rgba(20,18,24,.35); border:2px solid rgba(255,255,255,.45); pointer-events:auto; touch-action:none; display:grid; place-items:center; }
+  #dronefpv .dstick.L { left:30px; } #dronefpv .dstick.R { right:30px; }
+  #dronefpv .dstick i { width:48px; height:48px; border-radius:50%; background:rgba(244,242,234,.85); box-shadow:0 2px 8px rgba(0,0,0,.4); transition:transform .06s linear; }
+  #dronefpv .dstick small { position:absolute; bottom:-20px; font-size:11px; letter-spacing:.08em; opacity:.85; white-space:nowrap; }
+  #dronefpv .dret { position:absolute; left:16px; top:10px; pointer-events:auto; font:inherit; color:inherit; background:rgba(20,18,24,.55); border:1.5px solid rgba(255,255,255,.5); border-radius:16px; padding:5px 12px; cursor:pointer; }
+  #dronefpv .dshot { position:absolute; right:40px; top:50%; width:56px; height:56px; margin-top:-28px; border-radius:50%; pointer-events:auto; cursor:pointer; background:rgba(255,255,255,.18); border:4px solid rgba(255,255,255,.85); }
+  #dronefpv .dhelp { position:absolute; left:200px; right:200px; bottom:14px; text-align:center; font-size:12px; line-height:1.9; opacity:.85; } #dronefpv .dhelp kbd { font-size:10px; }
+  #dronefpv .dsurvey { position:absolute; right:22px; top:calc(50% + 46px); pointer-events:auto; cursor:pointer; font:inherit; color:inherit; text-align:center; background:rgba(40,30,20,.6); border:1.5px solid rgba(232,194,106,.8); border-radius:12px; padding:6px 10px; width:120px; }
+  #dronefpv .dsurvey small { display:block; font-size:9px; opacity:.8; margin-top:2px; letter-spacing:0; }
+  #dronefpv .dsurvey.off { border-color:rgba(255,255,255,.35); background:rgba(20,18,24,.5); opacity:.8; }
+  #dronefpv .dhelp .hspot { display:none; } #dronefpv .dhelp[data-spot="1"] .hspot { display:inline; }
+  /* the spotter's lock: corner brackets that close in on a hidden thing, then hold it with a label */
+  #dronefpv .dlocks { position:absolute; inset:0; pointer-events:none; }
+  #dronefpv .dlock { position:absolute; left:0; top:0; width:0; height:0; transition:opacity .3s; }
+  #dronefpv .dlock i { position:absolute; width:14px; height:14px; border:2px solid #ffd24a; animation:dlockin 1.3s cubic-bezier(.3,.7,.3,1) both; }
+  #dronefpv .dlock i:nth-child(1) { --sx:-1; --sy:-1; border-right:0; border-bottom:0; } #dronefpv .dlock i:nth-child(2) { --sx:1; --sy:-1; border-left:0; border-bottom:0; }
+  #dronefpv .dlock i:nth-child(3) { --sx:-1; --sy:1; border-right:0; border-top:0; } #dronefpv .dlock i:nth-child(4) { --sx:1; --sy:1; border-left:0; border-top:0; }
+  @keyframes dlockin { from { transform:translate(calc(var(--sx) * 60px - 7px), calc(var(--sy) * 60px - 7px)); opacity:.4; } 60% { opacity:1; } to { transform:translate(calc(var(--sx) * 22px - 7px), calc(var(--sy) * 22px - 7px)); } }
+  #dronefpv .dlock span { position:absolute; left:0; top:34px; transform:translateX(-50%); white-space:nowrap; font-size:11px; letter-spacing:.12em; color:#ffd24a; background:rgba(20,18,24,.6); padding:2px 6px; border-radius:4px; animation:dscan .5s steps(2) infinite; }
+  #dronefpv .dlock.locked i { border-color:#7cf07a; } #dronefpv .dlock.locked span { color:#9cf59a; animation:none; }
+  @keyframes dscan { 50% { opacity:.4; } }
+  #dronefpv .dmsg { position:absolute; left:50%; bottom:92px; transform:translateX(-50%); max-width:min(640px, 70%); padding:8px 14px; border-radius:12px; background:rgba(20,18,24,.72); text-align:center; font-size:13px; line-height:1.4; opacity:0; transition:opacity .3s; }
+  #dronefpv .dmsg.on { opacity:1; }
+  #dronefpv .dcon { position:absolute; inset:0; display:grid; place-items:center; background:#0b0a0d; color:#d8d4c8; letter-spacing:.12em; font-size:14px; opacity:0; transition:opacity .4s ease; }
+  #dronefpv.con .dcon { opacity:1; transition:none; }
+  #dronefpv .dcam { position:absolute; inset:0; border-radius:26px; background:#fff; opacity:0; pointer-events:none; } #dronefpv .dcam.on { animation:dflash .35s ease-out; } @keyframes dflash { from { opacity:.85; } to { opacity:0; } }
+  body:not(.mobile) #dronefpv .dstick { pointer-events:none; }
+  @media (max-width: 700px) { #dronefpv .dtop { gap:10px; padding:8px 90px; font-size:11px; } #dronefpv .dstick { width:100px; height:100px; } #dronefpv .dstick i { width:40px; height:40px; } }
   .ifund { display:block; margin:6px 2px 2px; font-size:12px; opacity:.75; line-height:1.4; }
   #fundline { margin-top:8px; font-size:11px; letter-spacing:.08em; opacity:.85; color:#c7e39a; }
   #scname { transition:opacity .8s ease; } #scname.dim { opacity:0; }

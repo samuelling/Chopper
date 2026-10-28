@@ -17,6 +17,8 @@ export const DIVIDEND = [0, 1500, 4000, 7000, 9000];
 
 export const SUPPLIES = [
   { id: 'seeds', title: 'A sack of seeds', price: 250, gain: '25 seeds of native trees and shrubs. G plants one where you stand. Every tree planted helps the woods hold up against harm.', give: () => { S().seeds = (S().seeds || 0) + 25; return '25 seeds in your pocket. G plants one.'; } },
+  { id: 'drone', fun: true, once: true, title: 'A camera drone', price: 2500, gain: 'Just for fun: a small quadcopter to fly over the park, first-person, from your phone. It does nothing for the park, good or bad.', give: () => { S().drone = true; return 'The drone is yours. Q until it is in your hand, then the action button throws it up.'; } },
+  { id: 'droneai', fun: true, once: true, ai: true, needs: 'drone', title: 'AI spotter for the drone', price: 4000, gain: 'Clyde watches the drone\u2019s camera and locks onto hidden things from the air: ruins in the woods, wrecks, things under the water. Each one it finds is circled on your map. It adds harm while it runs, and more for every find.', give: () => { S().droneai = true; return 'The spotter is on the drone. Fly over the park and Clyde will lock onto what it sees. R switches it off.'; } },
   { id: 'saplings', title: 'Nursery saplings', price: 900, gain: '8 young trees, already three seasons along. G plants these before seeds. Every tree planted helps the woods hold up against harm.', give: () => { S().saplingStock += 8; return '8 saplings ready to plant. G plants one.'; } },
 ];
 
@@ -90,6 +92,8 @@ export const FUND = {
   holds() { return Math.max(0, Math.min(1, 1 - Math.max(0, PRESSURE.target - 0.4) / 0.6)); },
   buySupply(id) {
     const it = SUPPLIES.find((x) => x.id === id); if (!it) return { ok: false };
+    if (it.once && S()[it.id]) return { ok: false, msg: 'You already have one.' };
+    if (it.needs && !S()[it.needs]) return { ok: false, msg: 'That goes on the drone: buy the drone first.' };
     if (S().fund < it.price) return { ok: false, msg: 'Not enough in the fund yet.' };
     S().fund -= it.price; const msg = it.give(); RUN.save?.(); return { ok: true, msg };
   },

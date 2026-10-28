@@ -47,6 +47,7 @@ import { CareActs } from './careacts.js';
 import { PLACES, JOURNAL } from './places.js';
 import { Discoveries } from './discoveries.js';
 import { Explore, ATTRACTION } from './explore.js';
+import { Drone } from './drone.js';
 import { Usage, LEVELS } from './usage.js';
 import { GUIDE, BY_ID, pickSubject, treeCandidates } from './guide.js';
 import { Audio } from './audio.js';
@@ -473,6 +474,7 @@ async function boot() {
       if (!started || interludeOn || phone.isOpen) return;
       if (player.cameraMode) { if (down) player.events.photo?.(); }
       else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
+      else if (player.carry === 'drone') { if (down) player.events.droneLaunch?.(); }
       else if (down && !player.boat) player.startSwing();
     } });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
@@ -608,12 +610,88 @@ async function boot() {
   };
   discoveries.onFound = (it, k) => { ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5); explore.ruinFound(); featured(it.id, 'Attractions', 350, 'the ruin'); };
   explore.onFound = (it) => {
-    ui.toast(it.real ? `${it.name}. On your map now.` : `You found ${it.name.replace(/^The /, 'the ')}. Named on your map.`, 4.2);
+    ui.toast(it.real ? `${it.name}. On your map now.` : `You found ${it.name.replace(/^(The|An|A) /, (m) => m.toLowerCase())}. Named on your map.`, 4.2);
     audio.notify?.();
-    featured('place-' + it.id, ATTRACTION[it.kind] ? 'Attractions' : 'Places', ATTRACTION[it.kind], it.name.replace(/^The /, 'the '));
+    featured('place-' + it.id, ATTRACTION[it.kind] ? 'Attractions' : 'Places', ATTRACTION[it.kind], it.name.replace(/^(The|An|A) /, (m) => m.toLowerCase()));
   };
+  explore.onShipment = () => setTimeout(() => ui.toast('Something new seems to have turned up in the park. Ask around.', 5.5), 7500);
   explore.onLead = (l) => ui.toast(`A lead: ${l.text} Circled on your map.`, 6);
   let leadT = 0;
+  // ---- the drone (bought from the Park Fund): thrown from the hand, flown first-person from the phone held sideways
+  let droneOn = false;
+  const drone = new Drone({ scene, camera, player, audio, mobile: MOBILE });
+  drone.onNote = (t) => ui.toast(t, 3.2);
+  // the park's page pays for aerials of its places (once each) and for one promo reel a season: a single flight that
+  // takes in four places from up high.  An AI survey from the air circles hidden things nearby, and adds harm.
+  let reel = new Set();
+  const altNow = () => drone.pos.y - groundY(drone.pos.x, drone.pos.z);
+  const aerial = () => {
+    if (altNow() < 12) return false;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), v = new THREE.Vector3();
+    let best = null, bs = 1e9;
+    for (const pl of explore.list) {
+      v.set(pl.x - camera.position.x, groundY(pl.x, pl.z) - camera.position.y, pl.z - camera.position.z); const d = v.length();
+      if (d < 15 || d > 260) continue; const ang = Math.acos(Math.min(1, v.dot(fwd) / d)); if (ang > 0.3) continue;
+      const sc = ang + d / 900; if (sc < bs) { bs = sc; best = pl; }
+    }
+    if (!best) return false;
+    const name = best.name.replace(/^The /, 'the '), paid = FUND.bounty('aerial-' + best.id, 'Aerial', ATTRACTION[best.kind] ? 300 : 160);
+    setTimeout(() => drone.note(paid ? `An aerial of ${name} for the park\u2019s page: +$${paid} for the park fund.` : FUND.paid('aerial-' + best.id) ? `${best.name} from the air. The park\u2019s page already has this one.` : `${best.name} from the air. A good one for the album.`, 4), 400);
+    return true;
+  };
+  drone.onPhoto = () => { if (!aerial()) player.events.photo?.(); else { audio.shutter?.(); } };
+  drone.onFly = () => {
+    if (!(RUN.phaseTwo || RUN.dev) || altNow() < 15) return;
+    for (const pl of explore.list) if (Math.hypot(pl.x - drone.pos.x, pl.z - drone.pos.z) < 70) reel.add(pl.id);
+    if (reel.size >= 4 && RUN.s.reelN !== RUN.n) {
+      RUN.s.reelN = RUN.n; RUN.save?.(); const paid = FUND.bounty('reel-' + RUN.n, 'Aerial', 600);
+      if (paid) drone.note(`Your footage of ${reel.size} places makes this season\u2019s promo reel for the park\u2019s page: +$${paid} for the park fund.`, 5);
+    }
+  };
+  // the AI spotter (an upgrade): Clyde watches the feed, and now and then locks onto a hidden thing in view; each lock
+  // becomes a tight circle on your map.  It costs harm while it runs, and more for each find.
+  const LOCKNAME = { cellar: 'cellar hole', well: 'stone well', marker: 'boundary stone', lodge: 'beaver lodge', osprey: 'nest', skiff: 'sunken boat', road: 'old road', wreck: 'wreck', erratic: 'big boulder', truck: 'old vehicle', chimney: 'chimney', cemetery: 'small cemetery', bottles: 'old glass', carvedbeech: 'carved tree', fairyhouse: 'little house', benchmark: 'survey mark', ropeswing: 'rope swing', icehouse: 'foundation', canoe: 'canoe', anchor: 'anchor', mill: 'mill stones' };
+  let locks = [], spotT = 0;
+  const lockLayer = () => drone.el.querySelector('[data-d="locks"]');
+  const spotter = (dt) => {
+    const on = droneOn && drone.state === 'fly' && RUN.s.droneai && drone.spotOn;
+    if (!on) { if (locks.length) { for (const L of locks) L.el.remove(); locks = []; } return; }
+    PRESSURE.bump(0.00008 * dt);                                   // about half a percent of lasting harm per minute in the air
+    const v = new THREE.Vector3(), open = new Set(explore.openLeads().map((l) => l.target));
+    if ((spotT -= dt) <= 0) {
+      spotT = 0.5;
+      for (const t of explore.targets()) {
+        if (!LOCKNAME[t.kind] || open.has(t.id) || locks.some((L) => L.t.id === t.id)) continue;   // hidden things only, not named places
+        const d = Math.hypot(t.x - drone.pos.x, t.z - drone.pos.z); if (d > 230) continue;
+        v.set(t.x, groundY(t.x, t.z) + 0.6, t.z).project(camera); if (v.z > 1 || Math.abs(v.x) > 0.85 || Math.abs(v.y) > 0.8) continue;
+        if (Math.random() > 0.05 + 0.25 * (1 - d / 230)) continue;
+        const el = document.createElement('div'); el.className = 'dlock'; el.innerHTML = `<i></i><i></i><i></i><i></i><span>SCANNING</span>`; lockLayer().appendChild(el);
+        locks.push({ t, el, age: 0, done: false, gone: 0 }); break;            // one new lock at a time
+      }
+    }
+    const scr = drone.el.querySelector('.dscreen').getBoundingClientRect();
+    for (const L of locks) {
+      L.age += dt; v.set(L.t.x, groundY(L.t.x, L.t.z) + 0.6, L.t.z).project(camera);
+      const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05; L.gone = vis ? 0 : L.gone + dt;
+      L.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * scr.width}px, ${(-v.y * 0.5 + 0.5) * scr.height}px)`; L.el.style.opacity = vis ? '' : '0';
+      if (!L.done && L.age > 1.3) {
+        L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = `POSSIBLE ${(LOCKNAME[L.t.kind] || 'find').toUpperCase()}`;
+        PRESSURE.bump(0.003); explore.addLead('drone', { r: 25, quiet: true, only: L.t.id });
+        drone.note(`Clyde marks a possible ${LOCKNAME[L.t.kind] || 'find'} on your map. (+0.3% lasting harm)`, 3.5);
+      }
+    }
+    locks = locks.filter((L) => { const keep = L.age < 7 && L.gone < 1.5; if (!keep) L.el.remove(); return keep; });
+  };
+  drone.onEnter = () => { droneOn = true; reel = new Set(); drone.setSpotter(!!RUN.s.droneai); ui.mirror = (t, s) => drone.note(t, s); ui.els.hud.classList.remove('on'); tutEl.classList.remove('on'); if (MOBILE) touch.root.classList.remove('on'); if (!RUN.s.flown) { RUN.s.flown = true; RUN.save?.(); } };
+  drone.onExit = (hard) => {
+    droneOn = false; ui.mirror = null; camera.fov = player.cameraMode ? 26 : 68; camera.updateProjectionMatrix();
+    if (started) { ui.els.hud.classList.add('on'); if (MOBILE) touch.show(); }
+    if (hard) { player.setCarry('none'); return; }
+    // back on your feet, putting the phone away
+    player.setCarry('phone'); player.raise = 1; player.raiseTo = 0;
+    setTimeout(() => { if (player.carry === 'phone' && !phone.isOpen) player.setCarry('none'); }, 650);
+  };
+  player.events.droneLaunch = () => { if (!started || interludeOn || phone.isOpen || player.cameraMode) return; drone.launch(); };
   // Year Two: the fund on the status card, and a nudge when there is money to spend (once a season, and when a lake
   // measure first comes within reach), so the Park Fund app is not forgotten
   const fundEl = document.getElementById('fundline'), howTo = MOBILE ? 'Phone \u2192 Park Fund' : 'P \u2192 Park Fund';
@@ -634,7 +712,7 @@ async function boot() {
     }
   };
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player) }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
-    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', none: 'Hands free.' }[c], 1.8); },
+    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', drone: 'Drone in hand. The big button throws it up.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
@@ -644,7 +722,7 @@ async function boot() {
     if (phone.isOpen) phone.close();
     else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 520); }
   };
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry({ phone: 'axe', axe: 'rod', rod: RUN.s.drone ? 'drone' : 'none', drone: 'none', none: 'phone' }[player.carry]); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', drone: 'Drone in hand. Click to throw it up and fly it.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) togglePhone(); if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
@@ -700,7 +778,7 @@ async function boot() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     step(dt);
-    if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera);
+    if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 
@@ -727,7 +805,7 @@ async function boot() {
   const stayBtn = document.createElement('button'); stayBtn.className = 'crskip staymenu'; stayBtn.textContent = 'Start menu'; stayBtn.hidden = true; document.body.appendChild(stayBtn);
   stayBtn.addEventListener('click', (e) => { e.stopPropagation(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
   function beginEnding(kind) {
-    if (ending) return; ending = true; endingKind = kind;
+    if (ending) return; ending = true; endingKind = kind; drone.forceOff();
     // the wild keeps going under the credits: if the park lived, the light comes up to morning and the birds sing; if the reservoir died, dusk and wind
     manual = true; atmosphere.setPreset(kind === 'life' ? ARC[0] : ARC[2]); mood = kind === 'life' ? ARC[0] : ARC[2];
     if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
@@ -770,6 +848,7 @@ async function boot() {
   }
   let woodsT = 0, woodsWarned = false, woodsDying = false, woodsHold = 0, woodsHudT = 0, woodsAlive = 1, woodsDeadNow = 0;
   function beginInterlude() {
+    drone.forceOff();
     interludeOn = true; document.exitPointerLock?.(); ui.els.paused.classList.add('hidden');
     const ctx = { audio, player, chunks, lake, structures, setWaypoint, explore, mountUsage: (mount, cb) => initUsageUI(mount.parentElement, cb) };
     showInterlude(document.getElementById('interlude'), ctx, (pulse) => {
@@ -896,7 +975,8 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    player.inputLock = fishing.state === 'fight'; boat.update(dt, player.boat === boat); player.update(dt);
+    player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
+    drone.showHand(player.carry === 'drone' && !player.cameraMode && !player.carryHidden && !phone.isOpen); drone.update(dt); spotter(dt);   // in flight the camera is the drone's
     fishing.update(dt, { life: PRESSURE.life * (FUND.has('shade') ? 0.7 : 1), full: clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), dusk: [0.8, 0.5, 1, 0.6][mood] ?? 0.5, cold: SEASON === 'winter', season: SEASON, hold: player.mouseDown && player.locked, lean: clamp(((player.keys.KeyD || player.keys.ArrowRight) ? 1 : 0) - ((player.keys.KeyA || player.keys.ArrowLeft) ? 1 : 0) + (Math.abs(player.touch.x) > 0.3 ? Math.sign(player.touch.x) : 0), -1, 1) }, started && player.carry === 'rod' && !player.cameraMode && !player.carryHidden);
     if (player.boat) { boatT += dt; shoreChk -= dt; if (shoreChk <= 0) { shoreChk = 0.25; shoreNear = !!shoreSpot(4.5); } } else shoreNear = false;
     if (player.swimming && !RUN.s.swam) { RUN.s.swam = true; RUN.save?.(); ui.toast(MOBILE ? 'You are swimming. Hold HOP to dive under; let go to come up.' : 'You are swimming. Hold SPACE to dive under; let go to come up.', 5); }   // the first swim only
@@ -911,12 +991,13 @@ async function boot() {
     }
     chunks.update(dt, camera.position, null, 2);
     landmarks.update(dt, player);
-    atmosphere.update(dt, camera, flyover.active ? camera.position : player.pos);
+    atmosphere.update(dt, camera, flyover.active || droneOn ? camera.position : player.pos);
+    const focus = droneOn ? drone.pos : player.pos;      // wildlife and flowers gather around whoever is looking
     water.update(dt);
-    wildlife.update(dt, player.pos, player.speed);
-    squirrels.update(dt, player.pos);
-    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, player.pos, mood); critters.update(dt, player.pos, mood); fox.update(dt, player, mood); plants.update(dt, player.pos); stepSit(dt); stepDay(dt);
-    birds.update(dt, player.pos);
+    wildlife.update(dt, focus, player.speed);
+    squirrels.update(dt, focus);
+    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, focus, mood); critters.update(dt, focus, mood); fox.update(dt, player, mood); plants.update(dt, focus); stepSit(dt); stepDay(dt);
+    birds.update(dt, focus);
     // a regular: the same heron, season after season
     if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {
       RUN.s.herons.push(RUN.n); RUN.save?.(); const k = RUN.s.herons.length;
@@ -940,10 +1021,10 @@ async function boot() {
     ui.hud(woodsAlive, cut, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
-  const render = () => { if (!underwater.render(scene, camera, lake.level, shared.time.value)) renderer.render(scene, camera); };
+  const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
