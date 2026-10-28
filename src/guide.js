@@ -2,6 +2,7 @@
 // Species are habitat-typical for a Massachusetts reservoir forest, NOT from a survey of the real park.
 import * as THREE from 'three';
 import { PLANTS } from './plants.js';
+import { LEGENDS } from './legends.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -67,6 +68,8 @@ for (const [id, of, name, hint] of [
   ['chipmunk-sit', 'chipmunk', 'Chipmunk, sitting up', 'A chipmunk stops dead and sits up to look around'],
   ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
+// legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets
+for (const [id, L] of Object.entries(LEGENDS)) ENTRIES.push({ id, cat: 'Legendary', name: L.name, blurb: L.blurb, hint: L.hint, legend: true });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
 const SONG_TO_ID = {}; for (const e of ENTRIES) if (e.song) SONG_TO_ID[e.song] = e.id;
 

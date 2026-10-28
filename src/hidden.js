@@ -26,7 +26,27 @@ export const HIDDEN_KINDS = {
   icehouse: { ship: 2, where: 'shore', name: 'An ice house foundation', note: 'Before refrigerators, ice was cut from ponds in winter and packed in sawdust in a house like this to last the summer. Only the stone foundation is left.', rumour: 'there was an ice house on the shore here once', pay: 400 },
   anchor: { ship: 2, where: 'under', name: 'A sunken anchor', note: 'A heavy iron anchor and a length of chain on the bottom, furred with silt.', rumour: 'an old anchor is said to be down on the bottom here; you would have to dive', pay: 300 },
   mill: { ship: 2, where: 'brook', name: 'An old mill seat', note: 'Cut stones beside the brook and a cracked millstone: the kind of small mill that ran on brooks like this one before there was a dam.', rumour: 'there are old mill stones along the brook below the dam', pay: 450 },
+  // small finds, one more each year from Year Two (they turn up in their year, whatever your life expectancy)
+  geocache: { year: 2, where: 'trail', name: 'A geocache', note: 'An old ammo can tucked under a rock, with a logbook and a handful of trinkets inside: a geocache. Sign it and put it back as you found it.', rumour: 'people with GPS units keep stopping by a rock near the trail here', pay: 150 },
+  antler: { year: 3, where: 'land', name: 'A shed antler', note: 'A deer antler, dropped last winter. Mice and squirrels gnaw them for the calcium, so they rarely last long.', rumour: 'a buck spends the winter around here; you might find what he drops', pay: 200 },
+  hornets: { year: 4, where: 'land', name: 'A hornet nest', note: 'A grey paper nest the size of a football, hanging from a low branch. Bald-faced hornets chew wood into paper to build it. Empty by winter.', rumour: 'someone got chased by hornets off the trail around here', pay: 150 },
+  cairn: { year: 5, where: 'trail', name: 'A cairn', note: 'Flat stones stacked knee-high beside the path. Hikers have added one each for years.', rumour: 'hikers keep stacking stones somewhere along the trail here', pay: 120 },
+  birdhouse: { year: 6, where: 'trail', name: 'A birdhouse', note: 'A weathered birdhouse on a post, the hole just big enough for a chickadee. Someone built it and never came back to see who moved in.', rumour: 'someone put up a birdhouse near the trail here, years ago', pay: 150 },
+  sapbucket: { year: 7, where: 'land', name: 'An old sap bucket', note: 'A rusted sap bucket still hanging on an old maple. Farms here tapped their maples every March and boiled the sap down to syrup.', rumour: 'there is an old maple around here with a bucket still hanging on it', pay: 200 },
+  bottlemsg: { year: 8, where: 'shore', name: 'A message in a bottle', note: 'A corked bottle at the waterline with a rolled note inside: \u201cIf you find this, write back.\u201d The ink has run. On a reservoir, it can\u2019t have come far.', rumour: 'kids threw a bottle with a note in it off the beach; it must have washed up along here', pay: 180 },
+  bobber: { year: 9, where: 'shore', name: 'A snagged bobber', note: 'A red and white bobber tangled in a bush at the water\u2019s edge, line and all. Every shore has one.', rumour: 'someone lost a whole rig to a bush on this bit of shore', pay: 120 },
+  paintedrock: { year: 10, where: 'trail', name: 'A painted rock', note: 'A rock painted like a ladybird and left beside the trail for someone to find. You were the someone.', rumour: 'kids hide painted rocks along the trail here', pay: 120 },
+  lantern: { year: 11, where: 'land', name: 'An old lantern', note: 'A rusted kerosene lantern in the leaves, its glass long broken. Someone walked these woods at night, a century ago.', rumour: 'an old lantern was seen in the leaves out here', pay: 200 },
+  barbedwire: { year: 12, where: 'land', name: 'A wire-eating tree', note: 'Barbed wire running straight into a tree trunk and out the other side: the tree grew around an old pasture fence. These woods were fields once.', rumour: 'there is a tree here that swallowed a fence', pay: 200 },
+  toyboat: { year: 13, where: 'shore', name: 'A toy sailboat', note: 'A child\u2019s wooden sailboat beached on the shore, its sail torn. It sailed off from somewhere and ended up here.', rumour: 'a kid lost a toy sailboat off the beach; it might have washed up along here', pay: 150 },
+  horseshoe: { year: 14, where: 'trail', name: 'A horseshoe on a tree', note: 'An old horseshoe nailed to a tree, open end up to hold the luck. The bark has grown over the nails.', rumour: 'someone nailed a horseshoe to a tree near the trail here', pay: 150 },
+  owlpellets: { year: 15, where: 'land', name: 'Owl pellets', note: 'Grey pellets of fur and tiny bones under a big pine: an owl roosts above. It coughs up what it can\u2019t digest.', rumour: 'there is a roost tree around here; look under it', pay: 180 },
 };
+
+/** the game year you are in (Year One is the first four seasons) */
+export const yearOf = (RUN) => Math.floor((RUN.s?.n ?? RUN.n ?? 0) / 4) + 1;
+/** is this thing in the park yet? */
+export function arrived(K, RUN, upTo) { return K.year ? RUN.dev || yearOf(RUN) >= K.year : K.ship <= upTo; }
 
 /** which shipments have arrived: all of them in testing; otherwise by how far through your life expectancy you are */
 export function shipmentsIn(RUN) {
@@ -129,10 +149,85 @@ const BUILD = {
     for (let k = 0; k < 5; k++) { const [px, pz] = at(-2.5, 0.6 + k * 0.55); b.add(box, matrix(px, groundY(px, pz) + 0.25, pz, 0, yaw, 0, 0.6, 0.5, 0.6), { color: C(STONE[k % 4]) }); }
     const [mx, mz] = at(0.5, 1.6); b.add(cyl, matrix(mx, groundY(mx, mz) + 0.2, mz, 0.5, yaw, 0.2, 0.7, 0.18, 0.7), { color: C('#8a8478') });   // the millstone, tipped
   },
+  geocache(b, x, y, z, yaw, r) {
+    b.add(ball, matrix(x, y + 0.25, z, 0, yaw, 0, 0.9, 0.45, 0.7), { color: C('#8a8780') });
+    b.add(box, matrix(x + Math.sin(yaw) * 0.55, y + 0.12, z + Math.cos(yaw) * 0.55, 0, yaw, 0, 0.3, 0.2, 0.16), { color: C('#4a5a32') });
+    b.add(box, matrix(x + Math.sin(yaw) * 0.55, y + 0.23, z + Math.cos(yaw) * 0.55, 0, yaw, 0, 0.31, 0.03, 0.17), { color: C('#3a4a28') });
+  },
+  antler(b, x, y, z, yaw) {
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    b.add(cyl, matrix(x, y + 0.04, z, Math.PI / 2, yaw, 0.2, 0.025, 0.55, 0.025), { color: C('#d8c8a8') });
+    for (let k = 0; k < 3; k++) b.add(cone, matrix(x + s * (-0.15 + k * 0.15) + c * 0.06, y + 0.1, z + c * (-0.15 + k * 0.15) - s * 0.06, 0, yaw, -0.9, 0.02, 0.18, 0.02), { color: C('#e2d4b6') });
+  },
+  hornets(b, x, y, z, yaw, r) {
+    b.add(cyl, matrix(x, y + 1.3, z, 0.08, 0, 0.05, 0.05, 2.6, 0.05), { color: C('#5a4a3a') });
+    b.add(cyl, matrix(x + 0.4, y + 2.1, z, 0, 0, 1.2, 0.025, 1.0, 0.025), { color: C('#5a4a3a') });
+    b.add(ball, matrix(x + 0.7, y + 1.75, z, 0, 0, 0, 0.17, 0.24, 0.17), { color: C('#9a968c') });
+    b.add(ball, matrix(x + 0.7, y + 1.62, z, 0, 0, 0, 0.12, 0.08, 0.12), { color: C('#b4b0a4') });
+    for (let i = 0; i < 4; i++) b.add(ball, matrix(x + (r() - 0.5) * 1.6, y + 2.2 + r() * 0.4, z + (r() - 0.5) * 1.6, 0, 0, 0, 0.3, 0.2, 0.3), { color: C('#5a8a3a') });
+  },
+  cairn(b, x, y, z, yaw, r) {
+    let h = 0; for (let k = 0; k < 7; k++) { const w = 0.5 - k * 0.055, t = 0.09 + r() * 0.04; b.add(ball, matrix(x + (r() - 0.5) * 0.06, y + h + t, z + (r() - 0.5) * 0.06, 0, r() * 6, 0, w, t, w * 0.85), { color: C(STONE[k % 4]) }); h += t * 1.8; }
+  },
+  birdhouse(b, x, y, z, yaw) {
+    b.add(box, matrix(x, y + 0.8, z, 0, yaw, 0, 0.08, 1.6, 0.08), { color: C('#6a5440') });
+    b.add(box, matrix(x, y + 1.75, z, 0, yaw, 0, 0.26, 0.32, 0.24), { color: C('#8a7458') });
+    b.add(box, matrix(x, y + 1.95, z, 0, yaw, 0.25, 0.34, 0.03, 0.3), { color: C('#5a4a3a') });
+    b.add(cyl, matrix(x + Math.sin(yaw) * 0.125, y + 1.8, z + Math.cos(yaw) * 0.125, Math.PI / 2, yaw, 0, 0.04, 0.02, 0.04), { color: C('#1a1410') });
+  },
+  sapbucket(b, x, y, z, yaw, r) {
+    b.add(cyl, matrix(x, y + 4, z, 0, 0, 0, 0.38, 8, 0.38), { color: C('#5a4a40') });
+    for (let i = 0; i < 9; i++) b.add(ball, matrix(x + (r() - 0.5) * 5, y + 7.5 + r() * 2.5, z + (r() - 0.5) * 5, 0, 0, 0, 1.8, 1.1, 1.8), { color: C(i % 2 ? '#4f7a34' : '#5f8a3a') });
+    const fx = x + Math.sin(yaw) * 0.5, fz = z + Math.cos(yaw) * 0.5;
+    b.add(cyl, matrix(fx, y + 1.05, fz, 0, 0, 0, 0.15, 0.32, 0.13), { color: C('#7a5a3a') });
+    b.add(box, matrix(fx, y + 1.25, fz, 0.3, yaw, 0, 0.3, 0.02, 0.3), { color: C('#6a4a30') });
+  },
+  bottlemsg(b, x, y, z, yaw) {
+    b.add(cyl, matrix(x, y + 0.06, z, Math.PI / 2, yaw, 0, 0.06, 0.26, 0.06), { color: C('#5a8a6a') });
+    b.add(cyl, matrix(x + Math.sin(yaw) * 0.17, y + 0.06, z + Math.cos(yaw) * 0.17, Math.PI / 2, yaw, 0, 0.022, 0.09, 0.022), { color: C('#5a8a6a') });
+    b.add(cyl, matrix(x, y + 0.06, z, Math.PI / 2, yaw, 0, 0.035, 0.18, 0.035), { color: C('#e8dcc0') });
+  },
+  bobber(b, x, y, z, yaw, r) {
+    for (let i = 0; i < 6; i++) b.add(ball, matrix(x + (r() - 0.5) * 1.2, y + 0.4 + r() * 0.4, z + (r() - 0.5) * 1.2, 0, 0, 0, 0.45, 0.35, 0.45), { color: C(i % 2 ? '#4f6a34' : '#5a7a3a') });
+    b.add(ball, matrix(x + 0.5, y + 0.95, z, 0, 0, 0, 0.07, 0.05, 0.07), { color: C('#d83a2a') }); b.add(ball, matrix(x + 0.5, y + 0.85, z, 0, 0, 0, 0.07, 0.05, 0.07), { color: C('#f2efe8') });
+  },
+  paintedrock(b, x, y, z, yaw) {
+    b.add(ball, matrix(x, y + 0.08, z, 0, yaw, 0, 0.16, 0.09, 0.12), { color: C('#d8322a') });
+    b.add(box, matrix(x, y + 0.165, z, 0, yaw, 0, 0.012, 0.01, 0.2), { color: C('#1a1410') });
+    for (const [u, v] of [[0.06, 0.04], [-0.06, 0.05], [0.07, -0.05], [-0.05, -0.04]]) b.add(ball, matrix(x + Math.cos(yaw) * u + Math.sin(yaw) * v, y + 0.15, z - Math.sin(yaw) * u + Math.cos(yaw) * v, 0, 0, 0, 0.025, 0.012, 0.025), { color: C('#1a1410') });
+  },
+  lantern(b, x, y, z, yaw) {
+    b.add(cyl, matrix(x, y + 0.05, z, 0.2, yaw, 1.4, 0.09, 0.08, 0.09), { color: C('#6a4a30') });
+    b.add(cyl, matrix(x + 0.16, y + 0.09, z, 0.2, yaw, 1.4, 0.07, 0.18, 0.07), { color: C('#4a3a30') });
+    b.add(cone, matrix(x + 0.29, y + 0.12, z, 0.2, yaw, -1.7, 0.08, 0.1, 0.08), { color: C('#6a4a30') });
+  },
+  barbedwire(b, x, y, z, yaw) {
+    b.add(cyl, matrix(x, y + 3.5, z, 0, 0, 0, 0.34, 7, 0.34), { color: C('#5a4e44') });
+    b.add(ball, matrix(x, y + 1.05, z, 0, 0, 0, 0.42, 0.18, 0.42), { color: C('#5a4e44') });     // the bulge where it swallowed the wire
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    for (const sd of [-1, 1]) for (const h of [0.9, 1.2]) b.add(cyl, matrix(x + c * sd * 1.6, y + h, z - s * sd * 1.6, 0, yaw, Math.PI / 2, 0.01, 2.6, 0.01), { color: C('#3a3430') });
+    b.add(box, matrix(x + c * 3, y + 0.55, z - s * 3, 0.1, yaw, 0.15, 0.12, 1.1, 0.12), { color: C('#6a5a48') });           // the old post
+  },
+  toyboat(b, x, y, z, yaw) {
+    b.add(ball, matrix(x, y + 0.06, z, 0, yaw, 0.25, 0.09, 0.06, 0.24), { color: C('#c8462a') });
+    b.add(cyl, matrix(x, y + 0.25, z, 0, 0, 0.25, 0.008, 0.36, 0.008), { color: C('#6a4a30') });
+    b.add(cone, matrix(x - 0.05, y + 0.26, z, 0, yaw + Math.PI / 2, 0.25, 0.1, 0.28, 0.01), { color: C('#efe8d8') });
+  },
+  horseshoe(b, x, y, z, yaw, r) {
+    b.add(cyl, matrix(x, y + 3.5, z, 0, 0, 0, 0.3, 7, 0.3), { color: C('#6a5a4a') });
+    for (let i = 0; i < 8; i++) b.add(ball, matrix(x + (r() - 0.5) * 4, y + 7 + r() * 2, z + (r() - 0.5) * 4, 0, 0, 0, 1.5, 1, 1.5), { color: C(i % 2 ? '#4f7a34' : '#5a8a3a') });
+    const fx = x + Math.sin(yaw) * 0.31, fz = z + Math.cos(yaw) * 0.31, c = Math.cos(yaw), s = Math.sin(yaw);
+    for (let k = 0; k < 7; k++) { const a = -0.3 + k * 0.62; b.add(box, matrix(fx + c * Math.cos(a) * 0.08, y + 1.6 - Math.sin(a) * 0.09, fz - s * Math.cos(a) * 0.08, 0, yaw, a, 0.06, 0.025, 0.015), { color: C('#4a4440') }); }
+  },
+  owlpellets(b, x, y, z, yaw, r) {
+    b.add(cyl, matrix(x, y + 5, z, 0, 0, 0, 0.4, 10, 0.4), { color: C('#5a4434') });
+    for (let k = 0; k < 6; k++) b.add(cone, matrix(x, y + 4 + k * 1.2, z, 0, 0, 0, 2.4 - k * 0.32, 2, 2.4 - k * 0.32), { color: C('#2f5a36') });
+    for (let i = 0; i < 5; i++) { const a = r() * 6.28, d = 0.8 + r() * 0.8; b.add(ball, matrix(x + Math.cos(a) * d, y + 0.03, z + Math.sin(a) * d, 0, r() * 6, 0, 0.04, 0.03, 0.07), { color: C('#7a7470') }); }
+  },
 };
 
 /** places each shipped hidden thing and adds its geometry to `props`; returns the items ({kind, name, x, z, r, ship}) */
-export function placeHidden(props, rng, upTo, others) {
+export function placeHidden(props, rng, upTo, others, RUN) {
   // every thing is placed (shipped or not) so the spots never depend on what has arrived; only shipped ones are built
   const out = [], all = [], trails = TRAIL_LINES.flat().filter((_, i) => i % 3 === 0), far = (x, z, d) => [...others, ...all].every((q) => Math.hypot(q.x - x, q.z - z) > d);
   let idx = 0;
@@ -162,9 +257,9 @@ export function placeHidden(props, rng, upTo, others) {
       }
     }
     idx++; if (!spot) continue;
-    const yaw = rng() * 6.283, item = { kind, name: K.name, x: spot.x, z: spot.z, r: K.where === 'under' ? 12 : K.where === 'trail' ? 9 : 13, ship: K.ship, hidden: true };
+    const yaw = rng() * 6.283, item = { kind, name: K.name, x: spot.x, z: spot.z, r: K.where === 'under' ? 12 : K.where === 'trail' ? 9 : K.year ? 10 : 13, ship: K.ship, year: K.year, hidden: true };
     all.push(item);
-    if (K.ship <= upTo) { BUILD[kind](props, spot.x, groundY(spot.x, spot.z) - 0.02, spot.z, yaw, mulberry32(7001 + idx * 31), spot.out || [1, 0]); out.push(item); }
+    if (arrived(K, RUN, upTo)) { BUILD[kind](props, spot.x, groundY(spot.x, spot.z) - 0.02, spot.z, yaw, mulberry32(7001 + idx * 31), spot.out || [1, 0]); out.push(item); }
   }
   return out;
 }

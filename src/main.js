@@ -50,6 +50,7 @@ import { Explore, ATTRACTION } from './explore.js';
 import { Drone } from './drone.js';
 import { Fire } from './fire.js';
 import { Poachers } from './poachers.js';
+import { Legends, LEGENDS } from './legends.js';
 import { Binoculars } from './binoculars.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { Usage, LEVELS } from './usage.js';
@@ -385,7 +386,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -405,7 +406,8 @@ async function boot() {
     if (act && !hadAct) { const pa = FUND.bounty(act, 'Moments'); if (pa) setTimeout(() => ui.toast(FUND.byHand() ? `You put the photo on the park\u2019s page yourself, weeks later: +$${pa} for the park fund.` : `Clyde puts your photo on the park\u2019s page. People come hoping to see that: +$${pa} for the park fund.`, 3.8), 2600); }
     if (!BY_ID[id]) return;
     const paid = FUND.bounty(id, BY_ID[id].cat);
-    if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes it up for the park\u2019s page. Finds like this bring visitors: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
+    if (BY_ID[id].legend && !had) setTimeout(() => ui.toast(paid ? `${BY_ID[id].name} in Ashland State Park! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +$${paid.toLocaleString('en-US')} for the park fund.` : `You got it: ${BY_ID[id].name.toLowerCase()}, in Ashland State Park. A photo almost nobody has.`, 6.5), 1600);
+    else if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes it up for the park\u2019s page. Finds like this bring visitors: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
     else if (had && !(act && !hadAct)) ui.toast(`${act ? BY_ID[act].name : BY_ID[id].name}. Another for the album.`, 1.8);
   };
   // ---- gentle tutorial: one hint at a time, each clears when you do the thing (or after a while); remembered once finished
@@ -619,6 +621,7 @@ async function boot() {
     audio.notify?.();
     featured('place-' + it.id, ATTRACTION[it.kind] ? 'Attractions' : 'Places', ATTRACTION[it.kind], it.name.replace(/^(The|An|A) /, (m) => m.toLowerCase()));
   };
+  explore.onYearFind = () => setTimeout(() => ui.toast('A new year, and something small has turned up in the park. Ask around.', 5), 12000);
   explore.onShipment = () => setTimeout(() => ui.toast('Something new seems to have turned up in the park. Ask around.', 5.5), 7500);
   explore.onLead = (l) => ui.toast(`A lead: ${l.text} Circled on your map.`, 6);
   let leadT = 0;
@@ -632,6 +635,16 @@ async function boot() {
   poachers.onShot = () => { audio.shot?.(); if (!RUN.s.shotHeard) { RUN.s.shotHeard = true; RUN.save?.(); ui.toast('A shot, somewhere off in the woods. Hunting isn\u2019t allowed in the park.', 5); } };
   poachers.onFled = () => ui.toast('Someone crashes off through the brush ahead of you, fast. Whoever it was is gone.', 4.5);
   poachers.onFined = (amt) => { ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
+  // ---- legendary animals (legends.js): a bear, a moose, a bobcat, an otter, an eagle; very rare, and a huge deal
+  const legends = new Legends(scene, { force: params.get('legend'), life: PRESSURE.life });
+  const legendBan = document.createElement('div'); legendBan.id = 'legendban'; document.body.appendChild(legendBan);
+  legends.onSeen = (k, x, z) => {
+    const L = LEGENDS[k], A = L.a.replace(/^./, (c) => c.toUpperCase()); audio.legend?.();
+    legendBan.innerHTML = `<small>Legendary sighting</small><b>${L.name}</b>`; legendBan.classList.add('on'); setTimeout(() => legendBan.classList.remove('on'), 4800);
+    setTimeout(() => ui.toast(`${A}, right there! Hardly anyone ever sees one here. ${GUIDE.photographed(k) ? '' : MOBILE ? 'Quick: Phone \u2192 Camera.' : 'Quick: the camera (V).'}`, 6), 900);
+    JOURNAL.add(`Saw ${L.a}. ${{ bear: 'It crossed in no hurry, then was gone into the trees.', moose: 'Huge, dark and long-legged, it stepped through the woods like they were nothing.', bobcat: 'A stubby tail and tufted ears, there and then not.', otter: 'It swam the shoreline in a run of dives.', eagle: 'White head, on a dead tree by the water.' }[k]}`, x, z);
+    RUN.s.legendsSeen = { ...(RUN.s.legendsSeen || {}), [k]: (RUN.s.legendsSeen?.[k] || 0) + 1 }; RUN.save?.();
+  };
   // walking into it: stopped at the edge, like the winter water
   player.hotAt = (x, z, px, pz) => { if (!fire.s.start || !(fire.s.phase === 'burning' || fire.s.phase === 'located') || fire.fierce < 0.1) return false; const d = Math.hypot(x - fire.x, z - fire.z); return d < fire.s.r + 4 && d < Math.hypot(px - fire.x, pz - fire.z) - 1e-4; };
   player.events.hot = () => ui.toast('It\u2019s too hot. You can\u2019t get any closer to the fire.', 3.2);
@@ -684,7 +697,7 @@ async function boot() {
   };
   // the AI spotter (an upgrade): Clyde watches the feed, and now and then locks onto a hidden thing in view; each lock
   // becomes a tight circle on your map.  It costs harm while it runs, and more for each find.
-  const LOCKNAME = { cellar: 'cellar hole', well: 'stone well', marker: 'boundary stone', lodge: 'beaver lodge', osprey: 'nest', skiff: 'sunken boat', road: 'old road', wreck: 'wreck', erratic: 'big boulder', truck: 'old vehicle', chimney: 'chimney', cemetery: 'small cemetery', bottles: 'old glass', carvedbeech: 'carved tree', fairyhouse: 'little house', benchmark: 'survey mark', ropeswing: 'rope swing', icehouse: 'foundation', canoe: 'canoe', anchor: 'anchor', mill: 'mill stones' };
+  const LOCKNAME = { cellar: 'cellar hole', well: 'stone well', marker: 'boundary stone', lodge: 'beaver lodge', osprey: 'nest', skiff: 'sunken boat', road: 'old road', wreck: 'wreck', erratic: 'big boulder', truck: 'old vehicle', chimney: 'chimney', cemetery: 'small cemetery', bottles: 'old glass', carvedbeech: 'carved tree', fairyhouse: 'little house', benchmark: 'survey mark', ropeswing: 'rope swing', icehouse: 'foundation', canoe: 'canoe', anchor: 'anchor', mill: 'mill stones', geocache: 'box', antler: 'antler', hornets: 'nest', cairn: 'stone stack', birdhouse: 'birdhouse', sapbucket: 'bucket', bottlemsg: 'bottle', bobber: 'bobber', paintedrock: 'painted rock', lantern: 'lantern', barbedwire: 'wire', toyboat: 'toy boat', horseshoe: 'horseshoe', owlpellets: 'roost tree' };
   let locks = [], spotT = 0;
   const lockLayer = () => drone.el.querySelector('[data-d="locks"]');
   const spotter = (dt) => {
@@ -1030,6 +1043,7 @@ async function boot() {
 
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
+    legends.update(dt, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null, camera);
     poachers.update(dt * SPEED.v, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null);
     binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
     // finding the fire yourself: close enough to see the flames, or the smoke's source in the middle of the binoculars
@@ -1092,7 +1106,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, poachers, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, poachers, legends, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

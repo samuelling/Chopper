@@ -137,6 +137,8 @@ export class Audio {
   snort() { if (!this.ready) return; this._burst(900, 1.2, 0.18, 0.16, 'bandpass', 0.6); setTimeout(() => this._burst(700, 1.2, 0.22, 0.14, 'bandpass', 0.5), 260); }
   oarlock() { if (!this.ready) return; this._tone(150 + Math.random() * 60, 0.16, 0.022, 'square', 110); this._burst(900, 3, 0.1, 0.03, 'bandpass'); }
   dip(k = 1) { if (!this.ready) return; this._burst(1500, 1.1, 0.22, 0.1 * k, 'bandpass'); this._burst(500, 1, 0.3, 0.05 * k, 'lowpass'); }
+  /** a legendary sighting: a bright, rising four-note chime */
+  legend() { if (!this.ready) return; [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => this._tone(f, 0.9 - i * 0.1, 0.05, 'sine'), i * 110)); }
   /** a rifle shot a long way off, and its echo off the hills */
   shot() { if (!this.ready) return; this._burst(500, 0.8, 0.35, 0.3, 'lowpass', 0.5); this._tone(70, 0.4, 0.12, 'sine', 40); setTimeout(() => this._burst(380, 0.8, 0.6, 0.09, 'lowpass', 0.5), 420); }
   thud() { if (!this.ready) return; this._burst(180, 1, 0.22, 0.2, 'lowpass'); }

@@ -16,7 +16,7 @@ import { mulberry32 } from './noise.js';
 import { JOURNAL } from './places.js';
 import { SEASON } from './season.js';
 import { RUN } from './run.js';
-import { placeHidden, HIDDEN_KINDS, shipmentsIn, shipmentSeason } from './hidden.js';
+import { placeHidden, HIDDEN_KINDS, shipmentsIn, shipmentSeason, yearOf } from './hidden.js';
 
 const KEY = 'ashland.explore';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
@@ -156,7 +156,7 @@ export class Explore {
     if (WRECK) add({ kind: 'wreck', name: 'The helicopter wreck', x: WRECK.x, z: WRECK.z, r: 14 });
     // more hidden things, arriving in three shipments over a life (hidden.js)
     this.shipped = shipmentsIn(RUN);
-    for (const h of placeHidden(props, mulberry32(9090), this.shipped, [...this.list, ...(discoveries?.items || [])])) add({ ...h, id: 'h-' + h.kind });
+    for (const h of placeHidden(props, mulberry32(9090), this.shipped, [...this.list, ...(discoveries?.items || [])], RUN)) add({ ...h, id: 'h-' + h.kind });
     if (props.pos.length) { const geo = props.build(); const m = makeInstanced(geo, 1); m.fill.count = m.line.count = 1; m.fill.setMatrixAt(0, new THREE.Matrix4()); m.line.setMatrixAt(0, new THREE.Matrix4()); scene.add(m.fill); scene.add(m.line); this.mesh = m; }
     // an osprey on the nest in the warm months
     if (this.osprey && (SEASON === 'spring' || SEASON === 'summer')) this.bird = this._osprey(scene);
@@ -208,6 +208,11 @@ export class Explore {
     if (this.shipped > 0 && n === shipmentSeason(RUN, this.shipped)) {
       const kinds = Object.keys(HIDDEN_KINDS).filter((k) => HIDDEN_KINDS[k].ship === this.shipped);
       this.onShipment?.(); this.addLead('talk', { prefer: kinds, r: 70 });
+    }
+    // and each new year, one small thing (hidden.js): a rumour points at it
+    if (n % 4 === 0 && n > 0) {
+      const kinds = Object.keys(HIDDEN_KINDS).filter((k) => HIDDEN_KINDS[k].year === yearOf(RUN));
+      if (kinds.length) { this.onYearFind?.(HIDDEN_KINDS[kinds[0]]); this.addLead('talk', { prefer: kinds, r: 55 }); }
     }
   }
   /** a ruin you find hints at the next thing */
