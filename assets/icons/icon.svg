@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c45a"/><stop offset=".55" stop-color="#e8823a"/><stop offset="1" stop-color="#c9502a"/></linearGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5f8f9a"/><stop offset="1" stop-color="#2f4f5c"/></linearGradient>
+    <clipPath id="c"><rect width="1024" height="1024" rx="0"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1024" height="1024" fill="url(#sky)"/>
+    <circle cx="640" cy="360" r="120" fill="#fbe3a6"/>
+    <path d="M0 520 Q170 400 330 470 T680 430 T1024 470 V1024 H0Z" fill="#a8452a"/>
+    <path d="M0 600 Q200 500 420 575 T800 540 T1024 580 V1024 H0Z" fill="#6e2a22"/>
+    <path d="M0 680 H1024 V1024 H0Z" fill="url(#lake)"/>
+    <path d="M0 680 H1024" stroke="#f4e6c8" stroke-width="10" opacity=".85"/>
+    <g stroke="#f4e6c8" stroke-linecap="round" opacity=".55" stroke-width="12">
+      <path d="M560 760 H760"/><path d="M610 820 H700"/><path d="M180 860 H330"/><path d="M640 900 H860"/>
+    </g>
+    <path d="M0 700 Q150 690 300 712 T620 728 Q560 790 300 800 T0 790 Z" fill="#3b3a24" stroke="#1c1517" stroke-width="10"/>
+    <path d="M572 734 H708" stroke="#fbe3a6" stroke-width="14" stroke-linecap="round" opacity=".8"/>
+    <!-- pines, cel-shaded: a dark side and a lit side, outlined -->
+    <g stroke="#1c1517" stroke-width="12" stroke-linejoin="round">
+      <path d="M250 210 L360 430 H310 L400 570 H335 L430 720 H70 L165 570 H100 L190 430 H140 Z" fill="#2f5a36"/>
+      <path d="M250 210 L360 430 H310 L400 570 H335 L430 720 H250 Z" fill="#3f7a44" stroke="none"/>
+      <path d="M232 720 H268 V800 H232 Z" fill="#4a3426"/>
+      <path d="M440 400 L510 540 H478 L540 640 H496 L560 740 H320 L384 640 H340 L402 540 H370 Z" fill="#2a4f30"/>
+      <path d="M440 400 L510 540 H478 L540 640 H496 L560 740 H440 Z" fill="#386a3c" stroke="none"/>
+      <path d="M250 210 L360 430 H310 L400 570 H335 L430 720 H70 L165 570 H100 L190 430 H140 Z" fill="none"/>
+      <path d="M440 400 L510 540 H478 L540 640 H496 L560 740 H320 L384 640 H340 L402 540 H370 Z" fill="none"/>
+    </g>
+  </g>
+</svg>

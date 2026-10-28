@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PLATFORM, controlsPref, setControlsPref, canQuit, quitApp } from './platform.js';
 import { shared } from './toon.js';
 import { PRESSURE } from './pressure.js';
 import { woodsDead, totalTrees } from './woods.js';
@@ -68,9 +69,10 @@ document.documentElement.dataset.season = SEASON;   // the ASHLAND title takes t
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 // Phones and tablets: touch controls + a lighter renderer. ?mobile=1 / ?desktop=1 force either.
-const MOBILE = params.has('desktop') ? false : params.has('mobile')
+// On a tablet you can switch to keyboard and mouse (an iPad with a Magic Keyboard, say); the pause menu offers it.
+const MOBILE = params.has('desktop') || (PLATFORM.tablet && controlsPref() === 'keys') ? false : params.has('mobile')
   || (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches)
-  || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+  || PLATFORM.phone || PLATFORM.tablet || /Android/i.test(navigator.userAgent);
 if (MOBILE) document.body.classList.add('mobile');
 // testing aids: ?skip2=1 lands you at the end of Year One's last season, a few seconds before Clyde first appears and
 // Year Two begins; ?skipto=N does the same for Year N (e.g. ?skipto=3: the end of Year Two, just before Year Three)
@@ -92,7 +94,7 @@ window.addEventListener('unhandledrejection', (e) => { const r = e.reason; if (/
 
 async function boot() {
   const renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance', preserveDrawingBuffer: AUTO });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.25 : 1.75));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, PLATFORM.tablet ? 1.4 : MOBILE ? 1.25 : 1.75));   // tablets have the GPU for a little more
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -538,6 +540,12 @@ async function boot() {
   const restart = (e) => { e.stopPropagation(); if (confirm('Start over from Year One? The park, your choices, photos, places and footprint all reset.')) { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); sessionStorage.removeItem('ashland.fadein'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw'].forEach((k) => p.delete(k)); location.search = p.toString(); } };
   newgame.addEventListener('click', restart);
   document.querySelectorAll('[data-restart]').forEach((b) => { b.hidden = RUN.dev; b.addEventListener('click', restart); });
+  // tablets: touch controls or keyboard and mouse (reloads into the other); packaged apps: a way to quit
+  document.querySelectorAll('[data-controls]').forEach((b) => {
+    b.hidden = !PLATFORM.tablet; b.textContent = MOBILE ? 'Controls: touch \u00b7 switch to keyboard and mouse' : 'Controls: keyboard and mouse \u00b7 switch to touch';
+    b.addEventListener('click', (e) => { e.stopPropagation(); setControlsPref(MOBILE ? 'keys' : 'touch'); location.reload(); });
+  });
+  document.querySelectorAll('[data-quit]').forEach((b) => { b.hidden = !canQuit; b.addEventListener('click', (e) => { e.stopPropagation(); quitApp(); }); });
   // the life clock: ask for a birth year once (optional); it only sets how many game years you get
   const birthEl = document.getElementById('birth'), birthIn = document.getElementById('birthyear');
   

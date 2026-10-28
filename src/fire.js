@@ -13,7 +13,7 @@ import { SEASON } from './season.js';
 import { BURNS } from './burns.js';
 import { woodsDead } from './woods.js';
 
-const BASE = { spring: 0.03, summer: 0.07, autumn: 0.05, winter: 0 };      // chance of a fire in a season, healthy woods
+const BASE = { spring: 0.06, summer: 0.12, autumn: 0.09, winter: 0 };      // chance of a fire in a season, healthy woods (about one every four years)
 const GROW = 0.2, R0 = 6, RMAX = 75, CREW_ARRIVE = 20, OUT_AFTER = 50;       // metres per second, start, cap; seconds after it is found
 // a fire nobody finds is called in anyway once its smoke can be seen from town: at SEEN metres across in healthy woods,
 // but where the woods are dying (dead trees are kindling) it runs much further first
@@ -26,7 +26,7 @@ export class Fire {
     const S = RUN.s;
     if (!S.fireS || S.fireS.n !== RUN.n || force) {
       const live = RUN.phaseTwo || (RUN.dev && force);
-      const p = force ? 1 : live && !RUN.dev ? Math.min(0.6, (BASE[SEASON] ?? 0) * (1 + 6 * woodsDead())) : 0;
+      const p = force ? 1 : live && !RUN.dev ? Math.min(0.75, (BASE[SEASON] ?? 0) * (1 + 8 * woodsDead())) : 0;
       const start = Math.random() < p, spot = start ? this._spot() : null;
       S.fireS = { n: RUN.n, start: start && !!spot, t0: force ? 6 : (0.15 + Math.random() * 0.4) * RUN.len, x: spot?.x ?? 0, z: spot?.z ?? 0, phase: 'wait', r: R0, age: 0, located: null, foundAt: 0 };
       RUN.save?.();

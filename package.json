@@ -1,0 +1,12 @@
+{
+  "name": "ashland",
+  "productName": "Ashland",
+  "version": "0.9.0",
+  "description": "A cel-shaded walk through a lifetime of seasons at Ashland State Park, Massachusetts.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "serve": "python3 -m http.server 8211"
+  }
+}

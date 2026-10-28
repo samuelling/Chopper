@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ashland">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <meta name="theme-color" content="#1c1517">
 <title>Ashland</title>
 <style>
@@ -39,6 +45,10 @@
   #bar i { display:block; height:100%; width:0; background:var(--ember); transition:width .2s; }
   #hud { position:fixed; inset:0; pointer-events:none; z-index:3; opacity:0; transition:opacity .6s; }
   #hud.on { opacity:1; }
+  /* phones and tablets: keep the dashboard clear of notches, rounded corners and the home indicator */
+  body.mobile #hud .card { top:max(18px, env(safe-area-inset-top)); left:max(18px, env(safe-area-inset-left)); }
+  body.mobile #mood { top:max(18px, env(safe-area-inset-top)); right:max(18px, env(safe-area-inset-right)); }
+  body.mobile #hint { bottom:max(14px, env(safe-area-inset-bottom)); right:max(16px, env(safe-area-inset-right)); }
   .card { position:absolute; top:18px; left:18px; padding:10px 14px; background:rgba(34,20,22,.62); border:2px solid rgba(244,230,200,.55); border-radius:6px; min-width:210px; backdrop-filter: blur(3px); }
   .card b { color:var(--gold); letter-spacing:.14em; text-transform:uppercase; font-size:11px; display:block; }
   .card .v { font-size:20px; }
@@ -357,8 +367,12 @@
   #err { position:fixed; left:10px; bottom:10px; color:#ffb4a0; font:12px monospace; z-index:20; white-space:pre-wrap; max-width:80vw; }
 </style>
 <script>try{if(sessionStorage.getItem("ashland.fadein"))document.documentElement.classList.add("fadein")}catch(e){}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One+SC&family=Courier+Prime:wght@700&family=Spline+Sans:wght@600&display=swap">
+<style>
+  /* fonts are bundled (assets/fonts, SIL Open Font License) so the game runs offline and inside a desktop or iPad app */
+  @font-face { font-family:"Bowlby One SC"; font-style:normal; font-weight:400; font-display:swap; src:url(assets/fonts/bowlby-one-sc-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family:"Courier Prime"; font-style:normal; font-weight:700; font-display:swap; src:url(assets/fonts/courier-prime-latin-700-normal.woff2) format("woff2"); }
+  @font-face { font-family:"Spline Sans"; font-style:normal; font-weight:600; font-display:swap; src:url(assets/fonts/spline-sans-latin-600-normal.woff2) format("woff2"); }
+</style>
 </head>
 <body>
 <div id="loading" class="overlay"><h1 style="font-size:clamp(40px,8vw,80px)">ASHLAND</h1><div class="sub" id="loadmsg">Surveying the reservoir…</div><div id="bar"><i></i></div></div>
@@ -412,7 +426,7 @@
     <div class="r"><span class="k"><kbd>0</kbd></span><span class="t">follow the day</span></div>
     </div>
     </div>
-  <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone: Share &rarr; Add to Home Screen, then open Ashland from there.</div>
+  <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone or iPad: Share &rarr; Add to Home Screen, then open Ashland from there. It plays offline after that, too.</div>
   <div class="controls only-mobile">Left thumb: walk (push to the edge to hurry)<br>Drag the right side: look around<br>Big button: swing, cast and reel, or shoot in camera mode &middot; HOP jumps (hold to dive)<br>USE: boat, gate &middot; PHONE: map, camera, Tools (rod, sit, litter, seeds, map)<br>&#9776; this menu &middot; the sun button holds a light (keep tapping to return to the day)</div>
   <div class="note">The park layout is an informed approximation from public descriptions, not survey data. The reservoir is a drinking-water backup and a state park; in the real world, please leave the trees standing.</div>
 </div>
@@ -422,7 +436,7 @@
 <div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>
 <div id="phone" class="overlay hidden"></div>
-<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="controls ctl only-desktop" style="margin-top:18px">
+<div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen</div><div class="fsbtn" data-controls hidden></div><div class="fsbtn" data-quit hidden>Quit Ashland</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="controls ctl only-desktop" style="margin-top:18px">
     <div class="cg"><h4>Moving</h4>
     <div class="r"><span class="k"><kbd>Mouse</kbd></span><span class="t">look around</span></div>
     <div class="r"><span class="k"><span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span></span><span class="t">walk</span></div>

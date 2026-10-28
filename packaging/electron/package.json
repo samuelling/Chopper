@@ -1,0 +1,28 @@
+{
+  "name": "ashland-desktop",
+  "productName": "Ashland",
+  "version": "0.9.0",
+  "description": "Ashland, packaged for Mac and Windows.",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "prebuild-game": "cd ../.. && node tools/build.mjs",
+    "start": "npm run prebuild-game && electron .",
+    "dist:mac": "npm run prebuild-game && electron-builder --mac",
+    "dist:win": "npm run prebuild-game && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "org.megazine.ashland",
+    "productName": "Ashland",
+    "files": ["main.cjs", "preload.cjs"],
+    "extraResources": [{ "from": "../../dist", "to": "game" }],
+    "icon": "../../assets/icons/icon-1024.png",
+    "mac": { "category": "public.app-category.games", "target": [{ "target": "dmg", "arch": ["universal"] }] },
+    "win": { "target": ["nsis"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}
