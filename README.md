@@ -8,6 +8,10 @@ Run it (no build step):
 python3 -m http.server 8000     # then open http://localhost:8000
 ```
 
+## Packaging (Mac, Windows, iPad)
+
+Not shipped yet, but prepared: the game is self-contained (no CDN), `npm run build` makes a clean `dist/`, it installs to an iPad home screen and plays offline, and an Electron wrapper for Mac and Windows is in `packaging/electron/`. See [PACKAGING.md](PACKAGING.md) for the plan, signing and where to give it away, and [THIRD_PARTY.md](THIRD_PARTY.md) for licences.
+
 ## Controls
 
 | | |
