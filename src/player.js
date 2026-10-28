@@ -165,7 +165,8 @@ export class Player {
     this.sit += ((this.sitting ? 1 : 0) - this.sit) * Math.min(1, dt * 3.2);
     if (this.sit > 0.05) { fx = 0; fz = 0; }
     const sprint = k.ShiftLeft || k.ShiftRight || Math.hypot(this.touch.x, this.touch.y) > 0.92;
-    const depth = waterDepthAt(this.pos.x, this.pos.z);
+    const floor = this.floorAt?.(this.pos.x, this.pos.z) ?? -Infinity, onDeck = floor > groundY(this.pos.x, this.pos.z) + 0.05;   // a footbridge over water
+    const depth = onDeck ? 0 : waterDepthAt(this.pos.x, this.pos.z);
     // swimming: out of your depth (and not winter) you float at the surface and breaststroke; arms are never shown
     this.swimming = this.swimOK && !this.sitting && (this.swimming ? depth > 0.85 : depth > 1.05);
     this.swim += ((this.swimming ? 1 : 0) - this.swim) * Math.min(1, dt * 4);
@@ -211,7 +212,7 @@ export class Player {
     this.speed = moved / Math.max(dt, 1e-4);
 
     // vertical
-    const gy = groundY(nx, nz);
+    const gy = Math.max(groundY(nx, nz), this.floorAt?.(nx, nz) ?? -Infinity);
     if (this.swimming) {
       // hold Space (the Hop button) to dive; let go to float back up. Breath runs out in about 20 s.
       const want = (k.Space && this.locked && this.breath > 0.02 && !this.inputLock) ? Math.max(0, depth - 0.7) : 0;

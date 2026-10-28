@@ -3,7 +3,7 @@ import { fbm, noise2, smoothstep, clamp, lerp, GLSL_NOISE } from './noise.js';
 import { gradientMap, shared as toonShared } from './toon.js';
 import {
   LEVEL, MAX_DEPTH, DAM_Z, DAM_CREST, VALLEY_Y, WORLD, NX, NZ, CL_LEN, DAM_HALF, GATE,
-  lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, TRAIL_LINES, ROAD_LINES,
+  lakeSdf, islandSdf, unproject, BEACH, LOT, RAMP, BROOK, buildTrail, distToPolyline, SPILLWAY, BEACH_CREEK, SPILL_CREEK, TRAIL_LINES, ROAD_LINES,
 } from './ashland.js';
 
 import { IS_WINTER, SEASON_DEF } from './season.js';
@@ -95,6 +95,17 @@ function heightCore(x, z) {
     const d = distToPolyline(BROOK, x, z);
     if (d < 9) h -= 1.1 * smoothstep(8, 1.4, d);
   }
+  // --- the spillway: a notch through the dam's east end at the lake's level, then down the steps ---
+  {
+    const xm = (SPILLWAY.x0 + SPILLWAY.x1) / 2, hw = (SPILLWAY.x1 - SPILLWAY.x0) / 2, ax = Math.abs(x - xm);
+    if (ax < hw + 3 && z < DAM_Z + 9 && z > DAM_Z - 44) {
+      const k = smoothstep(hw + 2.6, hw + 0.2, ax) * smoothstep(DAM_Z + 8, DAM_Z + 4, z);
+      if (k > 0) h = lerp(h, Math.min(h, LEVEL - 0.25), k);
+    }
+  }
+  // --- small creeks: the spillway's stream down to the brook, and the one into the beach cove ---
+  if (z < DAM_Z - 35 && z > DAM_Z - 75) { const d = distToPolyline(SPILL_CREEK, x, z); if (d < 4) h -= 0.6 * smoothstep(3.6, 0.7, d); }
+  if (Math.abs(x + 200) < 40 && Math.abs(z + 280) < 20) { const d = distToPolyline(BEACH_CREEK, x, z); if (d < 3.2) h -= 0.55 * smoothstep(3, 0.5, d); }
   return h;
 }
 

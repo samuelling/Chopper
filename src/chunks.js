@@ -10,7 +10,7 @@ import { mulberry32, fbm, smoothstep, clamp, lerp } from './noise.js';
 import { IS_WINTER, SEASON_DEF } from './season.js';
 import { groundY, sdfAt, trailDistAt, gravelAt, WORLD, LEVEL } from './world.js';
 import { treeLuck, treeGone } from './pressure.js';
-import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline } from './ashland.js';
+import { DAM_Z, DAM_HALF, BROOK, BEACH, LOT, RAMP, distToPolyline, BEACH_CREEK, SPILL_CREEK } from './ashland.js';
 
 export const CHUNK = 64;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -276,6 +276,8 @@ export class ChunkManager {
     if (gravelAt(x, z) < 2 + pad) return true;
     if (onDam(x, z)) return true;
     if (z < DAM_Z - 30 && distToPolyline(BROOK, x, z) < 4.5 + pad) return true;
+    if (z < DAM_Z - 30 && z > DAM_Z - 80 && distToPolyline(SPILL_CREEK, x, z) < 2.6 + pad) return true;
+    if (Math.abs(x + 200) < 45 && Math.abs(z + 280) < 25 && distToPolyline(BEACH_CREEK, x, z) < 2.2 + pad) return true;
     return false;
   }
 

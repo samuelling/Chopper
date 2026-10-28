@@ -3,7 +3,7 @@ import { GeoBuilder, matrix, jitterGeometry } from './builder.js';
 import { fillMaterial, outlineMaterial, shared } from './toon.js';
 import { mulberry32, hash2, smoothstep, clamp, lerp } from './noise.js';
 import {
-  LEVEL, DAM_Z, DAM_HALF, DAM_CREST, GATE, SPILLWAY, BROOK, BEACH, LOT, RAMP, WRECK, SPAWN,
+  LEVEL, DAM_Z, DAM_HALF, DAM_CREST, GATE, SPILLWAY, BROOK, BEACH_CREEK, SPILL_CREEK, FOOTBRIDGES, PICNIC_OSM, BEACH, LOT, RAMP, WRECK, SPAWN,
 } from './ashland.js';
 import { groundY, lake, sdfAt, TRAIL } from './world.js';
 
@@ -107,6 +107,7 @@ export class Landmarks {
     this._ramp(layout);
     this._wreck();
     this._benches();
+    this._creeksAndBridges(layout);
   }
 
   // static merged model -> fill + outline meshes in world space
@@ -194,7 +195,7 @@ export class Landmarks {
     }
     // rubble side walls
     for (const sx of [x0 - 0.6, x1 + 0.6]) {
-      for (let z = DAM_Z - 8; z > DAM_Z - 40; z -= 1.5) {
+      for (let z = DAM_Z + 3; z > DAM_Z - 40; z -= 1.5) {
         const y = groundY(sx, z);
         const h = 0.9 + rng() * 0.5;
         this._box(b, sx + (rng() - 0.5) * 0.3, y - 0.3, z, 1.2 + rng() * 0.5, h, 1.7, '#8a867c', { noise: true, ry: (rng() - 0.5) * 0.4 });
@@ -210,7 +211,7 @@ export class Landmarks {
 
     // --- water: spill sheet over the steps, jet out of the culvert, and the brook ---
     this.spillMat = flowMaterial({ flow: 1, speed: 1.6, scale: 5, body: '#5d8f8a' });
-    const spillG = ribbonStrip(xm, w * 0.46, DAM_Z - 9, DAM_Z - 40);
+    const spillG = ribbonStrip(xm, w * 0.46, DAM_Z + 5, DAM_Z - 40);
     const spill = new THREE.Mesh(spillG, this.spillMat);
     spill.renderOrder = 3;
     this.group.add(spill);
@@ -232,6 +233,45 @@ export class Landmarks {
     this.group.add(brook);
     layout.addCircle(cx, cz, 5);
     layout.addCircle(xm, DAM_Z - 25, 14);
+  }
+
+  // ------------------------------------------------------------------------
+  // the little creeks (the spillway's stream down to the brook; the one into the beach cove) and the short wooden
+  // footbridges where the shore trail crosses water (ashland.js says which are from OpenStreetMap)
+  _creeksAndBridges(layout) {
+    this.creekMat = flowMaterial({ flow: 0.2, speed: 0.6, scale: 3, body: '#3d6664', foam: '#a9c4bc' });
+    for (const [pts, w0, w1] of [[SPILL_CREEK, 0.55, 0.85], [BEACH_CREEK, 0.3, 0.55]]) {
+      const m = new THREE.Mesh(ribbon(pts, (t) => w0 + (w1 - w0) * t + 0.08 * Math.sin(t * 23), 0.24, 70), this.creekMat);
+      m.renderOrder = 3; m.frustumCulled = false; this.group.add(m);
+    }
+    const b = new GeoBuilder(), rng = mulberry32(311);
+    this.decks = [];
+    for (const F of FOOTBRIDGES) {
+      const ax = Math.sin(F.yaw), az = Math.cos(F.yaw), cx = -az, cz = ax, L = F.len, W = 1.3;   // along, across
+      const P = (u, v) => [F.x + ax * u + cx * v, F.z + az * u + cz * v];
+      const [ex0, ez0] = P(-L / 2, 0), [ex1, ez1] = P(L / 2, 0), y0 = groundY(ex0, ez0) + 0.12, y1 = groundY(ex1, ez1) + 0.12;
+      const deck = (u) => { const t = u / L + 0.5; return y0 + (y1 - y0) * t + 0.18 * Math.sin(Math.PI * t); };
+      this.decks.push({ x: F.x, z: F.z, ax, az, L, W, deck });
+      const ry = F.yaw;
+      // planks across, each a little different
+      for (let u = -L / 2 + 0.15; u < L / 2; u += 0.32) { const [px, pz] = P(u, 0); this._box(b, px, deck(u) - 0.06, pz, W, 0.06, 0.28, ['#8a6a46', '#7d5f3e', '#957452', '#806444'][(rng() * 4) | 0], { ry }); }
+      // two stringers underneath, and stone footings at each end
+      for (const v of [-W / 2 + 0.12, W / 2 - 0.12]) for (let u = -L / 2; u < L / 2 - 0.01; u += L / 4) { const [px, pz] = P(u + L / 8, v); this._box(b, px, deck(u + L / 8) - 0.32, pz, 0.14, 0.26, L / 4 + 0.05, '#5e4630', { ry }); }
+      for (const u of [-L / 2, L / 2]) { const [px, pz] = P(u, 0); this._box(b, px, groundY(px, pz) - 0.5, pz, W + 0.5, 0.75, 0.7, '#8d897f', { noise: true, ry }); }
+      // posts and a top rail on each side
+      for (const v of [-W / 2, W / 2]) {
+        const n = Math.max(2, Math.round(L / 1.8));
+        for (let i = 0; i <= n; i++) { const u = -L / 2 + 0.1 + (L - 0.2) * i / n, [px, pz] = P(u, v); this._box(b, px, deck(u) - 0.05, pz, 0.1, 1.0, 0.1, '#6e5232', { ry }); }
+        for (let i = 0; i < n; i++) { const u = -L / 2 + 0.1 + (L - 0.2) * (i + 0.5) / n, [px, pz] = P(u, v); const du = (L - 0.2) / n; this._box(b, px, deck(u) + 0.88, pz, 0.08, 0.08, du + 0.06, '#7d5f3e', { ry }); }
+      }
+      layout.addCircle(F.x, F.z, L / 2 + 1);
+    }
+    this._emit(b);
+  }
+  /** the deck height of a footbridge under (x, z), or -Infinity */
+  deckAt(x, z) {
+    for (const d of this.decks || []) { const dx = x - d.x, dz = z - d.z, u = dx * d.ax + dz * d.az, v = -dx * d.az + dz * d.ax; if (Math.abs(u) < d.L / 2 + 0.2 && Math.abs(v) < d.W / 2 + 0.05) return d.deck(Math.max(-d.L / 2, Math.min(d.L / 2, u))); }
+    return -Infinity;
   }
 
   // ------------------------------------------------------------------------
@@ -273,11 +313,12 @@ export class Landmarks {
     }
 
     // picnic tables
-    for (const [u, v] of [[22, -14], [28, 8], [34, -4], [20, 20]]) {
-      const [tx, tz] = at(u, v);
+    // (four invented by the lot, and the two picnic sites OpenStreetMap marks along the shore south of the beach)
+    for (const [tx, tz] of [...[[22, -14], [28, 8], [34, -4], [20, 20]].map(([u, v]) => at(u, v)), ...PICNIC_OSM]) {
       const ty = groundY(tx, tz);
       const yaw = Math.atan2(uz, ux) + Math.PI / 2;
       this._box(b, tx, ty + 0.72, tz, 2.0, 0.07, 0.8, '#8a6840', { ry: yaw });
+      for (const s of [-1, 1]) this._box(b, tx + Math.cos(yaw) * 0.75 * s, ty - 0.2, tz - Math.sin(yaw) * 0.75 * s, 0.09, 0.95, 1.5, '#6e5232', { ry: yaw });   // legs and bench supports
       for (const s of [-1, 1]) {
         const px = tx + Math.sin(yaw) * 0.72 * s * 0, pz = tz;
         const ox = -Math.sin(yaw) * 0.78 * s * 0 + Math.cos(yaw + Math.PI / 2) * 0.62 * s;

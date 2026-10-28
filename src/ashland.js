@@ -164,7 +164,24 @@ export const GATE = (() => {
   const [bx] = project(OSM.brook[0][0]);
   return { x: Math.round(bx), z: DAM_Z - 6.5, yaw: 0 };
 })();
-export const SPILLWAY = { x0: GATE.x + 34, x1: GATE.x + 50, zTop: DAM_Z - 3, zBottom: DAM_Z - 36 };
+// the spillway at the dam's east end, where OpenStreetMap has it (the channel, way 893560130, leaves the dam at about
+// x = 130); the shore trail crosses its head on a short wooden footbridge (way 1106972362)
+const SPILL_HEAD = project([42.246578, -71.458816]);
+export const SPILLWAY = { x0: Math.round(SPILL_HEAD[0]) - 3, x1: Math.round(SPILL_HEAD[0]) + 3, zTop: DAM_Z - 3, zBottom: DAM_Z - 36 };
+// below the steps the spillway's stream runs down to join Cold Spring Brook (the rest of OSM way 893560130)
+export const SPILL_CREEK = [[Math.round(SPILL_HEAD[0]), DAM_Z - 41], [Math.round(SPILL_HEAD[0]) - 6, DAM_Z - 42.5],
+  ...[[42.247316, -71.459237], [42.247356, -71.459299], [42.247388, -71.459377], [42.247557, -71.459744], [42.247636, -71.459878], [42.247721, -71.459996], [42.247836, -71.46009]].map(project)];
+// the little creek that runs into the beach cove.  Not in OpenStreetMap; traced from the elevation model's drainage (it
+// comes down a hollow from the west and meets the cove just past the beach, where the shore trail crosses it)
+export const BEACH_CREEK = [[-232, -290], [-222, -290], [-212, -288], [-203, -284], [-195, -279], [-188, -275.5], [-181, -273], [-172, -270.5]];
+// short wooden footbridges where the trail crosses water: over the spillway's head (OSM) and over the beach creek
+const SPILL_BRIDGE = [project([42.246582, -71.45874]), project([42.246597, -71.458879])];
+export const FOOTBRIDGES = [
+  { x: (SPILL_BRIDGE[0][0] + SPILL_BRIDGE[1][0]) / 2, z: (SPILL_BRIDGE[0][1] + SPILL_BRIDGE[1][1]) / 2, yaw: Math.atan2(SPILL_BRIDGE[1][0] - SPILL_BRIDGE[0][0], SPILL_BRIDGE[1][1] - SPILL_BRIDGE[0][1]), len: 11, name: 'spillway' },
+  { x: -182.5, z: -273.6, yaw: Math.atan2(-2, 8.8), len: 5.5, name: 'beach creek' },
+];
+// the two picnic sites OpenStreetMap marks by the beach (nodes 3252519480 and 3252519481)
+export const PICNIC_OSM = [project([42.2444144, -71.4661246]), project([42.2451054, -71.4654379])];
 export const BROOK = (() => {
   const pts = OSM.brook[0].concat(OSM.brook[1].slice(1)).map(project);
   const out = [[GATE.x, DAM_Z - 41]];

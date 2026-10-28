@@ -193,7 +193,9 @@ async function boot() {
   // ------------------------------------------------------------------ gameplay wiring
   const tmpDir = new THREE.Vector3();
   player.events.step = (k, loud) => audio.footstep(k, loud);
+  player.floorAt = (x, z) => landmarks.deckAt(x, z);
   player.surfaceAt = (x, z) => {
+    if (landmarks.deckAt(x, z) > groundY(x, z)) return 'dam';                                                                                         // a wooden footbridge
     if (z < DAM_Z + 2 && z > DAM_Z - 12 && Math.abs(x) < DAM_HALF + 10) return 'pave';                                                              // the dam crest
     const g = gravelAt(x, z);
     if (g < 0.3) return Math.hypot(x - RAMP.x, z - RAMP.z) < RAMP.r + 0.5 ? 'pave' : 'gravel';  // boat ramp / parking lot
