@@ -263,7 +263,7 @@ export class Phone {
     { const f = this.fundCtx?.fire?.();
       if (f?.burning) {
         sect('Fire');
-        card('Park', 'Send out a lookout crew', '<div class="cone">Rangers and volunteers walk the woods and climb the fire tower until they find the smoke\u2019s source, then call it in. It takes them a few minutes. (Or fly the drone with its AI spotter.)</div>', 3000, !!f.s.crew, () => { if (FUND.balance < 3000) return { ok: false, msg: 'Not enough in the fund.' }; RUN.s.fund -= 3000; f.s.crew = true; RUN.save?.(); setTimeout(() => f.locate('crew'), 25000); return { ok: true, msg: 'The lookout crew is out. They will call it in when they find it.' }; }, 'Crew out searching');
+        card('Park', 'Send out a lookout crew', '<div class="cone">Rangers and volunteers walk the woods and climb the fire tower until they find the smoke\u2019s source, then call it in. It takes them a few minutes. (Or fly the drone with its AI spotter.)</div>', 5000, !!f.s.crew, () => { if (FUND.balance < 5000) return { ok: false, msg: 'Not enough in the fund.' }; RUN.s.fund -= 5000; f.s.crew = true; RUN.save?.(); setTimeout(() => f.locate('crew'), 25000); return { ok: true, msg: 'The lookout crew is out. They will call it in when they find it.' }; }, 'Crew out searching');
       }
     }
     sect('To plant');
