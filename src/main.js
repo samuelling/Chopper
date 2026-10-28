@@ -951,7 +951,7 @@ async function boot() {
     }
   };
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player), fire: () => fire }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
-    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', binoculars: 'Binoculars in hand. The big button raises them.', drone: 'Drone in hand. The big button throws it up.', none: 'Hands free.' }[c], 1.8); },
+    actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', binoculars: 'Binoculars in hand. The big button raises them.', drone: 'Drone in hand. The big button throws it up.', skis: 'Skis on.', none: 'Hands free.' }[c], 1.8); },
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },

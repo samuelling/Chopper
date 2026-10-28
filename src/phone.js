@@ -105,6 +105,7 @@ export class Phone {
       mk(p.carry === 'axe' ? '\u2713 Axe' : 'Axe', 'Chop. Swing with the big button.', () => A.carry('axe'));
       mk(p.carry === 'rod' ? '\u2713 Fishing rod' : 'Fishing rod', 'Cast with the big button, hold it to reel, steer the joystick to counter a run.', () => A.carry('rod'));
       mk(p.carry === 'binoculars' ? '\u2713 Binoculars' : 'Binoculars', 'Raise them with the big button: birds across the water, smoke on the horizon.', () => A.carry('binoculars'));
+      if (SEASON === 'winter') mk(p.carry === 'skis' ? '\u2713 Skis' : 'Cross-country skis', 'Quickest in the trail\u2019s track and out on the ice.', () => A.carry('skis'));
       if (RUN.s.drone) mk(p.carry === 'drone' ? '\u2713 Drone' : 'Drone', 'Throw it up with the big button and fly it from your phone.', () => A.carry('drone'));
       mk(p.carry === 'none' ? '\u2713 Hands free' : 'Hands free', 'Put everything away.', () => A.carry('none'));
       h('Out in the park');

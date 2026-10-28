@@ -31,7 +31,11 @@ Not shipped yet, but prepared: the game is self-contained (no CDN), `npm run bui
 | C | make choices (from Year Two, once the AI phase begins) |
 | Fullscreen | a button on the title and pause screens, and on the phone HUD (no key) |
 
-## On a phone
+## On a phone or tablet
+
+Left thumb anywhere in the lower left: a floating stick. Drag the rest of the screen to look (scaled for big screens). The big button is the camera when your hands are free, and otherwise swings, casts, throws or shoots. **Use** says what it will do where you stand (Board, Pick, Stone, Stack, Swing, Tee off, Litter, Gate, Out) and sits you down when there is nothing else. **The tool button** cycles what you hold in one tap. Hop jumps (and lets go of the rope swing). Tablets get larger buttons, and can switch to keyboard and mouse in the pause menu.
+
+
 
 Phones and tablets are detected automatically (or force it with `?mobile=1`; `?desktop=1` forces the desktop version). You get an on-screen joystick (left thumb), drag-to-look (right side), SWING / HOP / USE buttons and a sun button for the light, plus a lighter renderer: smaller shadow map, shorter draw distance, less leaf litter, lower pixel ratio. The title screen says it is best played on a desktop. Landscape works best.
 
@@ -171,6 +175,20 @@ A burn leaves black, bare snags and a ragged circle of ash; ground plants are go
 Three forts of big branches in the woods, there from the start, the kind people keep adding to for years: a **teepee** you can stand up in, a **lean-to** on a ridgepole between two trees, and a **big A-frame fort** with its ridgepole in the fork of a tree, a doorway and a log to sit on. Each stands in its own small clearing off the trail, with rumours pointing at them. Ashland really has forts like these: the teepee stands where you pinned one (42.24259 N, 71.46454 W, in the woods by the west shore south of the beach); the other two are placed by the game.
 
 **Old Camp Winnetaska.** A Girl Scout camp stood on the reservoir's quieter west shore for decades until it closed in 2015 (the land is the town's now). The game has what is left of it in a clearing near the teepee: a campfire circle with log benches, a bare flagpole, a weathered sign with the letters gone, and the floors of a few cabins. The camp is real; the remains and their exact spot are invented. **The little island** has a fire ring and a few beer cans, as a hiker who waded out to it found.
+
+### Things to do outdoors
+- **Foraging** (`src/forage.js`): something to pick each season with E. Fiddleheads in wet ground (spring); highbush blueberries on the shore and black raspberries at trail edges (summer); apples from a few old orchard trees where the real Old Orchard Trail leaves the park on the east side, and hen-of-the-woods at the foot of big oaks (autumn); teaberries in the snow (winter). Each patch gives a few handfuls a season; a Field Guide section, *Foraged*, keeps count.
+- **Winter on the ice**: the reservoir freezes. Walk out on it (you slide; it is slippery), cut a hole and **ice-fish** with the rod, or put on **cross-country skis** (in the Q kit in winter) for quick going in the trail's track. The rowboat is frozen in until spring.
+- **The night sky** (`src/sky.js`): nights are longer now (the last quarter of each season), and sitting no longer hurries them. Stars, the Milky Way, and the constellations really up that season over eastern Massachusetts (the Big Dipper, the North Star and Cassiopeia all year; Leo in spring; the Summer Triangle in summer and autumn; Orion in winter). Look at one for a moment and its lines draw in, and it goes in the Field Guide under *Sky*. Shooting stars now and then, every few seconds in summer (the Perseids).
+- **Birding by ear** (`src/birding.js`): now and then a cardinal, robin, house wren or red-eyed vireo perches nearby and sings every few seconds; the song comes from its side (stereo) and grows louder as you close in. Find it and photograph it: the bird for your Field Guide, and a moment.
+- **Leaf-peeping**: in autumn a handful of red maples by the water flare brighter than the rest; a photo of one is a moment.
+- **A grand stag**: some seasons (mostly in the autumn rut, never once antlers have dropped) the buck is a big one with a twelve-point rack. Legendary, with a sighting banner.
+- **Your own cairn** at each skipping shore: E adds a stone, but it sways more the higher it gets, so wait until it stands still. Seven high is a photo.
+- **The rope swing**: on a steep bank with deep water close. E grabs the rope, you swing out, Space (Hop) lets go; hang on and you drop back on the bank. Not in winter.
+- **Swim to the little island**, and a **geocache chain**: the first geocache's logbook gives the coordinates of the next, on your map, through four more caches.
+- **Disc golf** (`src/discgolf.js`): six holes on the east side (people play a course over that way) with tee pads, chain baskets and mown fairways. E at the tee, hold to wind up, let go: the disc fades left, clatters off trees and splashes in water (a penalty). Par 3 a hole.
+- **Photos pay by distance**: an animal photographed within 8 m pays full value on the park's page, down to a quarter at 60 m (and from the drone, a quarter at most). A closer photo later pays the difference.
+- **The rowboat across seasons**: if the season turns while you are rowing, you are still in the boat when it comes back (in winter the lake freezes around it, and you stand on the ice).
 
 ### Skipping stones (`src/skipping.js`)
 Three **skipping shores** (invented names: Flat Stone Shore, The Skipping Ledge, Slate Beach), picked where a gentle bank of flat stones looks out on at least 50 m of open water. Finding one names it on your map and, from Year Two, puts it on the park's page. E picks up a stone. Hold the action and a gauge comes up: the arm's power fills (and fades if you hold too long) while a needle swings the stone's angle to the water between 0 and 45 degrees. Let go with the needle near 20 degrees (the real magic angle, from Clanet, Hersen and Bocquet in *Nature*, 2004) and the arm full: the best moment is the needle's way back down, just after a second. Each touch leaves a ring on the water. Ten skips or more leaves a chain of rings, and a photo of it before it fades is a Field Guide moment the park's page pays well for. Fifteen is mastery (the world record is 88). The game tells you what went wrong: too steep, too flat, not enough arm, or facing the bank.
