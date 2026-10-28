@@ -750,12 +750,22 @@ async function boot() {
     player.setCarry('phone'); player.raise = 1; player.raiseTo = 0;
     setTimeout(() => { if (player.carry === 'phone' && !phone.isOpen) player.setCarry('none'); }, 650);
   };
-  // secrets: type d-r-o-n-e during play for the drone and its AI spotter, in hand; f-i-r-e starts a forest fire nearby
+  // secret: 9-1-1 during play starts a forest fire nearby (to try the fire out).  After a 9, the 1s are held back from
+  // the light keys for a moment, so dialling it does not also change the light.
+  { let dial = '', armT = 0;
+    addEventListener('keydown', (e) => {
+      if (!started || e.repeat || !/^Digit\d$/.test(e.code)) return;
+      const d = e.code[5], armed = Date.now() < armT;
+      if (d === '9') { dial = '9'; armT = Date.now() + 5000; return; }
+      if (!armed || d !== '1') { dial = ''; return; }
+      e.stopImmediatePropagation(); e.preventDefault(); dial += '1'; armT = Date.now() + 5000;
+      if (dial === '911') { dial = ''; armT = 0; if (!fire.ignite(player.pos)) ui.toast('A fire is already burning.', 2.5); }
+    }, true); }
+  // secret: type d-r-o-n-e during play for the drone and its AI spotter, in hand
   { let typed = '';
     addEventListener('keydown', (e) => {
       if (!started || e.repeat || !/^Key[A-Z]$/.test(e.code)) return;
       typed = (typed + e.code[3]).slice(-5);
-      if (typed.endsWith('FIRE')) { typed = ''; if (!fire.ignite(player.pos)) ui.toast('A fire is already burning.', 2.5); }
       if (typed === 'DRONE') { typed = ''; RUN.s.drone = true; RUN.s.droneai = true; RUN.save?.(); if (!drone.active && !player.cameraMode && !phone.isOpen) { fishing.reset(); player.setCarry('drone'); } ui.toast('Drone and AI spotter unlocked. Click to throw it up.', 3.5); }
     }); }
   player.events.droneLaunch = () => { if (!started || interludeOn || phone.isOpen || player.cameraMode) return; drone.launch(); };
