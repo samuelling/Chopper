@@ -435,6 +435,9 @@ async function boot() {
       { text: 'Phone \u2192 <b>Tools</b> \u2192 <b>Fishing rod</b>. The big button casts, then tap again when the bobber dips; hold it to reel, and push the joystick sideways to counter a run', ok: () => tut.fished, max: 30 },
       { text: 'At the boat ramp, <b>Use</b> gets you into the rowboat. The joystick rows and turns; <b>Use</b> again at the shore climbs out', ok: () => false, max: 14 },
       { text: '<b>Tools</b> also picks up litter, plants a seed and turns the corner map on. At the dam gatehouse, <b>Use</b> works the gate', ok: () => false, max: 14 },
+      // and then you are on your own
+      { text: 'Now go and explore. Photograph the plants and animals, fish the lake, look for what is hidden in the woods and under the water. Your phone keeps it all: the <b>Field Guide</b> for what you have found, the <b>Journal</b> for what you have lived', ok: () => false, max: 15 },
+      { text: 'The years go quickly here. Spend them well', ok: () => false, max: 7 },
     ] : [
       { text: 'Click to take hold of the view', ok: () => player.locked, max: 1e9, always: true },
       { text: '<span class="wasd" aria-label="W A S D"><kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd></span> to walk &nbsp; mouse to look around', ok: () => tut.moved > 7 && tut.turned > 0.8, max: 45 },
@@ -446,6 +449,9 @@ async function boot() {
       { text: '<kbd>Q</kbd> again brings out a fishing rod: click to cast into open water, and click when the bobber dips', ok: () => tut.fished, max: 25 },
       { text: 'At the boat ramp, <kbd>E</kbd> gets you into the rowboat. <kbd>W</kbd> <kbd>S</kbd> row, <kbd>A</kbd> <kbd>D</kbd> turn', ok: () => false, max: 14 },
       { text: '<kbd>E</kbd> picks up litter (at the dam gatehouse, it works the gate) &nbsp; <kbd>G</kbd> plants a seed &nbsp; <kbd>M</kbd> map &nbsp; <kbd>H</kbd> brings back the dashboard &nbsp; <kbd>Esc</kbd> menu with every control', ok: () => false, max: 14 },
+      // and then you are on your own
+      { text: 'Now go and explore. Photograph the plants and animals, fish the lake, look for what is hidden in the woods and under the water. Your phone keeps it all: the <b>Field Guide</b> for what you have found, the <b>Journal</b> for what you have lived', ok: () => false, max: 15 },
+      { text: 'The years go quickly here. Spend them well', ok: () => false, max: 7 },
     ],
     moved: 0, turned: 0, sat: false, hopped: false, phoned: false, tooled: false, shot: false, _p: null, _y: 0,
     start() { this.active = true; this.go(0); },
