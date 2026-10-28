@@ -143,7 +143,7 @@ export class Goggles {
   }
   _hideTags() { for (const t of this.tagPool) t.style.display = 'none'; }
   _tag(cands, hidden, cam, name, isNew) {
-    const W = innerWidth, H = innerHeight, seen = new Map(), list = [];
+    const cr = this.r.domElement.getBoundingClientRect(), W = cr.width || innerWidth, H = cr.height || innerHeight, seen = new Map(), list = [];
     for (const c of cands) {
       const d = Math.hypot(c.x - cam.x, c.z - cam.z); if (d > 70) continue;
       const k = c.kind, prev = seen.get(k); if (prev && prev.d <= d) continue;

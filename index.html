@@ -19,6 +19,8 @@
   :root[data-season=summer] { --sh1:#efb43a; --sh2:#a0541a; }
   html,body { margin:0; height:100%; overflow:hidden; background:#1c1517; font-family: "Avenir Next", "Trebuchet MS", Georgia, serif; color:var(--paper); }
   canvas { display:block; position:fixed; inset:0; width:100%; height:100%; }
+  #world { position:fixed; left:0; top:0; right:auto; bottom:auto; width:100vw; height:100vh; }
+  @supports (height:100lvh) { #world { height:100lvh; } body.mobile #cross { top:50lvh; } }   /* iPhone: under the toolbar and the home bar too, not just the part Safari calls the window */
   .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     background: radial-gradient(ellipse at 50% 60%, rgba(60,28,26,.55), rgba(20,12,16,.88)); z-index:5; padding:24px; cursor:pointer; }
   .overlay.hidden { display:none; }

@@ -105,20 +105,25 @@ window.addEventListener('unhandledrejection', (e) => { const r = e.reason; if (/
 async function boot() {
   const renderer = new THREE.WebGLRenderer({ antialias: !MOBILE, powerPreference: 'high-performance', preserveDrawingBuffer: AUTO });
   renderer.setPixelRatio(Math.min(devicePixelRatio, PLATFORM.tablet ? 1.4 : MOBILE ? 1.25 : 1.75));   // tablets have the GPU for a little more
-  renderer.setSize(innerWidth, innerHeight);
+  // the canvas is sized by CSS (on iPhone it reaches down behind Safari's toolbar and the home bar), and drawn to match
+  renderer.domElement.id = 'world';
+  const viewW = () => renderer.domElement.clientWidth || innerWidth, viewH = () => renderer.domElement.clientHeight || innerHeight;
+  renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.08, 4000);
+  const camera = new THREE.PerspectiveCamera(68, viewW() / viewH(), 0.08, 4000);
   scene.add(camera);
   const onResize = () => {
-    renderer.setSize(innerWidth, innerHeight);
-    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+    const w = viewW(), h = viewH();
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
     shared.resY.value = renderer.domElement.height;
   };
-  addEventListener('resize', onResize);
+  addEventListener('resize', onResize); window.visualViewport?.addEventListener('resize', onResize);
+  addEventListener('orientationchange', () => setTimeout(onResize, 300));
   onResize();
 
   ui.progress('Raising the land…', 0.05); await tick();
