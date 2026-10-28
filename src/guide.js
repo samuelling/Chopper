@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { PLANTS } from './plants.js';
 import { LEGENDS } from './legends.js';
+import { FORAGE } from './forage.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -69,6 +70,8 @@ for (const [id, of, name, hint] of [
   ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
   ['skip-rings', 'skip', 'Ten skips, in rings', 'Skip a stone ten times or more at a skipping shore, then photograph the chain of rings before it fades'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
+// things to pick (forage.js): found when you pick them, or photograph them
+for (const [k, F] of Object.entries(FORAGE)) ENTRIES.push({ id: 'forage-' + k, cat: 'Foraged', name: F.name, blurb: F.blurb, hint: F.hint });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets
 for (const [id, L] of Object.entries(LEGENDS)) ENTRIES.push({ id, cat: 'Legendary', name: L.name, blurb: L.blurb, hint: L.hint, legend: true });
 export const BY_ID = Object.fromEntries(ENTRIES.map((e) => [e.id, e]));
@@ -92,7 +95,9 @@ export const GUIDE = {
   photographed(id) { return !!this.d[id]?.photos; },
   heard(id) { return !!this.d[id]?.heard; },
   caught(id) { return !!this.d[id]?.caught; },
-  found(id) { return this.photographed(id) || this.heard(id) || this.caught(id); },
+  foraged(id) { return !!this.d[id]?.foraged; },
+  found(id) { return this.photographed(id) || this.heard(id) || this.caught(id) || this.foraged(id); },
+  addForaged(id) { const r = (this.d[id] ||= {}), first = !r.foraged; r.foraged = (r.foraged || 0) + 1; this.save(); if (first) this.onNew?.('foraged', BY_ID[id]); },
   count() { return ENTRIES.filter((e) => this.found(e.id)).length; },
   addPhoto(id, thumb, season, big) {
     if (big) { this.photos.push({ id, season, at: Date.now(), data: big, thumb }); if (this.photos.length > MAXPHOTOS) this.photos.shift(); this.savePhotos(); }
