@@ -59,7 +59,7 @@ export const MEASURES = [
 // bounties (Year Two on): the first record of each find pays into the fund.  The backstory: Clyde writes each one up for the
 // park's page ("Found at Ashland"), and the visitors it draws pay in parking and donations.  The page and the rates are
 // invented; rarer finds, and the places guests can go out to see, pay more.
-const RARE = { indianpipe: 450, jack: 350, witchhazel: 350, soldiers: 300, bloodroot: 300, osprey: 500, fox: 600, beaver: 600, woodduck: 500, hawk: 500, heron: 400, ladyslipper: 600, cardinalflower: 450, columbine: 400, deer: 350, turtle: 300, troutlily: 300, eel: 400, brook: 400, carp: 300, 'skip-rings': 900, bear: 5000, stag: 4500, moose: 5000, bobcat: 4000, otter: 3500, eagle: 4000 };
+const RARE = { indianpipe: 450, jack: 350, witchhazel: 350, soldiers: 300, bloodroot: 300, osprey: 500, fox: 600, beaver: 600, woodduck: 500, hawk: 500, heron: 400, ladyslipper: 600, cardinalflower: 450, columbine: 400, deer: 350, turtle: 300, troutlily: 300, eel: 400, brook: 400, carp: 300, 'skip-rings': 900, 'my-cairn': 500, 'peak-maple': 600, 'by-ear': 500, bear: 5000, stag: 4500, moose: 5000, bobcat: 4000, otter: 3500, eagle: 4000 };
 const BY_CAT = { Foraged: 200, Legendary: 4000, Trees: 100, Plants: 200, Birds: 250, Animals: 250, Fish: 150, Moments: 300, Places: 150, Attractions: 400 };
 for (const k of ['bounties']) if (S()[k] === undefined) S()[k] = {};
 

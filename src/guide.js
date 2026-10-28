@@ -71,6 +71,7 @@ for (const [id, of, name, hint] of [
   ['frog-hop', 'frog', 'Frog, mid-hop', 'Frogs wait at the water\u2019s edge and leap in when you come close'],
   ['peak-maple', 'maple', 'A red maple at its peak', 'In autumn a few red maples by the water flare brighter than all the rest. Find one and photograph it'],
   ['by-ear', null, 'A singer, found by ear', 'Follow a bird\u2019s song (louder on the side it is on) until you find the singer, and photograph it'],
+  ['my-cairn', 'cairn', 'Your own cairn, seven high', 'Stack a cairn of seven stones at a skipping shore (E, when it stands still) and photograph it'],
   ['skip-rings', 'skip', 'Ten skips, in rings', 'Skip a stone ten times or more at a skipping shore, then photograph the chain of rings before it fades'],
 ]) ENTRIES.push({ id, cat: 'Moments', name, of, blurb: hint + '.', hint });
 // things to pick (forage.js): found when you pick them, or photograph them

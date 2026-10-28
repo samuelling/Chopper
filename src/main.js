@@ -55,6 +55,7 @@ import { Skipping } from './skipping.js';
 import { Forage, FORAGE } from './forage.js';
 import { Sky, SKY_ENTRIES } from './sky.js';
 import { Birding } from './birding.js';
+import { Cairns, Caches } from './pastimes.js';
 const FORAGE_WHAT = Object.fromEntries(Object.entries(FORAGE).map(([k, F]) => [k, F.what]));
 import { Legends, LEGENDS } from './legends.js';
 const DRONE_SHARE = 0.25;   // what a drone photo of a species is worth to the park's page, next to a close-up on foot
@@ -346,6 +347,7 @@ async function boot() {
   player.events.interact = () => {
     if (player.boat) { disembark(); return; }
     if (nearBoat()) { embark(); return; }
+    { const cn = !player.swimming && !skipping.holding && cairns.near(player.pos); if (cn) { addCairn(cn); return; } }
     { const fp = !player.swimming && forage.near(player.pos); if (fp) { pickForage(fp); return; } }
     if (!player.swimming && skipping.near(player.pos) && !skipping.holding) { fishing.reset(); player.setCarry('none'); skipping.pickUp(); ui.toast(MOBILE ? 'A flat stone. Hold THROW, and let go when the needle is near 20\u00b0 and the arm is full.' : 'A flat stone. Hold the mouse button, and let go when the needle is near 20\u00b0 and the arm is full.', 4.5); return; }
     if (landmarks.nearGate(player.pos)) {
@@ -417,7 +419,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught' || kind === 'foraged') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen, ...cairns.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -619,7 +621,7 @@ async function boot() {
   // ---- each season is one day: morning, midday, golden light and dusk, and night as the season ends.  The light follows
   // the season's clock; 1-4 (or the sun button) take the light into your own hands and hold it there; 0 gives it back.
   const ARC = { autumn: [1, 0, 2, 3], winter: [1, 0, 2, 3], spring: [1, 0, 2, 3], summer: [0, 1, 2, 3] }[SEASON] || [1, 0, 2, 3];
-  const SEG = [[0, 0.16], [0.3, 0.5], [0.72, 0.8], [0.94, 1]];        // holds at each light; the gaps between are the transitions
+  const SEG = [[0, 0.13], [0.24, 0.42], [0.52, 0.62], [0.74, 1]];      // holds at each light; the gaps between are the transitions (a long night: the last quarter of the season, for the stars)
   const PHASE = ['morning', 'midday', 'evening', 'night'];
   const arcAt = (p) => {
     for (let i = 0; i < SEG.length; i++) {
@@ -689,6 +691,22 @@ async function boot() {
   // ---- birding by ear (birding.js): a singer somewhere close, to find by its song
   const birding = new Birding(scene, camera, audio, chunks);
   birding.onArrive = () => { if (!RUN.s.byEarHint) { RUN.s.byEarHint = true; RUN.save?.(); setTimeout(() => ui.toast('A bird is singing close by. Follow the song (it is louder in the ear it is on) and find the singer with the camera.', 6), 2500); } };
+  // ---- pastimes (pastimes.js): your own cairn at the skipping shores, the swim to the little island, a geocache chain
+  const cairns = new Cairns(scene, explore.skips);
+  const addCairn = (c) => {
+    const r = cairns.add(c); if (r.busy) return;
+    if (r.fell) { audio.thud?.(); ui.toast(`It sways, and down it comes. ${r.h} stones high. Wait for it to stand still before the next.`, 3.4); return; }
+    if (r.full) { ui.toast('Ten stones: as high as it will go. Leave it for the next person to find.', 3); return; }
+    audio.thud?.(0.4); if (r.h === 7) { audio.notify?.(); ui.toast(`Seven stones, and it stands. A photo of it goes on the park\u2019s page (${MOBILE ? 'Phone \u2192 Camera' : 'V'}).`, 4.5); JOURNAL.add('Stacked a cairn seven stones high at the water\u2019s edge.', c.x, c.z); }
+    else ui.toast(r.h < 3 ? `A stone on the stack: ${r.h}.` : `${r.h} stones. It sways a little more each time: add the next when it stands still.`, 2.2);
+  };
+  const islandSwim = explore.list.find((q) => q.name === 'The little island');
+  const caches = new Caches(scene, explore);
+  const cacheFound = (r) => {
+    audio.notify?.();
+    if (r.last) { const pa = FUND.bounty('geocache-chain', 'Attractions', 700); ui.toast(`The last cache in the chain, and a travel-bug coin to carry on. ${pa ? `The series goes on the park\u2019s page: +$${pa} for the park fund.` : 'You sign the log.'}`, 6); JOURNAL.add('Found the last geocache of the chain, near ' + (r.found.near || 'the water').replace(/^The /, 'the ') + '.', r.found.x, r.found.z); setWaypoint(null); return; }
+    ui.toast(`Cache found. The logbook has the next one: ${caches.coords(r.next)}. Marked on your map.`, 6); JOURNAL.add(`Found geocache #${r.found.n}. Next at ${caches.coords(r.next)}.`, r.found.x, r.found.z); setWaypoint(r.next.x, r.next.z, `Geocache #${r.next.n}`);
+  };
   // ---- foraging (forage.js): something to pick in every season
   const forage = new Forage(scene);
   const pickForage = (p) => {
@@ -716,6 +734,7 @@ async function boot() {
   };
   discoveries.onFound = (it, k) => { ui.toast(`You found ${k.name.toLowerCase()}. Noted in your journal.`, 4.5); explore.ruinFound(); featured(it.id, 'Attractions', 350, 'the ruin'); };
   explore.onFound = (it) => {
+    if (it.kind === 'geocache') { const nx = caches.start(); if (nx) setTimeout(() => { ui.toast(`Inside the box, a logbook: it is the first of a chain. The next one: ${caches.coords(nx)}. Marked on your map.`, 7); setWaypoint(nx.x, nx.z, `Geocache #${nx.n}`); }, 4800); }
     ui.toast(it.real ? `${it.name}. On your map now.` : `You found ${it.name.replace(/^(The|An|A) /, (m) => m.toLowerCase())}. Named on your map.`, 4.2);
     audio.notify?.();
     featured('place-' + it.id, ATTRACTION[it.kind] ? 'Attractions' : 'Places', ATTRACTION[it.kind], it.name.replace(/^(The|An|A) /, (m) => m.toLowerCase()));
@@ -1121,7 +1140,7 @@ async function boot() {
     const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
     PRESSURE.update(tdt); checkEndings(tdt);
     if (!RUN.dev && started && player.locked && !interludeOn) {
-      RUN.s.played += tdt * (player.sitting && player.sit > 0.9 ? 4 : 1);   // sit and wait: the day goes by faster around you
+      RUN.s.played += tdt * (player.sitting && player.sit > 0.9 && arcPhase < 3 ? 4 : 1);   // sit and wait: the day goes by faster around you (but not the night: sit and watch the stars)
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
@@ -1156,6 +1175,10 @@ async function boot() {
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
     if (grandStag && !stagSaid) { const st = deer.seen.find((q) => q.kind === 'stag'); if (st && Math.hypot(st.x - camera.position.x, st.z - camera.position.z) < 80) { const v = new THREE.Vector3(st.x, st.y, st.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) { stagSaid = true; legends.onSeen?.('stag', st.x, st.z); } } }
+    cairns.update(dt);
+    if (started && !interludeOn) { const cr = caches.update(player.pos); if (cr) cacheFound(cr); }
+    if (islandSwim && !RUN.s.swamIsland && started && !player.boat && Math.hypot(player.pos.x - islandSwim.x, player.pos.z - islandSwim.z) < islandSwim.r * 0.6 && !player.swimming && waterDepthAt(player.pos.x, player.pos.z) < 0.1 && player.wasSwimRecent) { RUN.s.swamIsland = true; RUN.save?.(); audio.notify?.(); ui.toast('You swam all the way out to the little island. Dripping, and pleased with yourself.', 5); JOURNAL.add('Swam out to the little island.', player.pos.x, player.pos.z); }
+    if (player.swimming) player.wasSwimRecent = true; else if (player.boat) player.wasSwimRecent = false;
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
     player.skis = player.carry === 'skis' && !player.boat;
@@ -1216,7 +1239,7 @@ async function boot() {
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
-    ui.prompt(!player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
+    ui.prompt(!player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
     woodsAlive = Math.max(0, 1 - woodsDeadNow - cut / totalTrees());                       // a tree cut down shows at once
@@ -1226,7 +1249,7 @@ async function boot() {
   const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { fire, poachers, legends, skipping, forage, sky, birding, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

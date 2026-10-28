@@ -149,7 +149,7 @@ export class Explore {
         props.add(disc, matrix(x, groundY(x, z) + 0.012, z, (srng() - 0.5) * 0.25, srng() * 6, (srng() - 0.5) * 0.25, w, 0.018, w * (0.75 + srng() * 0.25)), { color: new THREE.Color(cols[k % cols.length]) });
       }
       // a little stack someone left
-      const bx = sp.x - sp.ox * 2.6 + sp.oz * 1.2, bz = sp.z - sp.oz * 2.6 - sp.ox * 1.2; let h = groundY(bx, bz);
+      const bx = sp.x - sp.ox * 2.6 + sp.oz * 1.2, bz = sp.z - sp.oz * 2.6 - sp.ox * 1.2; let h = groundY(bx, bz); sp.stack = { x: bx, z: bz };
       for (let k = 0; k < 5; k++) { const w = 0.16 - k * 0.022; props.add(disc, matrix(bx, h + 0.02, bz, 0, srng() * 6, 0, w, 0.04, w * 0.85), { color: new THREE.Color(cols[(k * 2) % cols.length]) }); h += 0.042; }
     }
     const c0 = coves[0] || shore[0];
