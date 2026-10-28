@@ -46,6 +46,8 @@
   #hud { position:fixed; inset:0; pointer-events:none; z-index:3; opacity:0; transition:opacity .6s; }
   #hud.on { opacity:1; }
   #skipmeter { position:fixed; right:max(28px, env(safe-area-inset-right)); bottom:max(120px, calc(env(safe-area-inset-bottom) + 110px)); z-index:4; pointer-events:none; text-align:center; padding:8px 10px 6px; background:rgba(34,20,22,.55); border:2px solid rgba(244,230,200,.45); border-radius:10px; }
+  #discmeter { position:fixed; left:50%; bottom:22%; transform:translateX(-50%); width:200px; z-index:4; pointer-events:none; text-align:center; padding:6px 10px; background:rgba(34,20,22,.55); border:2px solid rgba(244,230,200,.45); border-radius:10px; }
+  #discmeter.hidden { display:none; } #discmeter small { display:block; font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.7; margin-top:3px; } #discmeter .sbar { height:8px; border-radius:4px; background:rgba(244,230,200,.2); overflow:hidden; } #discmeter .sbar i { display:block; height:100%; width:0; }
   #skipmeter.hidden { display:none; } #skipmeter small { display:block; font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.7; margin-top:3px; }
   #skipmeter .sbar { height:7px; margin-top:2px; border-radius:4px; background:rgba(244,230,200,.2); overflow:hidden; } #skipmeter .sbar i { display:block; height:100%; width:0; background:#ffe29a; }
   /* phones and tablets: keep the dashboard clear of notches, rounded corners and the home indicator */
