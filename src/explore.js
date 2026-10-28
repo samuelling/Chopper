@@ -130,6 +130,17 @@ export class Explore {
       return best || [x, z];
     };
     const props = new GeoBuilder();
+    // the little island: a fire pit in a ring of stones, and the beer cans that always come with one (a hiker who waded
+    // out found exactly this)
+    { const li = this.list.find((q) => q.name === 'The little island');
+      if (li) { let bx = li.x, bz = li.z, by = -1e9; for (let a = 0; a < 6.28; a += 0.7) for (const r of [0, 3, 6]) { const x = li.x + Math.cos(a) * r, z = li.z + Math.sin(a) * r, y = groundY(x, z); if (y > by) { by = y; bx = x; bz = z; } }
+        const frng = mulberry32(4321), ball = new THREE.SphereGeometry(1, 7, 5), cyl = new THREE.CylinderGeometry(1, 1, 1, 8);
+        for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.283; props.add(ball, matrix(bx + Math.cos(a) * 0.75, groundY(bx + Math.cos(a) * 0.75, bz + Math.sin(a) * 0.75) + 0.08, bz + Math.sin(a) * 0.75, 0, a, 0, 0.17, 0.13, 0.15), { color: new THREE.Color(['#8d8a82', '#777469', '#6f6c62'][i % 3]) }); }
+        props.add(cyl, matrix(bx, by + 0.02, bz, 0, 0, 0, 0.55, 0.04, 0.55), { color: new THREE.Color('#252120') });
+        for (let i = 0; i < 2; i++) props.add(cyl, matrix(bx + (frng() - 0.5) * 0.4, by + 0.1, bz + (frng() - 0.5) * 0.4, Math.PI / 2, frng() * 6, 0, 0.05, 0.6, 0.05), { color: new THREE.Color('#1a1614') });   // charred ends
+        for (let i = 0; i < 4; i++) { const a = frng() * 6.28, d = 1.4 + frng() * 1.8, x = bx + Math.cos(a) * d, z = bz + Math.sin(a) * d; props.add(cyl, matrix(x, groundY(x, z) + 0.035, z, Math.PI / 2, frng() * 6, 0, 0.033, 0.12, 0.033), { color: new THREE.Color(['#b8bcc0', '#b8322a', '#2f6a3a', '#c8a040'][i]) }); }
+        this.firepit = { x: bx, z: bz }; }
+    }
     // the skipping shores: a scatter of thin, flat stones, slate-grey and rust, on the bank
     for (const sp of this.skips) {
       const srng = mulberry32(Math.round(sp.x * 7 + sp.z * 13)), disc = new THREE.CylinderGeometry(1, 1, 1, 9), cols = ['#7d7f86', '#6a6d74', '#8a8478', '#a07a5a', '#5d6066', '#94918a'];
@@ -266,7 +277,7 @@ export class Explore {
   }
   _find(it) {
     this.found.add(it.id); this.save();
-    JOURNAL.add(`${it.name}. ${NOTE[it.kind] || ''}`.trim(), it.x, it.z);
+    JOURNAL.add(`${it.name}. ${NOTE[it.kind] || ''}${it.name === 'The little island' ? ' Someone has had fires out here: a ring of stones, and the beer cans that always come with one.' : ''}`.trim(), it.x, it.z);
     this.onFound?.(it);
   }
   pins() {

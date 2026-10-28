@@ -5,8 +5,8 @@
 // ice-house foundations).  Placement is fixed by a seed, off the trails, by the shore, or on the lake bottom.
 import * as THREE from 'three';
 import { matrix } from './builder.js';
-import { groundY, sdfAt, lake, WORLD } from './world.js';
-import { TRAIL_LINES, BROOK, BEACH, RAMP, LAKE_BOX, DAM_Z, islandSdf } from './ashland.js';
+import { groundY, sdfAt, lake, WORLD, trailDistAt } from './world.js';
+import { TRAIL_LINES, BROOK, BEACH, RAMP, LAKE_BOX, DAM_Z, islandSdf, project } from './ashland.js';
 import { mulberry32 } from './noise.js';
 
 export const HIDDEN_KINDS = {
@@ -42,8 +42,9 @@ export const HIDDEN_KINDS = {
   horseshoe: { year: 14, where: 'trail', name: 'A horseshoe on a tree', note: 'An old horseshoe nailed to a tree, open end up to hold the luck. The bark has grown over the nails.', rumour: 'someone nailed a horseshoe to a tree near the trail here', pay: 150 },
   owlpellets: { year: 15, where: 'land', name: 'Owl pellets', note: 'Grey pellets of fur and tiny bones under a big pine: an owl roosts above. It coughs up what it can\u2019t digest.', rumour: 'there is a roost tree around here; look under it', pay: 180 },
   // the branch forts (there from the start; placed last so nothing else moves): big branches leaned together in the woods, there for years, added to by whoever passes
-  teepee: { ship: 0, where: 'land', name: 'A branch teepee', note: 'Dozens of big branches leaned together into a teepee tall enough to stand up in. Nobody knows who started it; it has been here for years, and people keep adding to it.', rumour: 'someone built a teepee out of big branches back in the woods here, years ago, and people keep adding to it', pay: 400 },
+  teepee: { ship: 0, where: 'land', at: [42.24259, -71.46454], name: 'A branch teepee', note: 'Dozens of big branches leaned together into a teepee tall enough to stand up in. Nobody knows who started it; it has been here for years, and people keep adding to it.', rumour: 'someone built a teepee out of big branches back in the woods here, years ago, and people keep adding to it', pay: 400 },
   leanto: { ship: 0, where: 'land', name: 'A branch lean-to', note: 'A long pole lashed between two trees with branches leaned against it, thick enough to keep the rain off. A fort that has outlasted whoever built it.', rumour: 'there is a lean-to of branches between two trees off the trail here, big enough to sit in', pay: 350 },
+  camp: { ship: 0, where: 'land', at: [42.24196, -71.46591], name: 'Old Camp Winnetaska', note: 'Camp Winnetaska was a Girl Scout camp here for decades, until it closed in 2015; the land is the town\u2019s now. A campfire circle with log benches, a bare flagpole and the floors of a few old cabins are still here in the trees.', rumour: 'there used to be a Girl Scout camp on this side of the reservoir, and you can still find what is left of it', pay: 500 },
   bigfort: { ship: 0, where: 'land', name: 'The big branch fort', note: 'An A-frame of heavy branches over a ridgepole set in the fork of a tree, with a doorway and a log to sit on inside. Generations of kids have kept it standing.', rumour: 'there is a big fort made of branches in the woods somewhere around here, the kind kids keep rebuilding', pay: 450 },
 };
 
@@ -188,6 +189,28 @@ const BUILD = {
     }
     { const [lx, lz] = at(0.6, 0); seg(b, ...at(-0.6, 0.55).flatMap((v, k) => k ? [y + 0.22, v] : [v]), ...at(1.6, 0.55).flatMap((v, k) => k ? [y + 0.22, v] : [v]), 0.18, '#5a4a3a'); void lx; void lz; }   // a log to sit on
   },
+  camp(b, x, y, z, yaw, r) {
+    // the campfire circle and its log benches
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; b.add(ball, matrix(x + Math.cos(a) * 1.1, y + 0.1, z + Math.sin(a) * 1.1, 0, a, 0, 0.22, 0.16, 0.18), { color: C(STONE[i % 4]) }); }
+    b.add(cyl, matrix(x, y + 0.02, z, 0, 0, 0, 0.85, 0.04, 0.85), { color: C('#2a2624') });
+    for (let i = 0; i < 4; i++) { const a = yaw + (i / 4) * 6.283 + 0.4, bx = x + Math.cos(a) * 3.4, bz = z + Math.sin(a) * 3.4; b.add(cyl, matrix(bx, groundY(bx, bz) + 0.2, bz, 0, -a, Math.PI / 2, 0.2, 2.6, 0.2), { color: C(['#6a5440', '#5e4a38'][i % 2]) }); }
+    // the flagpole, no flag
+    { const fx = x + Math.cos(yaw) * 8, fz = z + Math.sin(yaw) * 8, fy = groundY(fx, fz); b.add(cyl, matrix(fx, fy + 4, fz, 0, 0, 0, 0.06, 8, 0.06), { color: C('#d8d4c8') }); b.add(ball, matrix(fx, fy + 8.05, fz, 0, 0, 0, 0.1, 0.1, 0.1), { color: C('#c8a040') }); b.add(cyl, matrix(fx, fy + 0.2, fz, 0, 0, 0, 0.5, 0.4, 0.5), { color: C('#9a968a') }); }
+    // the floors of three old cabins, with stub posts and a step
+    for (let k = 0; k < 3; k++) {
+      const a = yaw + 2.2 + k * 1.15, d = 13 + k * 2, cx = x + Math.cos(a) * d, cz = z + Math.sin(a) * d, cy = groundY(cx, cz), ry = -a + Math.PI / 2;
+      const c = Math.cos(ry), s = Math.sin(ry), at = (u, v) => [cx + c * u + s * v, cz - s * u + c * v];
+      b.add(box, matrix(cx, cy + 0.32, cz, 0, ry, 0, 4.2, 0.14, 5), { color: C(k === 1 ? '#8a8478' : '#7a6650') });
+      for (const [u, v] of [[-2, -2.4], [2, -2.4], [-2, 2.4], [2, 2.4]]) { const [px, pz] = at(u, v); b.add(box, matrix(px, groundY(px, pz) + 0.18, pz, 0, ry, 0, 0.3, 0.42, 0.3), { color: C('#8a8780') }); }
+      for (const [u, v] of [[-2, -2.4], [2, -2.4]]) { const [px, pz] = at(u, v); b.add(box, matrix(px, cy + 0.85, pz, (r() - 0.5) * 0.1, ry, (r() - 0.5) * 0.1, 0.14, 0.9 + r() * 0.5, 0.14), { color: C('#6a5440') }); }   // what is left of the walls
+      { const [px, pz] = at(0, 2.85); b.add(box, matrix(px, cy + 0.1, pz, 0, ry, 0, 1.1, 0.16, 0.5), { color: C('#8a8780') }); }
+    }
+    // the old sign by the path in: two posts and a weathered board
+    { const sx = x + Math.cos(yaw + 0.6) * 10, sz = z + Math.sin(yaw + 0.6) * 10, sy = groundY(sx, sz), ry = yaw + 0.6, c = Math.cos(ry), s = Math.sin(ry);
+      for (const u of [-0.9, 0.9]) b.add(box, matrix(sx + s * u, sy + 0.8, sz + c * u, 0, ry, 0, 0.12, 1.6, 0.12), { color: C('#5e4a38') });
+      b.add(box, matrix(sx, sy + 1.35, sz, 0, ry + Math.PI / 2, 0, 2.2, 0.55, 0.06), { color: C('#7a5a36') });
+      b.add(box, matrix(sx, sy + 1.35, sz, 0, ry + Math.PI / 2, 0, 1.8, 0.08, 0.07), { color: C('#d8cfa8') }); }   // a pale line where the letters were
+  },
   geocache(b, x, y, z, yaw, r) {
     b.add(ball, matrix(x, y + 0.25, z, 0, yaw, 0, 0.9, 0.45, 0.7), { color: C('#8a8780') });
     b.add(box, matrix(x + Math.sin(yaw) * 0.55, y + 0.12, z + Math.cos(yaw) * 0.55, 0, yaw, 0, 0.3, 0.2, 0.16), { color: C('#4a5a32') });
@@ -273,6 +296,13 @@ export function placeHidden(props, rng, upTo, others, RUN) {
   const flat = (x, z) => { const g = groundY(x, z); return Math.abs(groundY(x + 2.5, z) - g) < 0.8 && Math.abs(groundY(x, z + 2.5) - g) < 0.8; };
   for (const [kind, K] of Object.entries(HIDDEN_KINDS)) {
     let spot = null;
+    if (K.at) {   // a real spot: as close to it as there is level ground off the path
+      const [ax, az] = project(K.at);
+      for (let r = 0; r <= 14 && !spot; r += 1) for (let a = 0; a < 6.283 && !spot; a += r ? 0.8 / r : 7) {
+        const x = ax + Math.cos(a) * r, z = az + Math.sin(a) * r;
+        if (sdfAt(x, z) > 2.5 && trailDistAt(x, z) > 4 && flat(x, z)) spot = { x, z };
+      }
+    }
     for (let tries = 0; tries < 400 && !spot; tries++) {
       if (K.where === 'land' || K.where === 'trail') {
         const t = trails[(rng() * trails.length) | 0], a = rng() * 6.283, d = K.where === 'trail' ? 5 + rng() * 9 : 22 + rng() * 45;

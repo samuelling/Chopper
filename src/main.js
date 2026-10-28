@@ -636,7 +636,7 @@ async function boot() {
   const discoveries = new Discoveries(scene, chunks);
   const explore = new Explore(scene, discoveries);
   // the branch forts stand in their own little clearings
-  for (const it of explore.list) if (it.kind === 'teepee' || it.kind === 'leanto' || it.kind === 'bigfort') chunks.clearArea(it.x, it.z, it.kind === 'teepee' ? 3.4 : 4.2);
+  for (const it of explore.list) if (it.kind === 'teepee' || it.kind === 'leanto' || it.kind === 'bigfort' || it.kind === 'camp') chunks.clearArea(it.x, it.z, it.kind === 'camp' ? 18 : it.kind === 'teepee' ? 3.4 : 4.2);   // the old camp is still a clearing
   // ---- skipping stones at the skipping shores (skipping.js)
   const skipping = new Skipping(scene, camera, player, { audio, fx, spots: explore.skips });
   skipping.onDone = (n, I) => {
@@ -736,7 +736,7 @@ async function boot() {
   };
   // the AI spotter (an upgrade): Clyde watches the feed, and now and then locks onto a hidden thing in view; each lock
   // becomes a tight circle on your map.  It costs harm while it runs, and more for each find.
-  const LOCKNAME = { cellar: 'cellar hole', well: 'stone well', marker: 'boundary stone', lodge: 'beaver lodge', osprey: 'nest', skiff: 'sunken boat', road: 'old road', wreck: 'wreck', erratic: 'big boulder', truck: 'old vehicle', chimney: 'chimney', cemetery: 'small cemetery', bottles: 'old glass', carvedbeech: 'carved tree', fairyhouse: 'little house', benchmark: 'survey mark', ropeswing: 'rope swing', icehouse: 'foundation', canoe: 'canoe', anchor: 'anchor', mill: 'mill stones', geocache: 'box', antler: 'antler', hornets: 'nest', cairn: 'stone stack', birdhouse: 'birdhouse', sapbucket: 'bucket', bottlemsg: 'bottle', bobber: 'bobber', paintedrock: 'painted rock', lantern: 'lantern', barbedwire: 'wire', toyboat: 'toy boat', horseshoe: 'horseshoe', owlpellets: 'roost tree', teepee: 'branch teepee', leanto: 'lean-to', bigfort: 'branch fort' };
+  const LOCKNAME = { cellar: 'cellar hole', well: 'stone well', marker: 'boundary stone', lodge: 'beaver lodge', osprey: 'nest', skiff: 'sunken boat', road: 'old road', wreck: 'wreck', erratic: 'big boulder', truck: 'old vehicle', chimney: 'chimney', cemetery: 'small cemetery', bottles: 'old glass', carvedbeech: 'carved tree', fairyhouse: 'little house', benchmark: 'survey mark', ropeswing: 'rope swing', icehouse: 'foundation', canoe: 'canoe', anchor: 'anchor', mill: 'mill stones', geocache: 'box', antler: 'antler', hornets: 'nest', cairn: 'stone stack', birdhouse: 'birdhouse', sapbucket: 'bucket', bottlemsg: 'bottle', bobber: 'bobber', paintedrock: 'painted rock', lantern: 'lantern', barbedwire: 'wire', toyboat: 'toy boat', horseshoe: 'horseshoe', owlpellets: 'roost tree', teepee: 'branch teepee', leanto: 'lean-to', bigfort: 'branch fort', camp: 'old camp' };
   let locks = [], spotT = 0;
   const lockLayer = () => drone.el.querySelector('[data-d="locks"]');
   const spotter = (dt) => {
