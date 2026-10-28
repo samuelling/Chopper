@@ -89,14 +89,12 @@ const BUILD = {
     for (let i = 0; i < 6; i++) b.add(ball, matrix(tx + (r() - 0.5) * 0.8, y + 2.6 + r() * 0.8, tz + (r() - 0.5) * 0.8, 0, 0, 0, 0.35, 0.25, 0.35), { color: C('#5a8a3a') });   // the sapling through the engine
   },
   ropeswing(b, x, y, z, yaw, r, out) {
-    // a trunk leaning out over the water, a rope from its branch, a stick seat
-    const ox = out[0], oz = out[1], L = 6.5, lean = 0.55, tx = x + ox * Math.sin(lean) * L * 0.5, tz = z + oz * Math.sin(lean) * L * 0.5;
-    b.add(cyl, matrix(tx, y + Math.cos(lean) * L * 0.5, tz, oz * lean, 0, -ox * lean, 0.22, L, 0.22), { color: C('#6a5a48') });
-    const hx = x + ox * Math.sin(lean) * L * 0.85, hz = z + oz * Math.sin(lean) * L * 0.85, hy = y + Math.cos(lean) * L * 0.85;
-    for (let i = 0; i < 8; i++) b.add(ball, matrix(x + ox * Math.sin(lean) * L + (r() - 0.5) * 2, y + Math.cos(lean) * L + (r() - 0.5) * 1.2, z + oz * Math.sin(lean) * L + (r() - 0.5) * 2, 0, 0, 0, 1.1, 0.7, 1.1), { color: C(i % 2 ? '#4f7a34' : '#3f6a2c') });
-    const ry = Math.max(lake.originalLevel + 0.9, hy - 3.6);
-    b.add(cyl, matrix(hx, (hy + ry) / 2, hz, 0, 0, 0, 0.02, hy - ry, 0.02), { color: C('#c8b48a') });
-    b.add(cyl, matrix(hx, ry, hz, 0, yaw, Math.PI / 2, 0.04, 0.45, 0.04), { color: C('#7a5a3a') });
+    // a trunk leaning out over the water from the bank; the rope itself hangs from it in ropeswing.js (you can swing on it)
+    const G = ropeGeom(x, y, z, out);
+    seg(b, x, y - 0.3, z, G.tx, G.ty, G.tz, 0.3, '#6a5a48');
+    for (const [k, sd] of [[0.45, 1], [0.6, -1], [0.75, 1]]) { const px = x + (G.tx - x) * k, py = y + (G.ty - y) * k, pz = z + (G.tz - z) * k; seg(b, px, py, pz, px + G.oz * sd * 1.6, py + 1.4, pz - G.ox * sd * 1.6, 0.07, '#6a5a48'); b.add(ball, matrix(px + G.oz * sd * 1.8, py + 1.7, pz - G.ox * sd * 1.8, 0, 0, 0, 1.0, 0.7, 1.0), { color: C('#4f7a34') }); }
+    seg(b, G.hx, G.hy, G.hz, G.hx + G.ox * 0.2 + G.oz * 1.2, G.hy + 0.6, G.hz + G.oz * 0.2 - G.ox * 1.2, 0.08, '#6a5a48');   // the branch the rope is tied to
+    for (let i = 0; i < 9; i++) b.add(ball, matrix(G.tx + (r() - 0.5) * 2.4, G.ty + (r() - 0.5) * 1.2, G.tz + (r() - 0.5) * 2.4, 0, 0, 0, 1.2, 0.75, 1.2), { color: C(i % 2 ? '#4f7a34' : '#3f6a2c') });
   },
   chimney(b, x, y, z, yaw, r) {
     for (let k = 0; k < 12; k++) { const w = 1.1 - k * 0.03; b.add(box, matrix(x + (r() - 0.5) * 0.04, y + 0.15 + k * 0.3, z, 0, yaw + (r() - 0.5) * 0.06, 0, w, 0.31, w * 0.9), { color: C(STONE[(k * 3 + 1) % 4]) }); }
@@ -288,6 +286,28 @@ const BUILD = {
   },
 };
 
+/** a rope swing wants a steep bank: deep water within a few metres.  The nearest such shore spot to `s` */
+function steepBank(s) {
+  let best = null, bd = 1e9;
+  for (let r = 0; r <= 260; r += 6) for (let a = 0; a < 6.283; a += r ? 6 / r : 7) {
+    const x = s.x + Math.cos(a) * r, z = s.z + Math.sin(a) * r, sd = sdfAt(x, z);
+    if (sd < 1 || sd > 6 || groundY(x, z) < lake.originalLevel + 0.4 || islandSdf(x, z) < 20 || Math.hypot(x - BEACH.x, z - BEACH.z) < 70 || Math.hypot(x - RAMP.x, z - RAMP.z) < 60) continue;
+    const gx = sdfAt(x + 2, z) - sdfAt(x - 2, z), gz = sdfAt(x, z + 2) - sdfAt(x, z - 2), l = Math.hypot(gx, gz) || 1, ox = -gx / l, oz = -gz / l;
+    let deep = -1; for (let d = 1; d <= 9; d += 1) if (lake.originalLevel - groundY(x + ox * d, z + oz * d) > 1.6) { deep = d; break; }
+    if (deep < 0) continue;
+    const score = r + deep * 8; if (score < bd) { bd = score; best = { x, z, out: [ox, oz] }; }
+    if (best && r > 60) return best;
+  }
+  return best;
+}
+/** the rope swing's tree: leaning from the bank so the rope hangs just past the full lake's edge */
+export function ropeGeom(x, y, z, out) {
+  const ox = out[0], oz = out[1]; let wl = 2;
+  for (let d = 0; d <= 22; d += 0.5) if (lake.originalLevel - groundY(x + ox * d, z + oz * d) > 0.05) { wl = d; break; }
+  const R = Math.min(14, wl + 3.4), tx = x + ox * R * 1.18, tz = z + oz * R * 1.18, ty = y + 6.6;
+  const hx = x + (tx - x) * 0.85, hz = z + (tz - z) * 0.85, hy = y + (ty - y) * 0.85, ry = Math.max(lake.originalLevel + 2.4, hy - 4.2);
+  return { ox, oz, tx, ty, tz, hx, hy, hz, ry, len: hy - ry };
+}
 /** places each shipped hidden thing and adds its geometry to `props`; returns the items ({kind, name, x, z, r, ship}) */
 export function placeHidden(props, rng, upTo, others, RUN) {
   // every thing is placed (shipped or not) so the spots never depend on what has arrived; only shipped ones are built
@@ -325,8 +345,9 @@ export function placeHidden(props, rng, upTo, others, RUN) {
         spot = { x, z };
       }
     }
+    if (spot && kind === 'ropeswing') spot = steepBank(spot) || spot;   // (searched without the shared rng, so nothing else moves)
     idx++; if (!spot) continue;
-    const yaw = rng() * 6.283, item = { kind, name: K.name, x: spot.x, z: spot.z, r: K.where === 'under' ? 12 : K.where === 'trail' ? 9 : K.year ? 10 : 13, ship: K.ship, year: K.year, hidden: true };
+    const yaw = rng() * 6.283, item = { kind, name: K.name, x: spot.x, z: spot.z, r: K.where === 'under' ? 12 : K.where === 'trail' ? 9 : K.year ? 10 : 13, ship: K.ship, year: K.year, hidden: true, out: spot.out, y: groundY(spot.x, spot.z) - 0.02 };
     all.push(item);
     if (arrived(K, RUN, upTo)) { BUILD[kind](props, spot.x, groundY(spot.x, spot.z) - 0.02, spot.z, yaw, mulberry32(7001 + idx * 31), spot.out || [1, 0]); out.push(item); }
   }

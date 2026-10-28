@@ -113,6 +113,7 @@ export class Player {
   }
 
   _jump() {
+    if (this.ropeCtl) { this.events.ropeLetGo?.(); return; }
     if (!this.onGround) return;
     this.vy = 5.0; this.onGround = false;
     this.events.jump?.();
@@ -151,6 +152,7 @@ export class Player {
   }
 
   update(dt) {
+    if (this.ropeCtl) { this.ropeCtl(dt); this.speed = 0; this._applyCamera(dt); return; }   // on the rope swing
     if (this.boat) { this._ride(dt); return; }
     const k = this.keys;
     let fx = 0, fz = 0;
