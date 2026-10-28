@@ -6,8 +6,9 @@ import * as THREE from 'three';
 import { simpleToon } from './toon.js';
 import { groundY, sdfAt, lake, WORLD } from './world.js';
 import { clamp } from './noise.js';
+import { RUN } from './run.js';
 
-const H_MAX = 11, V_MAX = 4.2, YAW_RATE = 1.7, CEIL = 70, RANGE_SDF = 158, BATTERY = 300;   // m/s, m/s, rad/s, m above ground, park edge, seconds of flight
+const H_MAX = 11, V_MAX = 4.2, YAW_RATE = 1.7, CEIL = 70, RANGE_SDF = 158, BATTERY = 180, CHARGE = 420;   // m/s, m/s, rad/s, m above ground, park edge, seconds of flight, seconds to charge from flat
 
 /** the little quadcopter, about 30 cm across, as a group of toon parts; returns { g, props } */
 function buildModel() {
@@ -42,7 +43,9 @@ export class Drone {
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3(); this.yaw = 0; this.gimbal = -0.2; this.tiltF = 0; this.tiltS = 0;
     this.state = 'off';      // off | throw | launch | fly | land
     this.spotOn = true; this.spotOwned = false;
-    this.t = 0; this.battery = 1; this.keys = {}; this.stick = { L: { x: 0, y: 0 }, R: { x: 0, y: 0 } };
+    this.t = 0; this.keys = {};
+    // the battery lasts the season (it charges overnight); after a flight it must charge back to full before it flies again
+    const B = RUN.s.droneBat; this.battery = B && B.n === RUN.n ? B.v : 1; this.charging = !!(B && B.n === RUN.n && B.charging); this.stick = { L: { x: 0, y: 0 }, R: { x: 0, y: 0 } };
     this.onExit = null; this.onPhoto = null; this.onNote = null;
     this._v = new THREE.Vector3(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler(0, 0, 0, 'YXZ');
     this._ui();
@@ -114,7 +117,7 @@ export class Drone {
   /** the season ends (or the game does) mid-flight: everything down at once */
   forceOff() {
     if (this.state === 'off') return;
-    const was = this.state !== 'throw'; this.state = 'off'; this._back = false; this.world.g.visible = false;
+    const was = this.state !== 'throw'; if (was && this.battery < 0.999) { this.charging = true; this._saveBat(); } this.state = 'off'; this._back = false; this.world.g.visible = false;
     this.el.classList.add('hidden'); this.el.classList.remove('up', 'down', 'con'); this.keys = {}; this.stick = { L: { x: 0, y: 0 }, R: { x: 0, y: 0 } }; this._hum(0);
     if (was) this.onExit?.(true);
   }
@@ -124,13 +127,15 @@ export class Drone {
     if (this.state !== 'off') return false;
     const p = this.player;
     if (p.boat || p.swimming) { this.onNote?.('Not from here: you need your feet on the ground to throw it up.'); return false; }
-    if (this.battery < 0.15) { this.onNote?.(`The battery is at ${Math.round(this.battery * 100)}%. Give it a while to charge.`); return false; }
+    if (this.charging) { const m = Math.ceil((1 - this.battery) * CHARGE / 60); this.onNote?.(`The drone is charging: ${Math.floor(this.battery * 100)}%. It can fly again when it is full, in about ${m} minute${m === 1 ? '' : 's'}.`); return false; }
     this.state = 'throw'; this.t = 0; this.keys = {}; p.keys = {};
     return true;
   }
 
+  _saveBat() { RUN.s.droneBat = { n: RUN.n, v: +this.battery.toFixed(3), charging: this.charging }; RUN.save?.(); }
   exit() {
     if (this.state !== 'fly' && this.state !== 'launch') return;
+    if (this.battery < 0.999) { this.charging = true; this._saveBat(); }
     this.state = 'land'; this.t = 0;
     this.$('con').firstElementChild.textContent = 'Drone returning…'; this.el.classList.add('con');
   }
@@ -156,7 +161,11 @@ export class Drone {
   update(dt) {
     const p = this.player, cam = this.camera;
     for (const pr of this.world.props) pr.rotation.y += dt * (this.state === 'off' ? 0 : 60);
-    if (this.state === 'off') { this.battery = Math.min(1, this.battery + dt / 240); this._hum(0); return false; }
+    if (this.state === 'off') {
+      if (this.charging) { this.battery = Math.min(1, this.battery + dt / CHARGE); if (this.battery >= 1) { this.charging = false; this.onCharged?.(); } }
+      if ((this._saveT = (this._saveT || 0) - dt) <= 0) { this._saveT = 5; this._saveBat(); }
+      this._hum(0); return false;
+    }
     this.t += dt;
     if (this.state === 'throw') {
       // the hand swings the drone forward and up, then lets go

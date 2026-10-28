@@ -51,6 +51,7 @@ import { Drone } from './drone.js';
 import { Fire } from './fire.js';
 import { Poachers } from './poachers.js';
 import { Legends, LEGENDS } from './legends.js';
+const DRONE_SHARE = 0.25;   // what a drone photo of a species is worth to the park's page, next to a close-up on foot
 import { Binoculars } from './binoculars.js';
 import { landcoverAt } from './ashland_landcover.js';
 import { Usage, LEVELS } from './usage.js';
@@ -405,10 +406,15 @@ async function boot() {
     // a moment (a fox mid-pounce, a beaver's tail-slap) files the photo under the moment, and still counts for the species
     if (BY_ID[id]) GUIDE.addPhoto(id, thumb, SEASON, act ? null : big);
     if (act) GUIDE.addPhoto(act, thumb, SEASON, big);
-    if (act && !hadAct) { const pa = FUND.bounty(act, 'Moments'); if (pa) setTimeout(() => ui.toast(FUND.byHand() ? `You put the photo on the park\u2019s page yourself, weeks later: +$${pa} for the park fund.` : `Clyde puts your photo on the park\u2019s page. People come hoping to see that: +$${pa} for the park fund.`, 3.8), 2600); }
+    // from the drone a species is a speck: the park's page pays a quarter, and a close-up on foot later pays the rest
+    const fromAir = droneOn, share = fromAir ? DRONE_SHARE : 1, $ = (n) => `$${n.toLocaleString('en-US')}`;
+    const rest = (k, cat) => Math.max(0, Math.round(FUND.rate(k, cat) / 10) * 10 - FUND.paid(k));
+    const topUp = (k) => !fromAir && FUND.partial(k);
+    if (act && (!hadAct || topUp(act))) { const up = topUp(act), pa = FUND.bounty(act, 'Moments', undefined, share); if (pa) setTimeout(() => ui.toast(fromAir ? `From the drone it is a speck, but the park\u2019s page takes it: +${$(pa)}. A close-up on foot would bring ${$(rest(act, 'Moments'))} more.` : up ? `A proper close-up, far better than the drone shot: +${$(pa)} more for the park fund.` : FUND.byHand() ? `You put the photo on the park\u2019s page yourself, weeks later: +${$(pa)} for the park fund.` : `Clyde puts your photo on the park\u2019s page. People come hoping to see that: +${$(pa)} for the park fund.`, 4.2), 2600); }
     if (!BY_ID[id]) return;
-    const paid = FUND.bounty(id, BY_ID[id].cat);
-    if (BY_ID[id].legend && !had) setTimeout(() => ui.toast(paid ? `${BY_ID[id].name} in Ashland State Park! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +$${paid.toLocaleString('en-US')} for the park fund.` : `You got it: ${BY_ID[id].name.toLowerCase()}, in Ashland State Park. A photo almost nobody has.`, 6.5), 1600);
+    const upId = topUp(id), paid = FUND.bounty(id, BY_ID[id].cat, undefined, share);
+    if (paid && (fromAir || upId)) setTimeout(() => ui.toast(fromAir ? `${BY_ID[id].name}, from the air. A speck on the park\u2019s page: +${$(paid)}. Get a close-up on foot and it is worth ${$(rest(id, BY_ID[id].cat))} more.` : `${BY_ID[id].name}, up close at last: far better than the drone shot. +${$(paid)} more for the park fund.`, 5), had ? 0 : 3600);
+    else if (BY_ID[id].legend && !had) setTimeout(() => ui.toast(paid ? `${BY_ID[id].name} in Ashland State Park! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +$${paid.toLocaleString('en-US')} for the park fund.` : `You got it: ${BY_ID[id].name.toLowerCase()}, in Ashland State Park. A photo almost nobody has.`, 6.5), 1600);
     else if (paid) setTimeout(() => ui.toast(FUND.byHand() ? `You write it up for the park\u2019s page by hand. It takes weeks, and few people see it: +$${paid} for the park fund.` : `Clyde writes it up for the park\u2019s page. Finds like this bring visitors: +$${paid} for the park fund.`, 3.6), had ? 0 : 3600);
     else if (had && !(act && !hadAct)) ui.toast(`${act ? BY_ID[act].name : BY_ID[id].name}. Another for the album.`, 1.8);
   };
@@ -669,7 +675,8 @@ async function boot() {
   // ---- the drone (bought from the Park Fund): thrown from the hand, flown first-person from the phone held sideways
   let droneOn = false;
   const drone = new Drone({ scene, camera, player, audio, mobile: MOBILE });
-  drone.onNote = (t) => ui.toast(t, 3.2);
+  drone.onNote = (t) => ui.toast(t, 4);
+  drone.onCharged = () => { if (started && !interludeOn) ui.toast('The drone is fully charged and ready to fly.', 3.2); };
   // the park's page pays for aerials of its places (once each) and for one promo reel a season: a single flight that
   // takes in four places from up high.  An AI survey from the air circles hidden things nearby, and adds harm.
   let reel = new Set();

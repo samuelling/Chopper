@@ -17,7 +17,7 @@ export const DIVIDEND = [0, 1500, 4000, 7000, 9000];
 
 export const SUPPLIES = [
   { id: 'seeds', title: 'A sack of seeds', price: 250, gain: '25 seeds of native trees and shrubs. G plants one where you stand. Every tree planted helps the woods hold up against harm.', give: () => { S().seeds = (S().seeds || 0) + 25; return '25 seeds in your pocket. G plants one.'; } },
-  { id: 'drone', fun: true, once: true, title: 'A camera drone', price: 2500, gain: 'Just for fun: a small quadcopter to fly over the park, first-person, from your phone. It does nothing for the park, good or bad.', give: () => { S().drone = true; return 'The drone is yours. Q until it is in your hand, then the action button throws it up.'; } },
+  { id: 'drone', fun: true, once: true, title: 'A camera drone', price: 2500, gain: 'Just for fun: a small quadcopter to fly over the park, first-person, from your phone. Three minutes a flight, then it has to charge back up. It does nothing for the park, good or bad.', give: () => { S().drone = true; return 'The drone is yours. Q until it is in your hand, then the action button throws it up.'; } },
   { id: 'droneai', fun: true, once: true, ai: true, needs: 'drone', title: 'AI spotter for the drone', price: 4000, gain: 'Clyde watches the drone\u2019s camera and locks onto hidden things from the air: ruins in the woods, wrecks, things under the water. Each one it finds is circled on your map. It adds harm while it runs, and more for every find.', give: () => { S().droneai = true; return 'The spotter is on the drone. Fly over the park and Clyde will lock onto what it sees. R switches it off.'; } },
   { id: 'saplings', title: 'Nursery saplings', price: 900, gain: '8 young trees, already three seasons along. G plants these before seeds. Every tree planted helps the woods hold up against harm.', give: () => { S().saplingStock += 8; return '8 saplings ready to plant. G plants one.'; } },
 ];
@@ -69,10 +69,17 @@ export const FUND = {
   paid(id) { return S().bounties[id] || 0; },
   /** how much of a bounty reaches the fund: Clyde files records in minutes; by hand it takes weeks and most lapse */
   byHand() { const l = Usage.level(); return l === null || Math.round(l) === 0; },
-  bounty(id, cat, base) {
-    if (!(RUN.phaseTwo || RUN.dev) || S().bounties[id]) return 0;
-    const amt = this.rate(id, cat, base); S().bounties[id] = amt; S().fund += amt; RUN.save?.(); return amt;
+  /** `share` < 1 pays only part (a drone shot of a species is a speck next to a close-up); a later, better photo pays the rest */
+  bounty(id, cat, base, share = 1) {
+    if (!(RUN.phaseTwo || RUN.dev)) return 0;
+    const had = S().bounties[id] || 0, want = Math.round(this.rate(id, cat, base) * share / 10) * 10;
+    if (want <= had || (had && !this.partial(id))) return 0;
+    S().bounties[id] = want; S().fund += want - had; S().partials ||= {};
+    if (share < 1) S().partials[id] = true; else delete S().partials[id];
+    RUN.save?.(); return want - had;
   },
+  /** paid for a drone shot only: a close-up on foot still pays the rest */
+  partial(id) { return !!S().partials?.[id]; },
   get balance() { return S().fund; },
   has(id) { return !!S().measures[id]; },
   /** total lake protection from what is installed (shade balls count from the season after they go in) */
