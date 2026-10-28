@@ -72,6 +72,18 @@
   #tutorial { position:fixed; left:50%; bottom:11%; transform:translateX(-50%); z-index:4; padding:10px 20px; background:rgba(34,20,22,.62); border:2px solid rgba(244,230,200,.55); border-radius:8px; font-size:17px; letter-spacing:.02em; opacity:0; transition:opacity .6s; pointer-events:none; text-align:center; max-width:86vw; }
   #tutorial.quiet { background:none; border-color:transparent; font-size:13px; opacity:.75; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 1px 3px rgba(0,0,0,.6); }
   #tutorial.on { opacity:1; } #tutorial kbd { margin:0 2px; }
+  #goggles { position: fixed; top: calc(14px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: none; font: 700 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; color: #e8f4e0; text-shadow: 0 1px 2px #000; display: flex; align-items: center; gap: 8px; }
+  #goggles.hidden { display: none; }
+  #goggles i { display: block; width: 54px; height: 7px; border: 1px solid rgba(232,244,224,.7); border-radius: 2px; padding: 1px; }
+  #goggles u { display: block; height: 100%; background: #9fe08a; border-radius: 1px; }
+  #goggles.low u { background: #f06a4a; animation: goglow .5s steps(2) infinite; }
+  #goggles[data-m="nv"] { color: #b4ffb8; } #goggles[data-m="ai"] { color: #9fd0ff; } #goggles[data-m="ai"] u { background: #7ab8ff; }
+  @keyframes goglow { 50% { opacity: .2; } }
+  #aitags { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+  .aitag { position: absolute; left: 0; top: 0; white-space: nowrap; font: 600 11px/1 ui-monospace, Menlo, monospace; color: #cfe6ff; background: rgba(10,30,60,.55); border: 1px solid rgba(120,180,255,.75); border-radius: 3px; padding: 3px 6px; }
+  .aitag::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 1px; height: 6px; background: rgba(120,180,255,.75); }
+  .aitag.new { border-color: #ffd36a; color: #fff1c8; }
+  .aitag.hid { border-style: dashed; color: #ffc4a8; border-color: rgba(255,160,120,.8); }
   #skunked { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(170,190,60,0.05), rgba(150,170,40,0.35)); opacity: 0; transition: opacity 3s; z-index: 4; }
     #skunked.on { opacity: 1; transition: opacity 0.4s; }
     #legendban { position:fixed; left:50%; top:6%; transform:translateX(-50%) scale(.96); text-align:center; pointer-events:none; opacity:0; transition:opacity .6s, transform .6s; z-index:60; color:#f6d77a; text-shadow:0 3px 0 rgba(40,20,10,.85), 0 0 24px rgba(255,200,90,.35); }
@@ -439,6 +451,7 @@
     <div class="r"><span class="k"><kbd>0</kbd></span><span class="t">follow the day</span></div>
     <div class="r"><span class="k"><kbd>L</kbd></span><span class="t">flashlight</span></div>
     <div class="r"><span class="k"><kbd>N</kbd></span><span class="t">go to bed (at night)</span></div>
+    <div class="r"><span class="k"><kbd>O</kbd></span><span class="t">goggles, if you own any: thermal, night vision, Clyde Vision, off</span></div>
     </div>
     </div>
   <div class="fsnote only-mobile" id="fsnote">For fullscreen on iPhone or iPad: Share &rarr; Add to Home Screen, then open Ashland from there. It plays offline after that, too.</div>
@@ -480,6 +493,7 @@
     <div class="r"><span class="k"><kbd>0</kbd></span><span class="t">follow the day</span></div>
     <div class="r"><span class="k"><kbd>L</kbd></span><span class="t">flashlight</span></div>
     <div class="r"><span class="k"><kbd>N</kbd></span><span class="t">go to bed (at night)</span></div>
+    <div class="r"><span class="k"><kbd>O</kbd></span><span class="t">goggles, if you own any: thermal, night vision, Clyde Vision, off</span></div>
     </div>
     </div></div>
 

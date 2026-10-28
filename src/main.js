@@ -56,6 +56,7 @@ import { Forage, FORAGE } from './forage.js';
 import { Sky, SKY_ENTRIES } from './sky.js';
 import { Birding } from './birding.js';
 import { NightLife, NIGHT } from './nightlife.js';
+import { Goggles, GOGGLES, OWN_KEY, AI_SUB } from './goggles.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
 import { RopeSwing } from './ropeswing.js';
@@ -424,14 +425,14 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught' || kind === 'foraged') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...plants.seen, ...explore.seen, ...legends.seen, ...skipping.seen, ...forage.subjects, ...birding.seen, ...cairns.seen, ...nightlife.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...livingSeen(), ...plants.seen, ...explore.seen, ...skipping.seen, ...forage.subjects, ...cairns.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
     if (!pick) { ui.toast('Nothing in frame.', 1.4); return; }
     const id = pick.kind === 'squirrel' ? 'squirrel' : pick.kind, act = pick.act && BY_ID[pick.act] ? pick.act : null;
     if (!BY_ID[id] && !act) return;
-    renderer.render(scene, camera);
+    drawFrame();
     const src = renderer.domElement, tw = 192, th = 128, cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
     const sw = Math.min(src.width, src.height * 1.5) * 0.7, sh = sw / 1.5;
     cv.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, tw, th);
@@ -442,17 +443,23 @@ async function boot() {
     if (pick.act === 'by-ear') birding.photographed();
     if (BY_ID[id]) GUIDE.addPhoto(id, thumb, SEASON, act ? null : big);
     if (act) GUIDE.addPhoto(act, thumb, SEASON, big);
+    // found with Clyde Vision on: marked as spotted by AI until you photograph it again with the goggles off
+    for (const k of [BY_ID[id] && id, act].filter(Boolean)) { const d = GUIDE.d[k]; if (!d || droneOn) continue; if (gog.mode === 'ai') d.ai = true; else if (gog.mode !== 'thermal') delete d.ai; }
+    GUIDE.save();
     // what a photo is worth to the park's page: an animal close up is worth the most (full value within 8 m, down to a
     // quarter at 60 m); from the drone it is a speck (a quarter at most).  A better shot later pays the difference.
     const $ = (n) => `$${n.toLocaleString('en-US')}`, fromAir = droneOn, dist = Math.round(camera.position.distanceTo(new THREE.Vector3(pick.x, pick.y, pick.z)));
     const animal = (e) => e && (['Animals', 'Birds', 'Legendary', 'Night'].includes(e.cat) && e.id !== 'night-foxfire' || (e.cat === 'Moments' && !['skip-rings', 'peak-maple'].includes(e.id)));
-    const shareOf = (e) => { const near = !animal(e) || dist <= 8 ? 1 : dist >= 60 ? 0.25 : Math.round((1 - 0.75 * (dist - 8) / 52) * 20) / 20; return fromAir ? Math.min(DRONE_SHARE, near) : near; };
+    const gm = !fromAir && gog.mode, gogCap = gm === 'thermal' ? 0.15 : gm === 'ai' ? 0.5 : 1;   // a heat blob, or a find Clyde made for you
+    const shareOf = (e) => { const near = !animal(e) || dist <= 8 ? 1 : dist >= 60 ? 0.25 : Math.round((1 - 0.75 * (dist - 8) / 52) * 20) / 20; return Math.min(gogCap, fromAir ? Math.min(DRONE_SHARE, near) : near); };
     const rest = (k, cat) => Math.max(0, Math.round(FUND.rate(k, cat) / 10) * 10 - FUND.paid(k));
     const pay = (k, cat) => { const e = BY_ID[k], was = FUND.paid(k), part = FUND.partial(k), share = shareOf(e), pa = FUND.bounty(k, cat, undefined, share); return { e, pa, share, topped: was > 0 && part }; };
     const say = (r, cat, first) => {
       const { e, pa, share, topped } = r; if (!pa) return null;
       const more = share < 1 ? rest(e.id, cat) : 0;
       if (topped) return `${e.name}, ${fromAir ? 'from the air' : `closer this time (${dist} m)`}: +${$(pa)} more for the park fund.${more ? ` Closer still is worth ${$(more)} more.` : ''}`;
+      if (gm === 'thermal') return `${e.name}, through thermal goggles: a white blob nobody could tell from a dog. +${$(pa)}. A real photo is worth ${$(more)} more.`;
+      if (gm === 'ai') return `${e.name}, spotted for you by Clyde Vision: +${$(pa)} on the park\u2019s page. Find it again yourself, goggles off, and it is worth ${$(more)} more.`;
       if (fromAir) return `${e.name}, from the air: a speck on the park\u2019s page, +${$(pa)}. A close-up on foot is worth ${$(more)} more.`;
       if (share < 1) return `${e.name}, from ${dist} m: +${$(pa)} on the park\u2019s page. Get closer and the same photo is worth up to ${$(more)} more.`;
       if (e.legend && first) return `${e.name} in Ashland State Park, and close! Your photo goes on the park\u2019s page and the local news picks it up. Visitors pour in: +${$(pa)} for the park fund.`;
@@ -711,6 +718,19 @@ async function boot() {
   const toggleTorch = () => { torchOn = !torchOn; audio.toggle?.(); ui.toast(torchOn ? 'Flashlight on.' : 'Flashlight off.', 1.2); };
   // ---- go to bed: at night, skip on to the next season instead of staying up
   const nightNow = () => started && !manual && dayProgress() >= 0.66;
+  // ---- goggles (goggles.js): thermal, night vision, Clyde Vision.  O cycles; each has a battery
+  const gog = new Goggles(renderer, camera);
+  gog.canAI = () => {
+    if (RUN.s.aiVisN === RUN.n) return true;
+    if ((RUN.s.fund || 0) < AI_SUB) return `Clyde Vision needs this season\u2019s subscription ($${AI_SUB.toLocaleString('en-US')}), and the fund is short.`;
+    RUN.s.fund -= AI_SUB; RUN.s.aiVisN = RUN.n; RUN.save?.(); setTimeout(() => ui.toast(`Clyde Vision renews for the season: -$${AI_SUB.toLocaleString('en-US')} from the park fund.`, 3.5), 1800); return true;
+  };
+  gog.onLow = (k) => ui.toast(`${GOGGLES[k].name}: battery low.`, 2);
+  gog.onFlat = (k) => { audio.toggle?.(); ui.toast(`${GOGGLES[k].name}: the battery is flat, and they go dark. They charge back up while you are not wearing them.`, 4); };
+  gog.onCharged = (k) => ui.toast(`${GOGGLES[k].name}: charged enough to wear again (O).`, 2.4);
+  gog.onChange = (m) => { audio.toggle?.(); if (m === 'nv' && !RUN.s.nvHint) { RUN.s.nvHint = true; setTimeout(() => ui.toast('Night vision works best in the dark: turn the flashlight off (L). Animals do not see its infrared lamp, so you can walk up closer, and their eyes still shine.', 6.5), 2500); } if (m === 'thermal' && !RUN.s.thHint) { RUN.s.thHint = true; setTimeout(() => ui.toast('Thermal shows heat: find animals with it, then take the goggles off for the photo. A heat blob is worth almost nothing on the park\u2019s page.', 6.5), 2500); } };
+  const toggleGoggles = (m) => { const msg = m === undefined ? gog.cycle() : gog.set(gog.mode === m ? null : m); ui.toast(msg, 2.6); };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyO' && !e.repeat && started && !interludeOn && !phone.isOpen && !droneOn) toggleGoggles(); });
   const goToBed = () => { if (!nightNow() || interludeOn) { ui.toast('Not yet: bed is for after dark.', 2); return; } torchOn = false; ui.toast('You head home to bed.', 2.5); RUN.s.played = RUN.len; };
   addEventListener('keydown', (e) => { if (!started || e.repeat || interludeOn || phone.isOpen) return; if (e.code === 'KeyL') toggleTorch(); if (e.code === 'KeyN') goToBed(); });
   // the Q kit, in order (skis only in winter, the drone once you own it)
@@ -726,12 +746,15 @@ async function boot() {
   const sky = new Sky(scene, camera);
   sky.onFound = (id, C) => { if (GUIDE.addSeen('sky-' + id)) { audio.notify?.(); ui.toast(`${C.name}. ${C.blurb}`, 7); JOURNAL.add(`Found ${C.name} in the night sky.`, player.pos.x, player.pos.z); } };
   sky.onMeteor = () => { const first = GUIDE.addSeen('sky-meteor'); ui.toast(first ? `A shooting star! ${SEASON === 'summer' ? 'The Perseids are on: stay out and watch for more.' : 'Make a wish.'}` : 'Another shooting star.', first ? 5 : 1.6); if (first) JOURNAL.add('Saw a shooting star over the reservoir.', player.pos.x, player.pos.z); };
+  // everything alive that can be seen (for photos, thermal and Clyde Vision)
+  const livingSeen = () => [...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
   // ---- night life (nightlife.js): bats, raccoons, an opossum, a skunk, owls, peepers, foxfire... only after dark
   const nightlife = new NightLife(scene, chunks, camera, audio);
   const skunkEl = document.createElement('div'); skunkEl.id = 'skunked'; document.body.appendChild(skunkEl);
   let skunkT = 0;
-  nightlife.onEvent = (what, a) => {
+  nightlife.onEvent = function (what, a) {
     if (what === 'opossum-dead') { if (!RUN.s.possumHint) { RUN.s.possumHint = true; RUN.save?.(); ui.toast('The opossum keels over and lies still, tongue out. It is playing dead: it will get up once you leave.', 5.5); } }
+    else if (what === 'flee') { if (arguments[2] && !RUN.s.spookHint) { RUN.s.spookHint = true; RUN.save?.(); ui.toast(`The light in its eyes sent it off. Animals bolt from twice as far when the beam is on them: dim the flashlight (L) and creep up${RUN.s.gogNV ? ', or wear the night-vision goggles' : ''}.`, 6); } }
     else if (what === 'skunk-warn') ui.toast('The skunk stamps its front feet and lifts its tail. That is a warning.', 3.2);
     else if (what === 'skunk-spray') { skunkT = 45; skunkEl.classList.add('on'); audio.splash?.(0.2); ui.toast('Too close. The skunk turns and sprays you. Your eyes water; that smell will be with you a while.', 5); JOURNAL.add('Got too close to a skunk, and paid for it.', player.pos.x, player.pos.z); }
   };
@@ -948,6 +971,7 @@ async function boot() {
     addEventListener('keydown', (e) => {
       if (!started || e.repeat || !/^Key[A-Z]$/.test(e.code)) return;
       typed = (typed + e.code[3]).slice(-5);
+      if (typed === 'OPTIC') { typed = ''; RUN.s.gogThermal = RUN.s.gogNV = RUN.s.gogAI = true; RUN.save?.(); ui.toast('All three goggles unlocked. O puts them on.', 3.5); }
       if (typed === 'DRONE') { typed = ''; RUN.s.drone = true; RUN.s.droneai = true; RUN.save?.(); if (!drone.active && !player.cameraMode && !phone.isOpen) { fishing.reset(); player.setCarry('drone'); } ui.toast('Drone and AI spotter unlocked. Click to throw it up.', 3.5); }
     }); }
   player.events.droneLaunch = () => { if (!started || interludeOn || phone.isOpen || player.cameraMode) return; drone.launch(); };
@@ -972,7 +996,7 @@ async function boot() {
   };
   const phone = new Phone({ fundCtx: { toast: (t, s) => ui.toast(t, s), plantShore: () => careActs.plantShore(player), fire: () => fire }, discoveries, explore, setWaypoint: (x, z, l) => { setWaypoint(x, z, l); ui.toast(`Marked: ${l}`, 1.6); }, onCamera: () => setTimeout(() => { if (!player.cameraMode) { if (player.locked) setCameraMode(true); else { const f = () => { if (player.locked) { setCameraMode(true); removeEventListener("pointerlockchange", f); } }; document.addEventListener("pointerlockchange", f); } } }, 350), audio, el: document.getElementById('phone'), player, minimap, gauge, jobCtx: { player, chunks, queue: jobQueue },
     actions: { carry: (c) => { fishing.reset(); player.setCarry(c); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Cast toward open water.', binoculars: 'Binoculars in hand. The big button raises them.', drone: 'Drone in hand. The big button throws it up.', skis: 'Skis on.', none: 'Hands free.' }[c], 1.8); },
-      torch: () => toggleTorch(), torchOn: () => torchOn, bed: () => goToBed(), night: () => nightNow(),
+      torch: () => toggleTorch(), torchOn: () => torchOn, goggles: () => gog.owned(), gogMode: () => gog.mode, gogBat: (k) => gog.bat[k], gog: (k) => toggleGoggles(k), bed: () => goToBed(), night: () => nightNow(),
       sit: () => { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); },
       pickUp: () => { if (!player.boat) careActs.pickUp(); }, plant: () => { if (!player.boat) careActs.plant(player); },
       map: () => { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); }, phaseTwo: () => phaseTwo(), choices: () => { showChoices(); openMenu(); } },
@@ -1034,11 +1058,16 @@ async function boot() {
   // ------------------------------------------------------------------ loop
   let last = performance.now();
   const lightCol = new THREE.Color();
+  function drawFrame() {
+    if (underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) return;
+    if (!droneOn && started && gog.render(scene, camera, { dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0.05, torch: torchOn })) return;
+    renderer.render(scene, camera);
+  }
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     step(dt);
-    if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera);
+    drawFrame();
     requestAnimationFrame(frame);
   }
 
@@ -1247,8 +1276,11 @@ async function boot() {
     if (nightNow() && !RUN.s.nightHint && !interludeOn) { RUN.s.nightHint = true; RUN.save?.(); ui.toast(MOBILE ? 'Night. Phone \u2192 Tools has a flashlight, or sit back and watch the stars. Tools \u2192 Go to bed moves on to the next season.' : 'Night. L for the flashlight, or B to sit back and watch the stars. N goes to bed, on to the next season.', 7); }
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
+    { const gok = started && !interludeOn && !droneOn;
+      gog.update(dt, { ok: gok, cands: gog.mode === 'thermal' || gog.mode === 'ai' ? [...livingSeen(), ...(gog.mode === 'ai' ? [...plants.seen, ...forage.subjects] : [])] : [], hidden: gog.mode === 'ai' ? explore.targets().map((t) => ({ ...t, y: groundY(t.x, t.z) })) : [], name: (k) => BY_ID[k]?.name || (NIGHT[k.replace('night-', '')]?.name) || null, isNew: (k) => !GUIDE.photographed(k) });
+      if (gog.mode === 'ai' && gok) PRESSURE.bump(0.00008 * dt); }
     { const dark = started && !interludeOn && (nightNow() || mood === 3), tp = camera.getWorldPosition(new THREE.Vector3()), td = camera.getWorldDirection(new THREE.Vector3());
-      nightlife.update(dt, dark ? 1 : 0, player.pos, { on: torchOn && !droneOn, pos: tp, dir: td });
+      nightlife.update(dt, dark ? 1 : 0, player.pos, { on: torchOn && !droneOn, ir: gog.mode === 'nv' && !droneOn, pos: tp, dir: td });
       // the first time you set eyes on each one (in view and fairly close), it is noted; the Field Guide still wants a photo
       if (dark) for (const q of nightlife.seen) { if (nightSeen.has(q.kind)) continue; const d = Math.hypot(q.x - tp.x, q.z - tp.z), v = new THREE.Vector3(q.x, q.y, q.z).project(camera);
         if (d < (q.kind === 'night-bat' || q.kind === 'night-owl' ? 30 : 16) && v.z < 1 && Math.abs(v.x) < 0.7 && Math.abs(v.y) < 0.7) { nightSeen.add(q.kind); const N = NIGHT[q.kind.slice(6)]; if (N && !GUIDE.photographed(q.kind)) ui.toast(`${N.name}. ${N.blurb}`, 6); } }
@@ -1320,10 +1352,10 @@ async function boot() {
     ui.hud(woodsAlive, cut, clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1), lake.drained, PRESETS[mood].name);
   }
 
-  const render = () => { if (!underwater.render(scene, camera, sdfAt(camera.position.x, camera.position.z) < 3 ? lake.level : -1e9, shared.time.value)) renderer.render(scene, camera); };
+  const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

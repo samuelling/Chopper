@@ -181,29 +181,35 @@ export class NightLife {
     const cosCone = Math.cos(0.5);
     for (const a of this.list) {
       a.t += dt; const M = a.m, dx = a.x - you.x, dz = a.z - you.z, dy = Math.hypot(dx, dz);
+      // a flashlight in its face makes it bolt from twice as far; with no light at all you can creep closer
+      const sk = (a.seenLit || 0) > 0.25 ? 2 : torch.on ? 1 : 0.6;
       // behaviour
       if (a.kind === 'bat') {   // loops over you, quick and erratic
         a.ph += dt * (2 + Math.sin(a.t * 3) * 0.6); const r = 9 + 5 * Math.sin(a.t * 0.7);
         a.x = you.x + Math.cos(a.ph) * r + Math.sin(a.t * 5) * 1.2; a.z = you.z + Math.sin(a.ph * 1.3) * r; a.y = groundY(a.x, a.z) + 5 + 2 * Math.sin(a.t * 1.7);
         M.root.position.set(a.x, a.y, a.z); M.root.rotation.y = -a.ph; M.wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * Math.sin(a.t * 26) * 0.9; });
+      } else if (M.perch && a.st === 'fly') {   // off through the trees, away from you
+        a.ft = (a.ft || 0) + dt; a.x += a.fx * dt * 7; a.z += a.fz * dt * 7; a.y += dt * (1.2 - a.ft * 0.3) + Math.sin(a.ft * 9) * 0.03; M.root.position.set(a.x, a.y, a.z); M.root.rotation.set(0.4, Math.atan2(a.fx, a.fz), 0);
+        if (a.ft > 6) a.life = 0;
       } else if (M.perch) {
+        if ((a.seenLit || 0) > 0.4 && dy < 25) { a.glare = (a.glare || 0) + dt; if (a.glare > 1.4) { a.st = 'fly'; const L = dy || 1; a.fx = dx / L; a.fz = dz / L; this.onEvent?.('flee', a, true); } } else a.glare = Math.max(0, (a.glare || 0) - dt);
         const tr = a.tree, y = tr.y + Math.min(5, tr.H * 0.45); a.y = y; a.x = tr.x + Math.cos(a.side) * 0.6; a.z = tr.z + Math.sin(a.side) * 0.6; M.root.position.set(a.x, y, a.z); M.root.rotation.y = Math.PI / 2 - a.side;
         if (M.head) M.head.rotation.y = dy < 30 ? Math.atan2(you.x - a.x, you.z - a.z) - M.root.rotation.y : Math.sin(a.t * 0.4) * 1.2;
       } else if (M.onTrunk) {
         const tr = a.tree, r = tr.radius * 0.95 + 0.02; a.y = tr.y + 1.3; a.x = tr.x + Math.cos(a.side) * r; a.z = tr.z + Math.sin(a.side) * r; M.root.position.set(a.x, a.y, a.z); M.root.rotation.y = Math.PI / 2 - a.side;
       } else if (M.glider) {   // sits on a trunk, then glides to another
         const tr = a.tree;
-        if (a.st === 'walk') { a.y = tr.y + 4; a.x = tr.x + Math.cos(a.side) * (tr.radius * 0.8 + 0.05); a.z = tr.z + Math.sin(a.side) * (tr.radius * 0.8 + 0.05); M.root.position.set(a.x, a.y, a.z); M.root.rotation.set(-1.4, Math.PI / 2 - a.side, 0, 'YXZ'); if (a.t > 6 + Math.random() * 4) { const nx = this.chunks.treesNear(tr.x, tr.z, 22).filter((t) => t !== tr && Math.hypot(t.x - tr.x, t.z - tr.z) > 8)[0]; if (nx) { a.st = 'glide'; a.g0 = { x: tr.x, y: a.y, z: tr.z }; a.next = nx; a.gt = 0; } else a.t = 0; } }
+        if (a.st === 'walk') { if ((a.seenLit || 0) > 0.4 && a.t < 50) a.t = 50; a.y = tr.y + 4; a.x = tr.x + Math.cos(a.side) * (tr.radius * 0.8 + 0.05); a.z = tr.z + Math.sin(a.side) * (tr.radius * 0.8 + 0.05); M.root.position.set(a.x, a.y, a.z); M.root.rotation.set(-1.4, Math.PI / 2 - a.side, 0, 'YXZ'); if (a.t > 6 + Math.random() * 4) { const nx = this.chunks.treesNear(tr.x, tr.z, 22).filter((t) => t !== tr && Math.hypot(t.x - tr.x, t.z - tr.z) > 8)[0]; if (nx) { a.st = 'glide'; a.g0 = { x: tr.x, y: a.y, z: tr.z }; a.next = nx; a.gt = 0; } else a.t = 0; } }
         else { a.gt += dt / 2.2; const u = Math.min(1, a.gt), n = a.next; a.x = a.g0.x + (n.x - a.g0.x) * u; a.z = a.g0.z + (n.z - a.g0.z) * u; a.y = a.g0.y - 2.2 * u + 1.0 * Math.sin(Math.PI * u); M.root.position.set(a.x, a.y, a.z); M.root.rotation.set(0, Math.atan2(n.x - a.g0.x, n.z - a.g0.z), 0, 'YXZ'); if (u >= 1) { a.side = Math.atan2(a.g0.z - n.z, a.g0.x - n.x); a.tree = n; a.st = 'walk'; a.t = 0; } }
       } else if (M.still) {
         a.y = groundY(a.x, a.z); M.root.position.set(a.x, a.y, a.z);
         const dark = torch.on ? 0 : 1; M.glow.opacity += (dark * 0.85 - M.glow.opacity) * Math.min(1, dt * 2);
       } else {   // walkers: the four-legged ones and the little ones
         let sp = { coyote: 1.1, peeper: 0, raccoon: 0.5, opossum: 0.3, skunk: 0.25, porcupine: 0.15, toad: 0.15, salamander: 0.06 }[a.kind] ?? 0.3;
-        if (a.kind === 'opossum' && dy < 4 && a.st !== 'dead') { a.st = 'dead'; a.deadT = 0; this.onEvent?.('opossum-dead', a); }
-        if (a.kind === 'skunk') { if (dy < 6 && a.st === 'walk') { a.st = 'warn'; a.warnT = 0; this.onEvent?.('skunk-warn', a); } if (a.st === 'warn') { a.warnT += dt; if (dy < 3.2 && a.warnT > 0.6) { a.st = 'sprayed'; this.onEvent?.('skunk-spray', a); } if (dy > 9) a.st = 'walk'; } }
-        if (a.kind === 'raccoon' && dy < 7 && a.st === 'walk') { a.st = 'flee'; }
-        if (a.kind === 'coyote' && dy < 16 && a.st === 'walk') { a.st = 'flee'; a.life = Math.min(a.life, 12); }
+        if (a.kind === 'opossum' && dy < 4 * sk && a.st !== 'dead') { a.st = 'dead'; a.deadT = 0; this.onEvent?.('opossum-dead', a); }
+        if (a.kind === 'skunk') { if (dy < 6 * sk && a.st === 'walk') { a.st = 'warn'; a.warnT = 0; this.onEvent?.('skunk-warn', a); } if (a.st === 'warn') { a.warnT += dt; if (dy < 3.2 && a.warnT > 0.6) { a.st = 'sprayed'; this.onEvent?.('skunk-spray', a); } if (dy > 9 * sk) a.st = 'walk'; } }
+        if (a.kind === 'raccoon' && dy < 7 * sk && a.st === 'walk') { a.st = 'flee'; this.onEvent?.('flee', a, sk > 1); }
+        if (a.kind === 'coyote' && dy < 16 * sk && a.st === 'walk') { a.st = 'flee'; a.life = Math.min(a.life, 12); this.onEvent?.('flee', a, sk > 1); }
         if (a.kind === 'coyote' && a.st === 'walk' && !a.yipped && a.t > 2) { a.yipped = true; this._call(a, 'yip'); }
         if (a.st === 'flee') { sp = 1.6; a.h = Math.atan2(dx, dz); }
         if (a.st === 'dead') { a.deadT += dt; if (dy > 10 && a.deadT > 4) a.st = 'walk'; sp = 0; }
@@ -229,8 +235,8 @@ export class NightLife {
       // eyeshine: bright in the flashlight's beam, dark otherwise
       if (M.eyes.length) {
         let lit = 0;
-        if (torch.on) { this._d.set(a.x - torch.pos.x, (a.y + 0.2) - torch.pos.y, a.z - torch.pos.z); const L = this._d.length(); if (L < 40) { const c = this._d.divideScalar(L).dot(torch.dir); if (c > cosCone) lit = Math.min(1, (c - cosCone) / (1 - cosCone) * 3) * (1 - L / 45); } }
-        a.lit = lit;
+        if (torch.on || torch.ir) { this._d.set(a.x - torch.pos.x, (a.y + 0.2) - torch.pos.y, a.z - torch.pos.z); const L = this._d.length(); if (L < 40) { const c = this._d.divideScalar(L).dot(torch.dir); if (c > cosCone) lit = Math.min(1, (c - cosCone) / (1 - cosCone) * 3) * (1 - L / 45); } }
+        a.lit = lit; a.seenLit = torch.on ? lit : 0;
         for (const e of M.eyes) e.material.color.setRGB(0.07 + lit, 0.06 + lit, 0.04 + lit * 0.6);
         if (M.eyes.shine) { M.eyes.shine.opacity = Math.min(1, lit * 1.4); M.eyes.shine.visible = lit > 0.02; const far = Math.min(6, Math.max(1, Math.hypot(a.x - torch.pos.x, a.z - torch.pos.z) * 0.3)); for (const g of M.eyes.glows) g.scale.setScalar(g.userData.R * far); if (!a._sc) { a._sc = 1; M.eyes.shine.color.set(SHINE[a.kind] || '#ffe9a0').multiplyScalar(1.7); } }
       }
