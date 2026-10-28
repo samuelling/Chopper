@@ -523,6 +523,24 @@ async function boot() {
   deer.onMoment = () => { ui.toast('A deer grazes close by. You are very still.', 4); JOURNAL.add('A deer grazed close by while I sat still.', player.pos.x, player.pos.z); };
   // benches and picnic tables: sitting near one puts you on it, at seat height, facing the view (or the table)
   const nearSeat = () => { let best = null, bd = 1.9; for (const s of [...(landmarks.seats || []), ...structures.seats]) { const d = Math.hypot(s.x - player.pos.x, s.z - player.pos.z); if (d < bd) { bd = d; best = s; } } return best; };
+  // the touch Use button says what it will do here (and sits you down when there is nothing else)
+  const TOOLNAME = { phone: 'Phone in hand', axe: 'Axe in hand', rod: 'Fishing rod in hand', binoculars: 'Binoculars in hand', skis: 'Skis on', drone: 'Drone in hand', none: 'Hands free' };
+  const TOOLSHORT = { phone: 'Phone', axe: 'Axe', rod: 'Rod', binoculars: 'Binocs', skis: 'Skis', drone: 'Drone', none: 'Hands' };
+  let useT = 0;
+  const useLabel = () => {
+    if (!started || player.cameraMode) return '';
+    if (player.boat) return shoreSpot() ? 'Out' : '';
+    if (nearBoat()) return 'Board';
+    if (landmarks.nearGate(player.pos)) return 'Gate';
+    if (player.swimming) return '';
+    if (disc.holding || skipping.holding) return '';
+    const dc = disc.canPick(player.pos); if (dc) return dc === 'tee' ? 'Tee off' : 'Disc';
+    if (cairns.near(player.pos)) return 'Stack';
+    if (forage.near(player.pos)) return 'Pick';
+    if (skipping.near(player.pos)) return 'Stone';
+    if (careActs.nearest) return 'Litter';
+    return player.sitting ? 'Stand' : 'Sit';
+  };
   const sitDown = () => {
     const s = player.sitting ? nearSeat() : null; player.seatLift = s ? 0.47 : 0;
     if (s) { const prev = camera.position.clone(); player.teleport(s.x, s.z, Math.atan2(-(s.fx - s.x), -(s.fz - s.z)), -0.08); player.sitting = true; player.blendFrom(prev); }
@@ -531,7 +549,9 @@ async function boot() {
   addEventListener('keydown', (e) => { if (e.code === 'KeyB' && !e.repeat && started && player.locked && !interludeOn && !player.cameraMode) setTimeout(sitDown, 0); });
   const stepSit = () => {};                                   // sitting now lets the day itself pass faster (see the season clock)
   const touch = new TouchControls(player, {
-    onUse: () => player.events.interact?.(), onMood: () => { if (manual && mood === PRESETS.length - 1 && !RUN.dev) followDay(); else handLight(manual ? (mood + 1) % PRESETS.length : 0); },
+    onUse: () => { const L = useLabel(); if (L === 'Sit' || L === 'Stand') { if (player.boat || player.swimming || player.cameraMode) return; player.sitting = !player.sitting && waterDepthAt(player.pos.x, player.pos.z) < 0.2; sitDown(); } else if (L === 'Litter') careActs.pickUp(); else player.events.interact?.(); },
+    onTool: () => { if (!started || interludeOn || phone.isOpen || player.cameraMode || player.boat) return; fishing.reset(); skipping.drop(); player.setCarry(nextCarry(player.carry)); ui.toast(TOOLNAME[player.carry] + '.', 1.4); },
+    onMood: () => { if (manual && mood === PRESETS.length - 1 && !RUN.dev) followDay(); else handLight(manual ? (mood + 1) % PRESETS.length : 0); },
     onMenu: () => { if (started && !interludeOn) openMenu(); },
     onPhone: () => { if (!started || interludeOn) return; if (player.cameraMode) setCameraMode(false); else togglePhone(); },
     onSwing: (down) => {                                                    // the one big button: swing, cast and reel, or shutter
@@ -542,6 +562,7 @@ async function boot() {
       else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
       else if (player.carry === 'drone') { if (down) player.events.droneLaunch?.(); }
       else if (player.carry === 'binoculars') { if (down) player.events.binoc?.(); }
+      else if (down && (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone')) setCameraMode(true);   // hands free: the big button is the camera
       else if (down && !player.boat) player.startSwing();
     } });
   const card = document.getElementById('seasoncard'), newgame = document.getElementById('newgame');
@@ -1251,7 +1272,8 @@ async function boot() {
     audio.update(dt, { mood, rain: wx, snow: weather.kind === 'snow', hawk: birds.hawk.active && birds.hawk.mode === 'soar', geese: birds.geese.mode === 'fly', wind: 0.5, sdf: s, lakeFrac: lake.drained ? 0 : 1, gate: lake.gateOpen && !lake.drained, credits: ending ? endingKind : null });
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
-    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
+    if (MOBILE && (useT = (useT || 0) - dt) <= 0) { useT = 0.2; const ub = document.getElementById('bUse'), ul = useLabel(); if (ub.textContent !== (ul || 'Use')) ub.textContent = ul || 'Use'; ub.classList.toggle('idle', !ul); const tb = document.getElementById('bTool'), tl = TOOLSHORT[player.carry] || 'Hands'; if (tb.textContent !== tl) tb.textContent = tl; }
+    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone') && !skipping.holding && !disc.holding ? 'Photo' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(disc.holding ? (disc.state === 'wind' ? '' : MOBILE ? 'Hold THROW to wind up, let go to throw' : 'Hold the mouse button to wind up, let go to throw') : !player.boat && !player.swimming && disc.canPick(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${disc.canPick(player.pos) === 'tee' ? `disc golf: start hole ${disc.S.hole + 1}` : 'pick up your disc'}` : !player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
