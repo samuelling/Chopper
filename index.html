@@ -233,6 +233,9 @@
   .logtut code { font-size:12px; opacity:.9; }
   #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:60; transition:opacity 1.5s ease; }
   .fadein #fade { opacity:1; transition:none; }
+  /* the credits: the play screen's controls fade away */
+  body.ending #touch, body.ending #minimap, body.ending #clydenudge, body.ending #gauge, body.ending #hud { transition:opacity 1.6s ease; }
+  body.ending #touch, body.ending #minimap, body.ending #mood, body.ending #waypoint, body.ending #cross, body.ending #hint, body.ending #padring, body.ending #clydenudge, body.ending #gauge { opacity:0 !important; pointer-events:none !important; }
   #credits { z-index:30; background:linear-gradient(rgba(14,10,12,.55), rgba(14,10,12,.15) 30%, rgba(14,10,12,.15) 70%, rgba(14,10,12,.6)); overflow:hidden; display:block; text-align:center; }
   #credits.hidden { display:none; }
   #credits .crscroll { position:absolute; left:0; right:0; top:0; will-change:transform; padding:0 8vw; }

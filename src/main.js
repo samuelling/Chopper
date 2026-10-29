@@ -1254,7 +1254,9 @@ async function boot() {
   stayBtn.addEventListener('click', (e) => { e.stopPropagation(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
   function beginEnding(kind) {
     if (ending) return; ending = true; endingKind = kind; drone.forceOff();
-    touch.hide?.();   // the touch layer takes every tap on the page while it is on: the credits' buttons need them
+    // the controls and the rest of the play screen fade away as the credits come up (and the touch layer then goes, since
+    // while it is on it takes every tap on the page, and the credits' buttons need them)
+    document.body.classList.add('ending'); setTimeout(() => touch.hide?.(), 1800);
     // the wild keeps going under the credits: if the park lived, the light comes up to morning and the birds sing; if the reservoir died, dusk and wind
     manual = true; atmosphere.setPreset(kind === 'life' ? ARC[0] : ARC[2]); mood = kind === 'life' ? ARC[0] : ARC[2];
     if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
