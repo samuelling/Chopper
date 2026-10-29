@@ -137,7 +137,7 @@ export class DataCenter {
       const pos = F.hp.clone().lerp(F.hl, Math.min(0.08, F.t * 0.002)); F.pos.copy(pos); this._look(pos, F.hl);
     }
     // the hum: the electrical tones and the fan roar, louder the closer you are
-    const dd = cam.distanceTo(centre); this.audio?.dcHum?.(Math.pow(Math.max(0, 1 - dd / 1100), 1.6));
+    const dd = cam.distanceTo(centre); this.audio?.dcHum?.(Math.max(0, 1 - dd / 1500) ** 1.2);   // heard from far off now, and at full menace at the fence
     // the haze thins as you go, so it can loom out of it
     return F.phase === 'rise' ? null : F.phase === 'glide' ? 0.0019 : 0.0012;
   }

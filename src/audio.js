@@ -196,15 +196,45 @@ export class Audio {
    *  slightly detuned fan tones beating, a broad roar of fans, and a faint high whine.  v: 0 (gone) to 1 (at the fence) */
   dcHum(v) {
     if (!this.ready) return;
+    const c = this.ctx;
     if (!this._dc) {
-      const c = this.ctx, g = c.createGain(); g.gain.value = 0; g.connect(this.master);
-      const tone = (type, f, gn) => { const o = c.createOscillator(); o.type = type; o.frequency.value = f; const gg = c.createGain(); gg.gain.value = gn; o.connect(gg); gg.connect(g); o.start(); };
-      tone('sine', 60, 0.5); tone('sine', 120, 0.42); tone('triangle', 180, 0.16); tone('sawtooth', 240, 0.05); tone('sine', 97, 0.14); tone('sine', 99.4, 0.14);
-      const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; const ng = c.createGain(); ng.gain.value = 0.9; n.connect(lp); lp.connect(ng); ng.connect(g); n.start();
-      const w = c.createOscillator(); w.frequency.value = 6900; const wg = c.createGain(); wg.gain.value = 0.008; w.connect(wg); wg.connect(g); w.start();
-      this._dc = g;
+      // everything runs through a soft-clipping distortion, for grit, then a master gain that swells slowly, like breathing
+      const out = c.createGain(); out.gain.value = 0;
+      const lim = c.createDynamicsCompressor(); lim.threshold.value = -5; lim.knee.value = 3; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12; out.connect(lim); lim.connect(this.master);   // a limiter: as loud as it can go without clipping
+      const swell = c.createGain(); swell.gain.value = 0.85; swell.connect(out);
+      const sl = c.createOscillator(), sld = c.createGain(); sl.frequency.value = 0.11; sld.gain.value = 0.22; sl.connect(sld); sld.connect(swell.gain); sl.start();
+      const shaper = c.createWaveShaper(); { const n = 1024, cu = new Float32Array(n); for (let k = 0; k < n; k++) { const x = (k / (n - 1)) * 2 - 1; cu[k] = Math.tanh(x * 3.2); } shaper.curve = cu; shaper.oversample = '2x'; }
+      const drive = c.createGain(); drive.gain.value = 0.9; drive.connect(shaper); shaper.connect(swell);
+      // a throb on the electrical hum, faster as you get close
+      const throb = c.createGain(); throb.gain.value = 0.75; throb.connect(drive);
+      const tl = c.createOscillator(), tld = c.createGain(); tl.frequency.value = 1.6; tld.gain.value = 0.25; tl.connect(tld); tld.connect(throb.gain); tl.start();
+      const oscs = [];
+      const tone = (type, f, gn, dest) => { const o = c.createOscillator(); o.type = type; o.frequency.value = f; const gg = c.createGain(); gg.gain.value = gn; o.connect(gg); gg.connect(dest); o.start(); oscs.push(o); };
+      // the electrical hum: 60 Hz and its harmonics (the tone neighbours complain of)
+      tone('sine', 60, 0.55, throb); tone('sine', 120, 0.5, throb); tone('triangle', 180, 0.22, throb); tone('sawtooth', 240, 0.08, throb); tone('square', 360, 0.025, throb);
+      // underneath, a deep drone a tritone below, and two fan tones beating against each other
+      tone('sine', 42.4, 0.5, drive); tone('sawtooth', 84.8, 0.07, drive); tone('sine', 97, 0.18, drive); tone('sine', 99.6, 0.18, drive);
+      // the fans: a broad roar
+      const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650; const ng = c.createGain(); ng.gain.value = 1.0; n.connect(lp); lp.connect(ng); ng.connect(swell); n.start();
+      // the part phone speakers can play (they drop everything under ~200 Hz): the hum's upper harmonics as a buzzing
+      // saw-and-square band from 240 Hz to 1.2 kHz, plus a hissing fan band -- the ear rebuilds the missing 60 Hz from them
+      const mid = c.createBiquadFilter(); mid.type = 'bandpass'; mid.frequency.value = 520; mid.Q.value = 0.6;
+      const midg = c.createGain(); midg.gain.value = 0.0; mid.connect(midg); midg.connect(throb);
+      tone('sawtooth', 120, 0.55, mid); tone('square', 180, 0.22, mid); tone('sawtooth', 240.6, 0.3, mid); tone('sawtooth', 300, 0.16, mid); tone('square', 420, 0.06, mid);
+      const n2 = c.createBufferSource(); n2.buffer = this.noiseBuf; n2.loop = true; const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.8; const ng2 = c.createGain(); ng2.gain.value = 0; n2.connect(bp); bp.connect(ng2); ng2.connect(swell); n2.start();
+      // a harsh high whine with a metallic ring, wavering
+      const wg = c.createGain(); wg.gain.value = 0.02; wg.connect(out);
+      const wl = c.createOscillator(), wld = c.createGain(); wl.frequency.value = 5.3; wld.gain.value = 0.012; wl.connect(wld); wld.connect(wg.gain); wl.start();
+      for (const [f, gn] of [[6900, 1], [7350, 0.6], [1131, 0.5], [1517, 0.35]]) { const o = c.createOscillator(); o.type = f < 2000 ? 'triangle' : 'sine'; o.frequency.value = f; const gg = c.createGain(); gg.gain.value = gn; o.connect(gg); gg.connect(wg); o.start(); oscs.push(o); }
+      this._dc = { out, tl, oscs, wg, midg, ng2, bp };
     }
-    this._dc.gain.setTargetAtTime(Math.max(0, Math.min(1, v)) * 0.32, this.ctx.currentTime, 0.5);
+    const D = this._dc, t = c.currentTime, k = Math.max(0, Math.min(1, v));
+    D.out.gain.setTargetAtTime(Math.pow(k, 1.1) * 1.1, t, 0.6);                        // much louder, and earlier on the way in
+    D.tl.frequency.setTargetAtTime(1.2 + k * 3.4, t, 1.5);                              // the throb quickens
+    for (const o of D.oscs) o.detune.setTargetAtTime(k * 70, t, 2);                     // and everything creeps up in pitch
+    D.midg.gain.setTargetAtTime(0.35 + k * 0.45, t, 0.8);                               // the buzz grows harsher close up
+    D.ng2.gain.setTargetAtTime(0.25 + k * 0.5, t, 0.8); D.bp.frequency.setTargetAtTime(1100 + k * 900, t, 2);
+    D.wg.gain.setTargetAtTime(0.02 + k * 0.03, t, 1);
   }
   // night voices that come from one place (panned by songAt, so they are built with _seq)
   trill() { const L = []; for (let i = 0; i < 16; i++) L.push([i * 0.045, 1250 + Math.random() * 40, 0.03, 0.035, 1180, 'triangle']); this._seq(L); }
