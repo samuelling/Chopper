@@ -460,7 +460,7 @@ export class Landmarks {
   }
 
 
-  /** the park's sign on the trailhead board, both faces: dark brown routed wood, cream letters in Helvetica (or Arial),
+  /** the park's sign on the trailhead board, both faces: an off-white face in a brown wooden frame, brown letters in Helvetica (or Arial),
    *  the way the Commonwealth's park signs look. */
   _parkSign(x, y, z) {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
@@ -469,8 +469,10 @@ export class Landmarks {
       const c = cv.getContext('2d'), W = cv.width, H = cv.height;
       c.fillStyle = '#4a3020'; c.fillRect(0, 0, W, H);
       for (let i = 0; i < 70; i++) { const yy = (i / 70) * H + Math.sin(i * 7.3) * 4; c.strokeStyle = `rgba(${i % 3 ? '30,18,10' : '110,74,46'},${0.18 + (i % 5) * 0.03})`; c.lineWidth = 1 + (i % 4); c.beginPath(); c.moveTo(0, yy); for (let xx = 0; xx <= W; xx += 64) c.lineTo(xx, yy + Math.sin(xx * 0.006 + i) * 5); c.stroke(); }   // the grain
-      const routed = (fn) => { c.save(); c.translate(3, 4); c.fillStyle = c.strokeStyle = '#1f130b'; fn(); c.restore(); c.fillStyle = c.strokeStyle = '#efe2bf'; fn(); };   // carved: a dark lip, then the cream in it
-      routed(() => { c.lineWidth = 9; c.beginPath(); c.roundRect(34, 34, W - 68, H - 68, 26); c.stroke(); });
+      // the wood shows only as a frame; the face is an off-white panel, the letters on it in the frame's brown
+      c.save(); c.shadowColor = 'rgba(20,10,4,.55)'; c.shadowBlur = 10; c.shadowOffsetY = 3; c.fillStyle = '#f2ede1'; c.beginPath(); c.roundRect(44, 44, W - 88, H - 88, 18); c.fill(); c.restore();
+      { const gr = c.createLinearGradient(0, 44, 0, H - 44); gr.addColorStop(0, 'rgba(255,255,255,.18)'); gr.addColorStop(1, 'rgba(120,100,70,.10)'); c.fillStyle = gr; c.beginPath(); c.roundRect(44, 44, W - 88, H - 88, 18); c.fill(); }
+      const routed = (fn) => { c.fillStyle = c.strokeStyle = '#4a3020'; fn(); };
       c.textAlign = 'center'; c.textBaseline = 'alphabetic';
       const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
       const fit = (t, size, maxW, wt = 400) => { let s = size; do { c.font = `${wt} ${s}px ${FONT}`; s -= 4; } while (c.measureText(t).width > maxW && s > 20); };
