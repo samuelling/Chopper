@@ -300,12 +300,15 @@
   body.mobile .phone .pbar:not(.home) { padding-right:112px !important; }   /* room for Put away */
   body.mobile.phoneup .paway { top:calc(env(safe-area-inset-top) + 8px); right:max(14px, env(safe-area-inset-right)); }
   /* touch screens: the map sits under the status card, clear of the joystick */
-  body.mobile #minimap { left:max(18px, env(safe-area-inset-left)) !important; top:calc(max(18px, env(safe-area-inset-top)) + var(--cardh, 150px)) !important; bottom:auto !important; width:150px !important; height:150px !important; }
-  body.mobile #minimap.full { width:min(220px, 30vw) !important; height:auto !important; }
+  body.mobile #minimap { left:max(18px, env(safe-area-inset-left)) !important; top:calc(max(18px, env(safe-area-inset-top)) + var(--cardh, 150px)) !important; bottom:auto !important; width:120px !important; height:120px !important; }
+  body.mobile #minimap.full { width:min(180px, 26vw) !important; height:auto !important; }
+  /* touch screens: the status card in miniature (the map is placed from its scaled size) */
+  body.mobile #hud .card { transform:scale(.8); transform-origin:top left; }
   /* phones on their side are too short for the map to fit between the card and the joystick: it goes beside the card, smaller */
   @media (max-height:500px) {
-    body.mobile #minimap { left:calc(max(18px, env(safe-area-inset-left)) + var(--cardw, 0px)) !important; top:max(18px, env(safe-area-inset-top)) !important; width:112px !important; height:112px !important; }
-    body.mobile #minimap.full { width:min(160px, 24vw) !important; height:auto !important; }
+    body.mobile #hud .card { transform:scale(.66); }
+    body.mobile #minimap { left:calc(max(18px, env(safe-area-inset-left)) + var(--cardw, 0px)) !important; top:max(18px, env(safe-area-inset-top)) !important; width:88px !important; height:88px !important; }
+    body.mobile #minimap.full { width:min(130px, 20vw) !important; height:auto !important; }
   }
   .pname { font-size:20px; font-weight:800; letter-spacing:.04em; color:#ffd9a0; } .pbar small { font-size:11px; opacity:.7; letter-spacing:.08em; }
   .ptabs { display:flex; background:#25222c; } .ptabs button { flex:1; font:inherit; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); background:none; border:0; border-bottom:3px solid transparent; padding:10px 0; cursor:pointer; opacity:.6; } .ptabs button.on { opacity:1; border-color:#ffd9a0; }
@@ -551,6 +554,8 @@
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>
 
+<script>/* ?end= previews an ending: nothing it does is saved (the game, the guide, the photos stay as they were) */
+try{var Q=new URLSearchParams(location.search);if(Q.get("end")&&!Q.has("dev")&&!Q.has("season")&&!Q.has("auto")){var _si=Storage.prototype.setItem,_ri=Storage.prototype.removeItem;Storage.prototype.setItem=function(k,v){if(this===window.localStorage&&String(k).indexOf("ashland.")===0)return;return _si.call(this,k,v)};Storage.prototype.removeItem=function(k){if(this===window.localStorage&&String(k).indexOf("ashland.")===0)return;return _ri.call(this,k)};}}catch(e){}</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <script type="module" src="./src/main.js"></script>
 </body>

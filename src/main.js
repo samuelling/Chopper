@@ -1251,7 +1251,11 @@ async function boot() {
     const go = ui.els.title.querySelector('.go'); if (go) go.innerHTML = MOBILE ? 'Tap to begin a new life' : 'Begin a new life';
   }
   const stayBtn = document.createElement('button'); stayBtn.className = 'crskip staymenu'; stayBtn.textContent = 'Start menu'; stayBtn.hidden = true; document.body.appendChild(stayBtn);
-  stayBtn.addEventListener('click', (e) => { e.stopPropagation(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
+  stayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (END_PREVIEW) return leavePreview(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
+  // ?end=drained (or silent, life; add &dcflight=1 to see the data center after any of them): a preview of an ending.
+  // It saves nothing, and its buttons go back to the game as it was (without the ?end) rather than starting a new life.
+  const END_PREVIEW = !!params.get('end') && !RUN.dev;
+  const leavePreview = () => { const q = new URLSearchParams(location.search); ['end', 'dcflight', 'cspeed'].forEach((k) => q.delete(k)); location.search = q.toString(); };
   function beginEnding(kind) {
     if (ending) return; ending = true; endingKind = kind; drone.forceOff();
     // the controls and the rest of the play screen fade away as the credits come up (and the touch layer then goes, since
@@ -1259,7 +1263,7 @@ async function boot() {
     document.body.classList.add('ending'); setTimeout(() => touch.hide?.(), 1800);
     // the wild keeps going under the credits: if the park lived, the light comes up to morning and the birds sing; if the reservoir died, dusk and wind
     manual = true; atmosphere.setPreset(kind === 'life' ? ARC[0] : ARC[2]); mood = kind === 'life' ? ARC[0] : ARC[2];
-    if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
+    if (!RUN.dev && !END_PREVIEW) { RUN.s.end = kind; RUN.save(); }   // (a preview link, ?end=, leaves your saved life alone)
     started = false; interludeOn = true; document.exitPointerLock?.();
     ui.els.paused.classList.add('hidden'); ui.els.hud.classList.remove('on'); document.getElementById('interlude')?.classList.add('hidden');
     player.setCarry?.('none'); player.carryHidden = true; player.refreshCarry();
@@ -1268,9 +1272,9 @@ async function boot() {
     flyover.start(); flyover.speed = kind === 'drained' ? 10 : 8;
     const stats = endStats();
     rollCredits(document.getElementById('credits'), creditsHTML(kind, stats), {
-      onRestart: () => { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => p.delete(k)); location.search = p.toString(); },
+      onRestart: () => { if (END_PREVIEW) return leavePreview(); RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => p.delete(k)); location.search = p.toString(); },
       onStay: () => { stayBtn.hidden = false; },   // watching the drone: a way back to the menu whenever you want it
-      onMenu: () => { showFinishedMenu(); ui.els.hud.classList.remove('on'); },   // back to the start menu, the drone still flying behind it
+      onMenu: () => { if (END_PREVIEW) return leavePreview(); showFinishedMenu(); ui.els.hud.classList.remove('on'); },   // back to the start menu, the drone still flying behind it
       // the bleak endings: once the credits reach the megaZINE page, the drone climbs and goes to see the data center
       onHold: (root) => {
         const bleak = kind === 'drained' || kind === 'silent' || (kind === 'life' && stats.harm >= 0.6) || params.has('dcflight');
@@ -1453,7 +1457,7 @@ async function boot() {
     { const camUnder = camera.position.y < lake.level - 0.02;
       waterlife.update(dt, started && !interludeOn && !droneOn, player.pos, camera.position, camUnder);
       if (camUnder && player.underwater && !RUN.s.diveLifeHint && waterlife.list.length) { RUN.s.diveLifeHint = true; RUN.save?.(); ui.toast(`There is life down here: crayfish on the bottom, tadpoles in the shallows, newts, mussels, and in the deep, sometimes, a snapping turtle. Take the camera down with you (${MOBILE ? 'Phone \u2192 Camera, or the big button' : 'V'}): things under the water can only be photographed from under it.`, 8); } }
-    if (MOBILE && (cardT = (cardT || 0) - dt) <= 0) { cardT = 0.5; const cd = document.querySelector('#hud .card'); if (cd) { document.documentElement.style.setProperty('--cardh', `${(cd.offsetHeight || 130) + 12}px`); document.documentElement.style.setProperty('--cardw', `${cd.offsetWidth ? cd.offsetWidth + 12 : 0}px`); } }
+    if (MOBILE && (cardT = (cardT || 0) - dt) <= 0) { cardT = 0.5; const cd = document.querySelector('#hud .card'); if (cd) { const r = cd.getBoundingClientRect(); document.documentElement.style.setProperty('--cardh', `${(r.height || 100) + 10}px`); document.documentElement.style.setProperty('--cardw', `${r.width ? r.width + 10 : 0}px`); } }   // its drawn (scaled) size
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
     if (grandStag && !stagSaid) { const st = deer.seen.find((q) => q.kind === 'stag'); if (st && Math.hypot(st.x - camera.position.x, st.z - camera.position.z) < 80) { const v = new THREE.Vector3(st.x, st.y, st.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) { stagSaid = true; legends.onSeen?.('stag', st.x, st.z); } } }
@@ -1521,7 +1525,8 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, focus, player.speed);
     squirrels.update(dt, focus);
-    deerYou.x = player.pos.x; deerYou.y = player.pos.y; deerYou.z = player.pos.z; deerYou.speed = player.speed; deer.update(dt, deerYou, player.stillT, player.sitting);   // with your speed, so a running person spooks them from further flyers.update(dt, focus, mood); critters.update(dt, focus, mood); fox.update(dt, player, mood); plants.update(dt, focus); stepSit(dt); stepDay(dt);
+    deerYou.x = player.pos.x; deerYou.y = player.pos.y; deerYou.z = player.pos.z; deerYou.speed = player.speed; deer.update(dt, deerYou, player.stillT, player.sitting);   // with your speed, so a running person spooks them from further
+    flyers.update(dt, focus, mood); critters.update(dt, focus, mood); fox.update(dt, player, mood); plants.update(dt, focus); stepSit(dt); stepDay(dt);
     birds.update(dt, focus);
     // a regular: the same heron, season after season
     if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {
@@ -1551,7 +1556,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { datacenter, rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { atmosphere, datacenter, rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
