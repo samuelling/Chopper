@@ -20,7 +20,7 @@ app.whenReady().then(() => {
   ipcMain.on('ashland:quit', () => app.quit());
   const win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 960, minHeight: 600, backgroundColor: '#1c1517', title: 'Ashland', autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, autoplayPolicy: 'no-user-gesture-required' },   // sound from the start, no click needed
   });
   // links leave in the system browser; the game window never navigates away from the game
   win.webContents.setWindowOpenHandler(({ url }) => { external(url); return { action: 'deny' }; });

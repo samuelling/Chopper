@@ -601,7 +601,14 @@ async function boot() {
     newgame.hidden = RUN.n === 0 && RUN.fresh;
     ui.els.title.classList.add('hidden'); card.classList.remove('hidden');
   };
-  card.addEventListener('click', () => { if (autoCard) return; card.classList.add('hidden'); begin(); });
+  // iPhone and iPad in Safari: sound can only start on a tap, and each season is a fresh page, so the season card waits
+  // for one ("Tap to step in") instead of gliding on by itself.  The apps (and desktop browsers) need no tap.
+  const tapToStep = MOBILE && !PLATFORM.app && (PLATFORM.phone || PLATFORM.iPad || /iPhone|iPad|iPod/.test(navigator.userAgent));
+  let stepIn = null;   // set while the card waits for that tap
+  card.addEventListener('click', () => {
+    if (stepIn) { const go = stepIn; stepIn = null; document.getElementById('sctap').hidden = true; audio.unlock(); go(); return; }
+    if (autoCard) return; card.classList.add('hidden'); begin();
+  });
   // after the first season the card holds a moment, then the drone glides down to where you stand; no click needed
   let autoCard = false;
   const clearFadeIn = () => { try { sessionStorage.removeItem('ashland.fadein'); } catch {} document.documentElement.classList.remove('fadein'); };
@@ -614,7 +621,7 @@ async function boot() {
       setTimeout(() => { nm.classList.add('dim'); ag.classList.add('dim'); }, 1800 + CARD);
       setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); ag.textContent = ''; }, 2600 + CARD);
     }
-    setTimeout(() => {
+    const go = () => {
       card.classList.add('hidden');
       if (spawnFromDrone && !player.boat && !player.onIce) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
@@ -624,6 +631,10 @@ async function boot() {
         else if (padLed()) { softPlay(); tut.start(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
       });
+    };
+    setTimeout(() => {
+      if (tapToStep && !(audio.ctx && audio.ctx.state === 'running')) { stepIn = go; document.getElementById('sctap').hidden = false; }
+      else go();
     }, hold);
   };
   // a returning player lands on the opening menu (continue or start over); season changes within a visit reload straight into play

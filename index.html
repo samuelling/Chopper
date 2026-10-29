@@ -217,7 +217,7 @@
   .ifund { display:block; margin:6px 2px 2px; font-size:12px; opacity:.75; line-height:1.4; }
   #fundline { margin-top:8px; font-size:11px; letter-spacing:.08em; opacity:.85; color:#c7e39a; }
   #scname { transition:opacity .8s ease; } #scname.dim { opacity:0; }
-  #seasoncard { z-index:8; } #interlude { z-index:9; cursor:default; padding:16px; }
+  #seasoncard { z-index:8; } #sctap { margin-top:22px; font-size:15px; letter-spacing:.22em; text-transform:uppercase; color:#ffe9c2; opacity:0; animation:sctap 1.2s ease-out .2s forwards, sctapb 2.4s ease-in-out 1.4s infinite; } #sctap[hidden] { display:none; } @keyframes sctap { to { opacity:.85; } } @keyframes sctapb { 50% { opacity:.45; } } #interlude { z-index:9; cursor:default; padding:16px; }
   .logtut { max-width:560px; margin-top:12px; font-size:13px; text-align:left; opacity:.8; pointer-events:auto; }
   .logtut summary { cursor:pointer; text-align:center; letter-spacing:.08em; }
   .logtut ol { margin:8px 0 0; padding-left:20px; line-height:1.5; }
@@ -479,7 +479,7 @@
 
 <div id="fade"></div>
 <div id="credits" class="overlay hidden"></div>
-<div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div class="newgame" id="newgame" hidden>New game</div></div>
+<div id="seasoncard" class="overlay hidden"><h1 id="scname" style="font-size:clamp(64px,14vw,170px)"></h1><div id="scage"></div><div id="sctap" hidden>Tap to step in</div><div class="newgame" id="newgame" hidden>New game</div></div>
 <div id="interlude" class="overlay hidden"></div>
 <div id="phone" class="overlay hidden"></div>
 <div id="paused" class="overlay hidden"><h1 style="font-size:clamp(40px,8vw,80px)">Paused</h1><div class="go" style="margin-top:20px"><span class="only-desktop">Click to resume</span><span class="only-mobile">Tap to resume</span></div><div class="seasons" data-seasons><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></div><div class="fsbtn" data-minimap>Map: off</div><div data-usage-panel></div><div data-choices class="usage" hidden></div><div data-hud-panel class="usage"></div><div class="usage speedbox"><div class="urow"><span>Time passes</span><button data-speed="0.5">Slow ½×</button><button data-speed="1">Normal</button><button data-speed="2">Fast 2×</button><button data-speed="4">Faster 4×</button></div><small>Speeds up the seasons, the crew and the park's healing and harm together, so a season means the same at any speed. Walking and the animals stay in real time.</small></div><div class="fsbtn" data-fullscreen>&#x26F6; Fullscreen</div><div class="fsbtn" data-controls hidden></div><div class="fsbtn" data-quit hidden>Quit Ashland</div><div class="fsbtn" data-restart hidden>Start over from Year One</div><div class="controls ctl only-desktop" style="margin-top:18px">
