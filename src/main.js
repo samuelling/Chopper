@@ -713,6 +713,7 @@ async function boot() {
     return [ARC[3], ARC[3], 0, 3];
   };
   let manual = RUN.dev, arcPhase = -1, arcT = 0;                        // test links (?season=) keep the old hand-set light
+  let dayRing = null, dayRingT = 0;
   const dayProgress = () => Math.min(1, Math.max(0, RUN.s.played / Math.max(1, RUN.len)));
   // the drone flies at midday; as it drops to the ground the light slides into the day's own (morning, at a season's start)
   let dropT = null;
@@ -1399,6 +1400,7 @@ async function boot() {
     if (!RUN.dev && started && player.locked && !interludeOn) {
       RUN.s.played += tdt * (((player.sitting && player.sit > 0.9) || hammock.lying) && arcPhase < 3 ? 4 : 1);   // sit and wait: the day goes by faster around you (but not the night: sit and watch the stars)
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
+      if ((dayRingT -= dt) <= 0) { dayRingT = 0.5; const d = dayProgress(), r = (dayRing ||= document.querySelector('#bMood .dayring')); if (r) { r.style.setProperty('--day', d.toFixed(4)); r.style.setProperty('--dayc', d >= 0.66 ? 'rgba(150,180,255,.95)' : d >= 0.56 ? 'rgba(255,150,90,.95)' : 'rgba(255,214,140,.95)'); } }   // gold by day, sunset orange, moonlight after dusk
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
     }
     minimap.update(dt); phone.update(); discoveries.update(player.pos); explore.update(dt, player);

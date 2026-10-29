@@ -403,6 +403,9 @@
   .fsnote { display:none !important; margin-top:10px; font-size:12px; color:var(--gold); max-width:420px; } body.mobile .fsnote.show { display:block !important; }
   #bMenu { right:max(122px, calc(env(safe-area-inset-right) + 114px)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:19px; letter-spacing:0; }
   #bMood { right:max(18px, env(safe-area-inset-right)); top:max(14px, env(safe-area-inset-top)); width:44px; height:44px; font-size:18px; }
+  /* the day's progress as a ring around the light button (the season bar along the top edge is lost under the iPhone's notch) */
+  #bMood .dayring { position:absolute; inset:-7px; border-radius:50%; pointer-events:none; background:conic-gradient(var(--dayc, rgba(255,214,140,.95)) calc(var(--day, 0) * 360deg), rgba(244,230,200,.16) 0); -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }
+  #bMood .dayring::after { content:''; position:absolute; left:50%; top:50%; width:2px; height:6px; margin:-3px 0 0 -1px; background:rgba(150,180,255,.85); transform:rotate(237.6deg) translateY(-26px); }   /* dusk: where night begins */
   #rotate { display:none; position:fixed; inset:0; z-index:30; background:#1c1517; color:var(--paper); text-align:center; align-items:center; justify-content:center; font-size:20px; padding:30px; }
   @media (orientation: portrait) { body.mobile #rotate { display:flex; } }
   body.mobile #hint { display:none; } body.mobile #mood { display:none; } body.mobile .card { top:max(12px, env(safe-area-inset-top)); left:max(12px, env(safe-area-inset-left)); min-width:150px; padding:6px 10px; } body.mobile .card .v { font-size:16px; }
@@ -534,7 +537,7 @@
 </div>
 <div id="underwater"><i></i></div>
 <div id="touch"><div id="stick"><i></i></div>
-  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse" aria-label="Use">Use</div><div class="tbtn" id="bTool" aria-label="Change what you hold">Hands</div><div class="tbtn" id="bMood">&#9728;</div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bMenu">&#9776;</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
+  <div class="tbtn" id="bSwing">Swing</div><div class="tbtn" id="bHop">Hop</div><div class="tbtn" id="bUse" aria-label="Use">Use</div><div class="tbtn" id="bTool" aria-label="Change what you hold">Hands</div><div class="tbtn" id="bMood">&#9728;<span class="dayring"></span></div><div class="tbtn" id="bPhone">Phone</div><div class="tbtn" id="bMenu">&#9776;</div><div class="tbtn" id="bFull" data-fullscreen>&#x26F6;</div></div>
 <div id="turnup"><div class="tphone"></div><div data-turn-msg>Turn your phone upright to use it</div><small data-turn-sub>Turn it back to put it away</small><button class="tgo" data-turn-away>Put it away</button></div>
 <div id="rotate">Turn your phone sideways to play.<br>(Best played on a desktop computer.)</div>
 <div id="err"></div>

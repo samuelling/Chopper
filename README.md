@@ -39,7 +39,7 @@ Left thumb anywhere in the lower left: a floating stick. Drag the rest of the sc
 
 
 
-Phones and tablets are detected automatically (or force it with `?mobile=1`; `?desktop=1` forces the desktop version). You get an on-screen joystick (left thumb), drag-to-look (right side), SWING / HOP / USE buttons and a sun button for the light, plus a lighter renderer: smaller shadow map, shorter draw distance, less leaf litter, lower pixel ratio. The title screen says it is best played on a desktop. Landscape works best.
+Phones and tablets are detected automatically (or force it with `?mobile=1`; `?desktop=1` forces the desktop version). You get an on-screen joystick (left thumb), drag-to-look (right side), SWING / HOP / USE buttons and a sun button for the light (ringed by the day's progress, filling clockwise: gold by day, orange at sunset, blue after dusk, with a small blue tick where night begins; the season bar along the top edge is lost under a phone's notch), plus a lighter renderer: smaller shadow map, shorter draw distance, less leaf litter, lower pixel ratio. The title screen says it is best played on a desktop. Landscape works best.
 
 ## Game controllers and mice (`src/gamepad.js`)
 
