@@ -330,6 +330,21 @@ export class Landmarks {
       layout.addCircle(tx, tz, 3);
     }
 
+    // charcoal grills: the park's picnic areas are "outfitted with charcoal grills and tables" (mass.gov), and grilling is
+    // allowed only there.  One at each OpenStreetMap picnic site, two among the tables by the lot.  A pedestal grill: an
+    // iron post set in the ground and a box on top with a grate.
+    this.grills = [];
+    for (const [gx, gz] of [...PICNIC_OSM.map(([x, z]) => [x + 3.4, z + 1.6]), ...[[25, -20], [31, 14]].map(([u, v]) => at(u, v))]) {
+      const gy = groundY(gx, gz), yaw = Math.atan2(uz, ux);
+      this._box(b, gx, gy + 0.42, gz, 0.09, 0.84, 0.09, '#3a3634');                       // the post
+      this._box(b, gx, gy + 0.92, gz, 0.66, 0.22, 0.42, '#2a2726', { ry: yaw });           // the firebox
+      this._box(b, gx, gy + 1.04, gz, 0.6, 0.02, 0.36, '#55504c', { ry: yaw });            // the grate
+      this._box(b, gx + Math.cos(yaw) * 0.4, gy + 1.0, gz - Math.sin(yaw) * 0.4, 0.14, 0.04, 0.05, '#55504c', { ry: yaw });   // a handle
+      this.colliders.add(gx, gz, 0.45, { tag: 'grill' });
+      this.grills.push({ x: gx, y: gy + 1.04, z: gz });
+      layout.addCircle(gx, gz, 1.2);
+    }
+
     // lifeguard chair on the sand
     {
       const [lx, lz] = at(7, 6);

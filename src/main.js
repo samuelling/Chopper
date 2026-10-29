@@ -362,6 +362,7 @@ async function boot() {
     if (nearBoat()) { embark(); return; }
     if (!player.swimming && rope.near(player.pos)) { const r = rope.start(player); if (r === 'winter') ui.toast('Not in winter. The water is frozen.', 2.6); else if (r === 'low') ui.toast('The reservoir is too low: the rope swings over mud.', 3); else if (r) ui.toast(MOBILE ? 'Swinging out! Tap HOP to let go.' : 'Swinging out! SPACE to let go.', 2.6); return; }
     { const w = !player.swimming && !skipping.holding && disc.canPick(player.pos); if (w) { fishing.reset(); player.setCarry('none'); disc.pick(player.pos); const h = disc.hole; ui.toast(w === 'tee' ? `Disc golf, hole ${disc.S.hole + 1}: par ${h.par}, ${h.len} m. Hold ${MOBILE ? 'THROW' : 'the mouse button'} to wind up, and let go.` : 'You pick up your disc. Line it up, and throw.', 4); return; } }
+    { const g = nearGrill(); if (g && !player.swimming) { lightGrill(g); return; } }
     { const cn = !player.swimming && !skipping.holding && cairns.near(player.pos); if (cn) { addCairn(cn); return; } }
     { const fp = !player.swimming && forage.near(player.pos); if (fp) { pickForage(fp); return; } }
     if (!player.swimming && skipping.near(player.pos) && !skipping.holding) { fishing.reset(); player.setCarry('none'); skipping.pickUp(); ui.toast(MOBILE ? 'A flat stone. Hold THROW, and let go when the needle is near 20\u00b0 and the arm is full.' : 'A flat stone. Hold the mouse button, and let go when the needle is near 20\u00b0 and the arm is full.', 4.5); return; }
@@ -562,6 +563,7 @@ async function boot() {
     if (disc.holding || skipping.holding || rope.state !== 'idle') return '';
     if (rope.near(player.pos)) return 'Swing';
     const dc = disc.canPick(player.pos); if (dc) return dc === 'tee' ? 'Tee off' : 'Disc';
+    if (nearGrill()) return 'Grill';
     if (cairns.near(player.pos)) return 'Stack';
     if (forage.near(player.pos)) return 'Pick';
     if (skipping.near(player.pos)) return 'Stone';
@@ -806,6 +808,28 @@ async function boot() {
   // everything alive that can be seen (for photos, thermal and Clyde Vision)
   const waterlife = new WaterLife(scene);
   const livingSeen = () => [...waterlife.seen, ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
+  // ---- the charcoal grills at the picnic areas: E lights the coals (they glow and smoke for a few minutes)
+  const grills = (landmarks.grills || []).map((g) => ({ ...g, lit: 0, glow: null, puffs: [] }));
+  const nearGrill = () => grills.find((g) => Math.hypot(player.pos.x - g.x, player.pos.z - g.z) < 1.9) || null;
+  const coalMat = new THREE.MeshBasicMaterial({ color: '#ff7a2a', transparent: true, opacity: 0, toneMapped: false }), smokeMat = new THREE.MeshBasicMaterial({ color: '#d8d4ce', transparent: true, opacity: 0.35, depthWrite: false }), puffGeo = new THREE.CircleGeometry(0.16, 14);   // round puffs
+  const lightGrill = (g) => {
+    if (g.lit > 0) { ui.toast('The coals are already going. Give them a while.', 2.2); return; }
+    if (!g.glow) { g.glow = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.32), coalMat.clone()); g.glow.rotation.x = -Math.PI / 2; g.glow.position.set(g.x, g.y + 0.012, g.z); scene.add(g.glow); }
+    g.lit = 180; audio.chop?.(0.2);
+    ui.toast(IS_WINTER ? 'You light the charcoal. In the cold, the warmth off the grill is the best thing in the park.' : 'You light the charcoal. Smoke curls up, and the smell carries across the picnic area.', 3.5);
+    if (!RUN.s.grilled) { RUN.s.grilled = true; RUN.save?.(); JOURNAL.add('Lit a charcoal grill at the picnic area.', player.pos.x, player.pos.z); }
+  };
+  const stepGrills = (dt) => {
+    for (const g of grills) {
+      if (g.lit <= 0 && !g.puffs.length) continue;
+      g.lit = Math.max(0, g.lit - dt);
+      const heat = Math.min(1, g.lit / 20) * Math.min(1, (180 - g.lit) / 6 + 0.2);
+      if (g.glow) g.glow.material.opacity = heat * (0.75 + 0.25 * Math.sin(performance.now() / 180 + g.x));
+      if (g.lit > 0 && Math.random() < dt * 3) { const m = new THREE.Mesh(puffGeo, smokeMat.clone()); m.position.set(g.x + (Math.random() - 0.5) * 0.2, g.y + 0.1, g.z + (Math.random() - 0.5) * 0.2); m.userData.t = 0; scene.add(m); g.puffs.push(m); }
+      for (const m of g.puffs) { m.userData.t += dt; m.position.y += dt * 0.5; m.position.x += dt * 0.15; m.scale.setScalar(1 + m.userData.t * 0.9); m.material.opacity = Math.max(0, 0.32 - m.userData.t * 0.08); m.quaternion.copy(camera.quaternion); if (m.userData.t > 4) { scene.remove(m); m.material.dispose(); } }
+      g.puffs = g.puffs.filter((m) => m.userData.t <= 4);
+    }
+  };
   // ---- night life (nightlife.js): bats, raccoons, an opossum, a skunk, owls, peepers, foxfire... only after dark
   const nightlife = new NightLife(scene, chunks, camera, audio);
   const skunkEl = document.createElement('div'); skunkEl.id = 'skunked'; document.body.appendChild(skunkEl);
@@ -1326,7 +1350,7 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    pad.update(dt);
+    pad.update(dt); stepGrills(dt);
     updateStealth({ speed: player.speed, sitting: player.sitting, sneaking: player.sneaking, running: player.speed > 4.5, dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0 });
     // the first time you run at the animals: how to get close instead
     if (started && player.speed > 4.5 && !player.boat && !RUN.s.sneakHint) { sneakT = (sneakT || 0) + dt; if (sneakT > 3 && livingSeen().some((q) => !String(q.kind).startsWith('water-') && Math.hypot(q.x - player.pos.x, q.z - player.pos.z) < 30)) { RUN.s.sneakHint = true; RUN.save?.(); ui.toast(`Running, you send everything off. To get close to animals, creep (${MOBILE ? 'push the stick only a little' : 'hold Z'}) or stand still and let them come. In the dark they notice you far less.`, 7); } } else sneakT = 0;
@@ -1415,7 +1439,7 @@ async function boot() {
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE && (useT = (useT || 0) - dt) <= 0) { useT = 0.2; const ub = document.getElementById('bUse'), ul = useLabel(); if (ub.textContent !== (ul || 'Use')) ub.textContent = ul || 'Use'; ub.classList.toggle('idle', !ul); const tb = document.getElementById('bTool'), tl = TOOLSHORT[player.carry] || 'Hands'; if (tb.textContent !== tl) tb.textContent = tl; const hb = document.getElementById('bHop'), hl = rope.state === 'swing' ? 'Let go' : player.swimming || player.underwater ? 'Dive' : 'Hop'; if (hb.textContent !== hl) hb.textContent = hl; }
     if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone') && !skipping.holding && !disc.holding ? 'Photo' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
-    ui.prompt(rope.state === 'swing' ? (MOBILE ? 'HOP: let go' : 'SPACE: let go') : !player.boat && !player.swimming && rope.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  take the rope swing` : disc.holding ? (disc.state === 'wind' ? '' : MOBILE ? 'Hold THROW to wind up, let go to throw' : 'Hold the mouse button to wind up, let go to throw') : !player.boat && !player.swimming && disc.canPick(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${disc.canPick(player.pos) === 'tee' ? (() => { const i = disc.teeAt(player.pos), h = disc.holes[i]; return `disc golf: tee off on hole ${i + 1} of ${disc.holes.length} (par ${h.par}, ${h.len} m)`; })() : 'pick up your disc'}` : !player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
+    ui.prompt(rope.state === 'swing' ? (MOBILE ? 'HOP: let go' : 'SPACE: let go') : !player.boat && !player.swimming && rope.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  take the rope swing` : disc.holding ? (disc.state === 'wind' ? '' : MOBILE ? 'Hold THROW to wind up, let go to throw' : 'Hold the mouse button to wind up, let go to throw') : !player.boat && !player.swimming && disc.canPick(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${disc.canPick(player.pos) === 'tee' ? (() => { const i = disc.teeAt(player.pos), h = disc.holes[i]; return `disc golf: tee off on hole ${i + 1} of ${disc.holes.length} (par ${h.par}, ${h.len} m)`; })() : 'pick up your disc'}` : !player.boat && !player.swimming && nearGrill() ? `${MOBILE ? 'USE' : '[E]'}  ${nearGrill().lit > 0 ? 'the coals are going' : 'light the charcoal grill'}` : !player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
     woodsAlive = Math.max(0, 1 - woodsDeadNow - cut / totalTrees());                       // a tree cut down shows at once
