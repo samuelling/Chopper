@@ -14,7 +14,7 @@ import { CARE } from './care.js';
 import { Structures } from './structures.js';
 import { initHud, Gauge, HUD } from './hud.js';
 import { showInterlude, CLYDE_ICON } from './interlude.js';
-import { FUND, MEASURES, SUPPLIES } from './fund.js';
+import { FUND, MEASURES, SUPPLIES, DIVIDEND } from './fund.js';
 import { CATCHES } from './catches.js';
 import { Underwater } from './underwater.js';
 import { mulberry32, clamp } from './noise.js';
@@ -817,6 +817,34 @@ async function boot() {
   sky.onMeteor = () => { const first = GUIDE.addSeen('sky-meteor'); ui.toast(first ? `A shooting star! ${SEASON === 'summer' ? 'The Perseids are on: stay out and watch for more.' : 'Make a wish.'}` : 'Another shooting star.', first ? 5 : 1.6); if (first) JOURNAL.add('Saw a shooting star over the reservoir.', player.pos.x, player.pos.z); };
   // everything alive that can be seen (for photos, thermal and Clyde Vision)
   const waterlife = new WaterLife(scene);
+  // ---- Clyde's nudges: every few seasons from Year Two, a notification at the top of the screen about what more AI use
+  // would bring the park's fund, in the numbers of the moment.  A temptation, the way these things are offered.
+  const nudgeEl = document.createElement('div'); nudgeEl.id = 'clydenudge'; nudgeEl.className = 'notif'; document.body.appendChild(nudgeEl);
+  nudgeEl.addEventListener('click', (e) => { e.stopPropagation(); nudgeEl.classList.remove('in'); if (started && !interludeOn && !droneOn) { document.exitPointerLock?.(); setTimeout(() => { if (!phone.isOpen) phone.open('fund'); else phone.show('fund'); }, 30); } });   // straight to the Park Fund
+  ['pointerdown', 'mousedown', 'touchstart'].forEach((ev) => nudgeEl.addEventListener(ev, (e) => e.stopPropagation()));
+  const clydeNudge = () => {
+    const l0 = Usage.level(), l = l0 === null ? 0 : Math.round(l0); if (l >= 4) return false;
+    const $ = (n) => `$${Math.round(n).toLocaleString('en-US')}`, bal = FUND.balance, ideas = [];
+    const heavy = Math.max(3, l + 1), gain = DIVIDEND[heavy] - DIVIDEND[l];
+    if (gain > 0) ideas.push(['About the fund', `This season\u2019s dividend at ${l0 === null ? 'no' : LEVELS[l].name} use: ${$(DIVIDEND[l])}. At ${LEVELS[heavy].name}, it would be ${$(DIVIDEND[heavy])}. That is ${$(gain)} more for the park, every season.`]);
+    if (FUND.byHand()) ideas.push(['Your finds', 'You are writing up your finds by hand, and hardly anyone sees them. Let me write them up for the park\u2019s page, and each one brings in up to five times as much.']);
+    const want = [...SUPPLIES.filter((x) => x.fun && !RUN.s[x.id] && (!x.needs || RUN.s[x.needs])), ...MEASURES.filter((m) => !FUND.has(m.id))].filter((x) => x.price > bal).sort((a, b) => a.price - b.price)[0];
+    if (want) ideas.push(['A small idea', `You are ${$(want.price - bal)} short of ${want.title.replace(/^(A|An) /, (m) => m.toLowerCase())}. One heavier season would cover it. Just saying.`]);
+    ideas.push(['Visitors', 'Visitors are down this year. I could run the park\u2019s page every week: your photos, the sightings, the walks. More visitors, more in the fund. It would only take a little more of me.']);
+    const m = MEASURES.find((x) => !FUND.has(x.id) && x.kind === 'AI' && x.price > bal);
+    if (m) ideas.push(['The lake', `The town keeps asking about ${m.title.charAt(0).toLowerCase() + m.title.slice(1)}. With a bit more help from me, the fund could pay for it this year.`]);
+    const [head, body] = ideas[(Math.random() * ideas.length) | 0];
+    nudgeEl.innerHTML = `<div class="nicon">${CLYDE_ICON}</div><div class="ntext"><div class="nhead"><b>CLYDE</b><span>now</span></div><b>${head}</b><div>${body}</div></div>`;
+    void nudgeEl.offsetWidth; nudgeEl.classList.add('in'); audio.notify?.();
+    clearTimeout(nudgeEl._t); nudgeEl._t = setTimeout(() => nudgeEl.classList.remove('in'), 11000);
+    return true;
+  };
+  const stepNudge = () => {
+    const S = (RUN.s.nudge ||= {}), n = RUN.n || 0;
+    if (!(RUN.phaseTwo || params.has('nudge')) || n < 5 || S.n === n || (S.last != null && n - S.last < 3)) return;
+    const d = dayProgress(); if (d < 0.22 || d > 0.6 || !started || interludeOn || phone.isOpen || droneOn || knobOn) return;
+    S.n = n; if (clydeNudge()) S.last = n; RUN.save?.();
+  };
   // ---- the hammock (hammock.js): found left in the woods, then yours to hang between any two trees and lie back in
   const hammock = new Hammock(scene, chunks);
   hammock.onMoved = (at) => { if (waypoint?.label === 'A hammock?') setWaypoint(at.x, at.z, 'A hammock?'); };
@@ -1379,7 +1407,7 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    pad.update(dt); stepGrills(dt); hammock.update(dt, player.pos);
+    pad.update(dt); stepGrills(dt); hammock.update(dt, player.pos); stepNudge();
     if (hammock.waiting && !RUN.s.hammockLead && started && !interludeOn) { RUN.s.hammockLead = true; RUN.save?.(); setTimeout(() => { setWaypoint(hammock.S.at.x, hammock.S.at.z, 'A hammock?'); audio.notify?.(); ui.toast('A note pinned to the trailhead board: \u201cLeft my old hammock strung up in the woods. Don\u2019t need it any more. Finders keepers.\u201d Somebody has marked the spot on the park map. It is on your map now.', 8); JOURNAL.add('A note on the trailhead board: a hammock left strung up in the woods, finders keepers. Marked on my map.'); }, 30000); }
     migrants.update(dt, started && !interludeOn, manual ? 0.4 : dayProgress(), player.pos, camera, plants.seen);
     updateStealth({ speed: player.speed, sitting: player.sitting || hammock.lying, sneaking: player.sneaking, running: player.speed > 4.5, dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0 });
@@ -1482,7 +1510,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }
