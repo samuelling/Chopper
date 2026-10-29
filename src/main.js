@@ -930,7 +930,8 @@ async function boot() {
   // ---- forest fire (fire.js): rare, likelier as the woods die; found by the drone's spotter or a paid lookout crew
   const fire = new Fire(scene, { force: params.has('fire') }); fire.kindleDev = params.get('fire') === 'kindle';
   fire.onStart = () => { audio.notify?.(); ui.toast('You smell smoke. A fire has started somewhere in the park. Find it and call it in: follow the smoke, look with the binoculars (Q), fly the drone with its AI spotter, or send a lookout crew from the Park Fund.', 9); JOURNAL.add('Smoke over the trees: a fire somewhere in the park.'); };
-  fire.onLocated = (how) => { setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', drone: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
+  const fixWords = (p) => p > 0.93 ? 'Clyde gives them its position to the metre: they will be there fast.' : p > 0.75 ? 'They know just where it is.' : p > 0.5 ? 'Your fix is fair; they will find it soon enough.' : p > 0.3 ? 'From this far, your fix is rough: they will have to search for it while it grows.' : 'From so far off it is little more than a direction: they will be a long time finding it.';
+  fire.onLocated = (how) => { setTimeout(() => ui.toast(fixWords(fire.s.prec ?? 0.6), 4.5), 4200); setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', droneai: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', drone: 'From the drone you can see exactly where it is, and you phone it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
     if (how === 'kindling') JOURNAL.add('The dying woods caught like kindling. A big fire, seen from town.', fire.x, fire.z); };
   // ---- poachers (poachers.js): only the drone's AI spotter can pick them out; the fine goes to the park fund
   const poachers = new Poachers(scene, { force: params.has('poachers') });
@@ -1035,7 +1036,7 @@ async function boot() {
       L.age += dt; v.set(L.t.x, groundY(L.t.x, L.t.z) + 0.6, L.t.z).project(camera);
       const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05; L.gone = vis ? 0 : L.gone + dt;
       L.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * scr.width}px, ${(-v.y * 0.5 + 0.5) * scr.height}px)`; L.el.style.opacity = vis ? '' : '0';
-      if (!L.done && L.age > 1.3 && L.t.kind === 'fire') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'FIRE'; PRESSURE.bump(0.003); fire.locate('drone'); continue; }
+      if (!L.done && L.age > 1.3 && L.t.kind === 'fire') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'FIRE'; PRESSURE.bump(0.003); fire.locate('droneai', 0.98); continue; }   // the AI's fix: to the metre
       if (!L.done && L.age > 1.3 && L.t.kind === 'poachers') { L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = 'POACHERS'; PRESSURE.bump(0.003); if (poachers.catch()) drone.note('Clyde flags two people with rifles, off-trail in the thick woods. The Environmental Police are on their way. (+0.3% lasting harm)', 5); continue; }
       if (!L.done && L.age > 1.3) {
         L.done = true; L.el.classList.add('locked'); L.el.querySelector('span').textContent = `POSSIBLE ${(LOCKNAME[L.t.kind] || 'find').toUpperCase()}`;
@@ -1404,14 +1405,16 @@ async function boot() {
     binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
     // finding the fire yourself: close enough to see the flames, or the smoke's source in the middle of the binoculars
     if (fire.burning && started && !interludeOn) {
-      if (Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < fire.s.r + 30 && !droneOn) fire.locate('you');
+      if (Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < fire.s.r + 30 && !droneOn) fire.locate('you', 0.85);
+      // the drone over it, the fire in its camera: a good fix (the AI spotter, if it is on, does better still)
+      else if (droneOn && drone.state === 'fly' && Math.hypot(camera.position.x - fire.x, camera.position.z - fire.z) < fire.s.r + 60) { const v = new THREE.Vector3(fire.x, groundY(fire.x, fire.z) + 2, fire.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) fire.locate('drone', 0.85); }
       else if (binos.looking) {
         // the smoke column, some way up, in the middle of the view, and no hill in between
         const sy = groundY(fire.x, fire.z) + 25, v = new THREE.Vector3(fire.x, sy, fire.z).project(camera), c = camera.position;
         // (and no forest canopy: under the trees you see nothing far; find a shore, a hilltop or open water)
         let clear = true; for (let i = 1; i < 60 && clear; i++) { const f = i / 60, x = c.x + (fire.x - c.x) * f, z = c.z + (fire.z - c.z) * f, ly = c.y + (sy - c.y) * f, g = groundY(x, z);
           if (g > ly || (f < 0.9 && ly < g + 12 && sdfAt(x, z) > 3 && (landcoverAt(x, z)?.dens ?? 0) > 0.45)) clear = false; }
-        if (clear && v.z < 1 && Math.abs(v.x) < 0.4 && Math.abs(v.y) < 0.6 && Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < 1300) fire.locate('binoculars');
+        if (clear && v.z < 1 && Math.abs(v.x) < 0.4 && Math.abs(v.y) < 0.6 && Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z) < 1300) { const d = Math.hypot(player.pos.x - fire.x, player.pos.z - fire.z); fire.locate('binoculars', 0.8 - 0.7 * Math.min(1, Math.max(0, d - 120) / 1000)); }   // a bearing and a guess at the distance: rougher the further off
       }
     }
     drone.showHand(player.carry === 'drone' && !player.cameraMode && !player.carryHidden && !phone.isOpen); drone.update(dt); spotter(dt);   // in flight the camera is the drone's

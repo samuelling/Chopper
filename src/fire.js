@@ -68,9 +68,13 @@ export class Fire {
     this._slowSaid = false; this.slow = 1; RUN.save?.(); this.onStart?.(); return true;
   }
   /** someone has found it: the fire service is on the way */
-  locate(how) {
+  /** found and called in.  prec (0..1): how exactly the caller could say where.  A rough fix means the crews spend a
+   *  while searching before they reach it, and the fire keeps growing until they do. */
+  locate(how, prec = 0.6) {
     if (this.s.phase !== 'burning') return false;
-    this.s.phase = 'located'; this.s.located = how; this.s.foundAt = this.s.age; RUN.save?.();
+    prec = Math.max(0.05, Math.min(1, prec));
+    this.s.phase = 'located'; this.s.located = how; this.s.foundAt = this.s.age; this.s.prec = prec;
+    this.s.arrive = 10 + (1 - prec) * 60; this.s.outAfter = this.s.arrive + 30; RUN.save?.();
     this.onLocated?.(how); return true;
   }
   /** the season ends with the fire still going: it burns out on its own, bigger */
@@ -120,9 +124,9 @@ export class Fire {
     if (s.phase === 'wait') { if (playing && (RUN.dev ? this.t : RUN.s.played) >= s.t0) { s.phase = 'burning'; s.age = 0; s.r = R0; s.kindle = this.kindleDev ? 1 : Math.min(1, woodsDead() * 4); RUN.save?.(); this.onStart?.(); } else { this._hide(); return; } }
     if (playing) s.age += dt;
     // it spreads until the crew is there; a ring of trees cut down around it (a firebreak) slows it
-    if (playing && (s.phase === 'burning' || (s.phase === 'located' && s.age - s.foundAt < CREW_ARRIVE))) s.r = Math.min(RMAX, s.r + GROW * (1 + (s.kindle || 0)) * (this.slow ?? 1) * dt);
-    if (s.phase === 'burning' && s.r >= this.seenAt) this.locate(s.kindle > 0.3 ? 'kindling' : 'seen');
-    if (s.phase === 'located' && s.age - s.foundAt > OUT_AFTER) { this._out(false); this._hide(); return; }
+    if (playing && (s.phase === 'burning' || (s.phase === 'located' && s.age - s.foundAt < (s.arrive ?? CREW_ARRIVE)))) s.r = Math.min(RMAX, s.r + GROW * (1 + (s.kindle || 0)) * (this.slow ?? 1) * dt);
+    if (s.phase === 'burning' && s.r >= this.seenAt) this.locate(s.kindle > 0.3 ? 'kindling' : 'seen', 0.35);   // a big column seen from town: they know roughly where
+    if (s.phase === 'located' && s.age - s.foundAt > (s.outAfter ?? OUT_AFTER)) { this._out(false); this._hide(); return; }
     BURNS.live = { x: s.x, z: s.z, r: s.r * 0.85 };
     if ((this._syncT = (this._syncT || 0) - dt) <= 0) {
       this._syncT = 1.5; BURNS.sync(); RUN.save?.();
@@ -133,7 +137,7 @@ export class Fire {
       this.ash.add(this._liveAsh);
     }
     // how fierce: full while it burns, dying down once the crew is on it
-    const fierce = this.fierce = s.phase === 'burning' ? 1 : Math.max(0, 1 - Math.max(0, s.age - s.foundAt - CREW_ARRIVE) / (OUT_AFTER - CREW_ARRIVE));
+    const fierce = this.fierce = s.phase === 'burning' ? 1 : Math.max(0, 1 - Math.max(0, s.age - s.foundAt - (s.arrive ?? CREW_ARRIVE)) / ((s.outAfter ?? OUT_AFTER) - (s.arrive ?? CREW_ARRIVE)));
     const t = this.t, nf = Math.round(NF * Math.min(1, 0.3 + s.r / 40) * (fierce > 0.02 ? 1 : 0));
     for (let i = 0; i < nf; i++) {
       const a = i * 2.39996, rr = s.r * (0.72 + 0.28 * ((i * 0.618) % 1)), x = s.x + Math.cos(a) * rr, z = s.z + Math.sin(a) * rr, y = groundY(x, z);
