@@ -460,8 +460,8 @@ export class Landmarks {
   }
 
 
-  /** the park's sign on the trailhead board, both faces: dark brown routed wood, cream letters in a slab serif, the way
-   *  the Commonwealth's park signs look.  Drawn once the font has loaded (and again if it arrives late). */
+  /** the park's sign on the trailhead board, both faces: dark brown routed wood, cream letters in Helvetica (or Arial),
+   *  the way the Commonwealth's park signs look. */
   _parkSign(x, y, z) {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
@@ -472,15 +472,17 @@ export class Landmarks {
       const routed = (fn) => { c.save(); c.translate(3, 4); c.fillStyle = c.strokeStyle = '#1f130b'; fn(); c.restore(); c.fillStyle = c.strokeStyle = '#efe2bf'; fn(); };   // carved: a dark lip, then the cream in it
       routed(() => { c.lineWidth = 9; c.beginPath(); c.roundRect(34, 34, W - 68, H - 68, 26); c.stroke(); });
       c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-      const fit = (t, size, maxW) => { let s = size; do { c.font = `700 ${s}px Bitter, Rockwell, "Roboto Slab", Georgia, serif`; s -= 4; } while (c.measureText(t).width > maxW && s > 20); };
-      fit('ASHLAND', 196, W - 160); const f1 = c.font; routed(() => { c.font = f1; c.fillText('ASHLAND', W / 2, 262); });
-      fit('STATE PARK', 112, W - 220); const f2 = c.font; routed(() => { c.font = f2; c.letterSpacing = '6px'; c.fillText('STATE PARK', W / 2, 392); c.letterSpacing = '0px'; });
+      const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+      const fit = (t, size, maxW, wt = 400) => { let s = size; do { c.font = `${wt} ${s}px ${FONT}`; s -= 4; } while (c.measureText(t).width > maxW && s > 20); };
+      // ASHLAND in capitals, a little heavier than the rest (a regular weight with a thin outline of itself: medium, the
+      // same on every device, whatever weights its Helvetica or Arial has)
+      fit('ASHLAND', 200, W - 170); const f1 = c.font; routed(() => { c.font = f1; c.lineWidth = 5; c.lineJoin = 'round'; c.fillText('ASHLAND', W / 2, 262); c.strokeText('ASHLAND', W / 2, 262); });
+      fit('State Park', 118, W - 260); const f2 = c.font; routed(() => { c.font = f2; c.fillText('State Park', W / 2, 390); });
       routed(() => { c.fillRect(W / 2 - 230, 430, 460, 5); });
       fit('Department of Conservation & Recreation', 40, W - 200); const f3 = c.font; routed(() => { c.font = f3; c.fillText('Department of Conservation & Recreation', W / 2, 496); });
       tex.needsUpdate = true;
     };
     draw();
-    try { document.fonts?.load?.('700 100px Bitter').then(draw, () => {}); } catch {}
     const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(1.86, 1.06);
     this.parkSign = { x, y, z };
     for (const side of [1, -1]) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z + side * 0.045); m.rotation.y = side > 0 ? 0 : Math.PI; this.group.add(m); }
