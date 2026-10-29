@@ -36,8 +36,10 @@ export class TouchControls {
     // ?touchdebug=1: a dot where each touch lands, outlined in green if it hit a button
     const dbg = new URLSearchParams(location.search).has('touchdebug');
     const mark = (x, y, hit) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;left:${x - 9}px;top:${y - 9}px;width:18px;height:18px;border-radius:50%;z-index:9999;pointer-events:none;background:${hit ? 'rgba(80,220,120,.8)' : 'rgba(255,80,60,.8)'};box-shadow:0 0 0 2px #fff`; document.body.appendChild(d); setTimeout(() => d.remove(), 1200); };
+    // a few things must get a real tap from iOS (it only lets sound start on one): the touch layer leaves them alone
+    const passThrough = (e) => !!e.target?.closest?.('#soundpill');
     addEventListener('touchstart', (e) => {
-      if (!this.root.classList.contains('on')) return;
+      if (!this.root.classList.contains('on') || passThrough(e)) return;
       e.preventDefault();                 // also suppresses emulated mouse events
       unshift();
       for (const t of e.changedTouches) {
@@ -72,7 +74,7 @@ export class TouchControls {
       }
     }, opts);
     const end = (e) => {
-      if (!this.root.classList.contains('on')) return;
+      if (!this.root.classList.contains('on') || passThrough(e)) return;
       e.preventDefault();
       for (const t of e.changedTouches) {
         if (this.joy && t.identifier === this.joy.id) { this.joy = null; this.player.touch.x = this.player.touch.y = 0; this.knob.style.transform = ''; this.stick.classList.remove('float'); this.stick.style.left = this.stick.style.top = this.stick.style.bottom = ''; }

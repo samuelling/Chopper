@@ -740,6 +740,11 @@ async function boot() {
   // sound on iOS: unlocked by the first real tap, click or key (it stays silent until the game starts it)
   // (touchend and click, not pointerup: iOS counts the end of the touch, and the click after it, as the tap)
   for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, (e) => { if (e.isTrusted) audio.unlock(); }, { capture: true, passive: true });
+  // after a season changes the page reloads, and iOS wants a fresh tap before any sound: a small button asks for one
+  const soundPill = document.getElementById('soundpill'); document.body.appendChild(soundPill);   // on top of everything, not inside the HUD
+  soundPill.addEventListener('click', (e) => { e.stopPropagation(); audio.unlock(); audio.init(); setTimeout(() => { soundPill.hidden = !audio.blocked; }, 250); });
+  ['pointerdown', 'mousedown', 'touchstart'].forEach((ev) => soundPill.addEventListener(ev, (e) => e.stopPropagation()));
+  setInterval(() => { const b = audio.blocked; if (soundPill.hidden === b) soundPill.hidden = !b; }, 600);
   // back from the home screen or a call: iOS suspends sound, and only a tap can bring it back
   document.addEventListener('visibilitychange', () => { if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.ctx.resume?.().catch?.(() => {}); });
   // ---- game controllers (gamepad.js): the sticks and buttons drive the same actions as the keys and the touch buttons

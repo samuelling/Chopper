@@ -13,8 +13,11 @@ export class Audio {
     if (this.ctx) { if (this.ctx.state !== 'running') { this.ctx.resume?.()?.catch?.(() => {}); this._kick(); } return; }
     this._quiet = true; this.init();
   }
+  /** the game wants sound and the browser has not let it start (iOS after a reload, until a real tap) */
+  get blocked() { return !!this.wanted && (!this.ctx || this.ctx.state !== 'running'); }
   _kick() { try { const ctx = this.ctx, sb = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource(); src.buffer = sb; src.connect(ctx.destination); src.start(0); } catch {} }
   init() {
+    this.wanted = true;   // the game has asked for sound (so if it is not playing, the browser is holding it back)
     if (this.ctx) {
       this.ctx.resume();
       if (this._quiet) { this._quiet = false; this.master.gain.setTargetAtTime(0.7, this.ctx.currentTime + 0.05, 1.2); }   // the only automation on it, so nothing can hold it at 0
