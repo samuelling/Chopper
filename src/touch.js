@@ -37,7 +37,7 @@ export class TouchControls {
     const dbg = new URLSearchParams(location.search).has('touchdebug');
     const mark = (x, y, hit) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;left:${x - 9}px;top:${y - 9}px;width:18px;height:18px;border-radius:50%;z-index:9999;pointer-events:none;background:${hit ? 'rgba(80,220,120,.8)' : 'rgba(255,80,60,.8)'};box-shadow:0 0 0 2px #fff`; document.body.appendChild(d); setTimeout(() => d.remove(), 1200); };
     // a few things must get a real tap from iOS (it only lets sound start on one): the touch layer leaves them alone
-    const passThrough = (e) => !!e.target?.closest?.('#soundpill');
+    const passThrough = (e) => !!e.target?.closest?.('#soundpill, #credits, .staymenu');   // and the ending's buttons
     addEventListener('touchstart', (e) => {
       if (!this.root.classList.contains('on') || passThrough(e)) return;
       e.preventDefault();                 // also suppresses emulated mouse events

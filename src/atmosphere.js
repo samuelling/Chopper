@@ -145,7 +145,7 @@ void main(){
 
 const SKY_FRAG = /* glsl */ `
 uniform vec3 uTop, uMid, uHorizon, uSunDir, uSunColor, uCloudLit, uCloudShade;
-uniform float uTime, uCloudAmt;
+uniform float uTime, uCloudAmt, uCloudOff;
 varying vec3 vDir;
 ${GLSL_NOISE}
 void main(){
@@ -160,7 +160,7 @@ void main(){
   if (d.y > 0.0) {
     vec2 p = d.xz / (d.y + 0.15);
     p *= vec2(0.6, 1.5) * 1.1;
-    p += vec2(uTime * 0.005, 0.0);
+    p += vec2(uTime * 0.005 + uCloudOff, 0.0);
     float n  = fbm4(p);
     float thr = 0.60 - uCloudAmt * 0.13;
     float m  = step(thr, n);
@@ -293,7 +293,7 @@ export class Atmosphere {
       uTop: { value: new THREE.Color() }, uMid: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() },
       uSunDir: { value: new THREE.Vector3(0, 0.4, -1).normalize() }, uSunColor: { value: new THREE.Color() },
       uCloudLit: { value: new THREE.Color() }, uCloudShade: { value: new THREE.Color() },
-      uTime: shared.time, uCloudAmt: { value: 0.5 },
+      uTime: shared.time, uCloudAmt: { value: 0.5 }, uCloudOff: { value: 0 },   // uCloudOff: extra drift, when the day is going by fast
     };
     this.sky = new THREE.Mesh(
       new THREE.SphereGeometry(2600, 40, 20),

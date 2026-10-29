@@ -80,7 +80,7 @@ A gentle on-screen tutorial introduces the controls one at a time after the firs
 
 ## Being part of the place
 
-- **Sit and wait (B):** crouch and stay still; the light moves on (mist, gold, dusk, night) and animals relax and come closer. Any step stands you up.
+- **Sit and wait (B):** crouch and stay still; the light moves on (mist, gold, dusk, night) and animals relax and come closer. Any step stands you up. The sun crosses the sky all day (east-north-east at dawn, due south at midday, west-north-west at dusk), so shadows swing round even while the light holds at one mood; sitting or lying in the hammock runs the day four times faster and the clouds race over like a time-lapse.
 - **Deer** graze, freeze and watch you, and bolt with the white tail up; very still, they drift near. **Fox** (dawn, dusk, night), **chipmunks** (day), **frogs** on the shore (warm months), a **beaver** at dusk, **wood ducks** by day, **fireflies** at dusk in summer, **butterflies** and **dragonflies**, and **owls** and **coyotes** you mostly hear. All are invented behaviours of habitat-typical species, not survey data.
 - **Weather:** spells of rain (and distant thunder in summer) and, in winter, snowfall. `?weather=rain` or `?weather=snow` forces it for testing.
 - **Places (phone):** name any spot you stand on, just for you; they appear on your map. **Fog of war:** the map is dark until you have walked there. **Ruins** (cellar holes, a stone well, boundary stones; invented positions) are found by wandering near them. A **journal** logs it all.

@@ -714,6 +714,7 @@ async function boot() {
   };
   let manual = RUN.dev, arcPhase = -1, arcT = 0;                        // test links (?season=) keep the old hand-set light
   let dayRing = null, dayRingT = 0;
+  let timelapse = 0;   // (+x is east and +z south: the sun rises east-north-east, is due south at midday, sets west-north-west)
   const dayProgress = () => Math.min(1, Math.max(0, RUN.s.played / Math.max(1, RUN.len)));
   // the drone flies at midday; as it drops to the ground the light slides into the day's own (morning, at a season's start)
   let dropT = null;
@@ -727,8 +728,11 @@ async function boot() {
     }
     const [i0, i1, k, ph] = arcAt(dayProgress());
     if (ph !== arcPhase) { if (arcPhase >= 0 && started && !interludeOn) ui.toast({ 1: 'The morning warms toward midday.', 2: 'The light turns low and gold.', 3: 'Night comes on.' }[ph] ?? '', 3); arcPhase = ph; }
-    arcT -= dt; if (arcT > 0) return; arcT = 0.15;
+    arcT -= dt; if (arcT > 0) return; arcT = 0.1;
     atmosphere.setArc(i0, i1, k); mood = k < 0.5 ? i0 : i1;
+    // the sun crosses the sky all day long (east in the morning, south at midday, west at dusk; +x east, +z south), so the shadows swing
+    // round even while the light holds at one of the day's moods; at night the moon hangs where the sun went down
+    { const q = Math.min(1, dayProgress() / 0.66), a = 0.35 + q * (Math.PI - 0.7); atmosphere.setSunAzimuth(Math.cos(a), Math.sin(a)); }
   };
   const handLight = (i) => { manual = true; setMood(i); ui.toast(`Light: ${PRESETS[i].name}. ${MOBILE ? 'Keep tapping the sun to return to the day.' : 'Press 0 to follow the day again.'}`, 2.6); };
   const followDay = () => { manual = RUN.dev; if (manual) return; const [i0, i1, k] = arcAt(dayProgress()); setMood(k < 0.5 ? i0 : i1); arcT = 1.8; ui.toast(`Following the day: ${PHASE[arcAt(dayProgress())[3]]}.`, 2); };
@@ -1250,6 +1254,7 @@ async function boot() {
   stayBtn.addEventListener('click', (e) => { e.stopPropagation(); stayBtn.hidden = true; showFinishedMenu(); ui.els.hud.classList.remove('on'); });
   function beginEnding(kind) {
     if (ending) return; ending = true; endingKind = kind; drone.forceOff();
+    touch.hide?.();   // the touch layer takes every tap on the page while it is on: the credits' buttons need them
     // the wild keeps going under the credits: if the park lived, the light comes up to morning and the birds sing; if the reservoir died, dusk and wind
     manual = true; atmosphere.setPreset(kind === 'life' ? ARC[0] : ARC[2]); mood = kind === 'life' ? ARC[0] : ARC[2];
     if (!RUN.dev) { RUN.s.end = kind; RUN.save(); }
@@ -1270,8 +1275,11 @@ async function boot() {
         if (!bleak) return;
         datacenter.onDescend = () => { const sc = root.querySelector('.crscroll'); if (sc) { sc.style.transition = 'opacity 4s'; sc.style.opacity = '0'; } };
         datacenter.onArrive = () => {   // on the sign: the credits fade away, and it is just the building, the sign and the hum
-          root.style.transition = 'opacity 6s'; root.style.opacity = '0'; root.style.pointerEvents = 'none';
-          setTimeout(() => { stayBtn.hidden = false; stayBtn.style.opacity = '0.35'; }, 14000);   // a quiet way back to the menu, later
+          // the dark wash and the buttons fade with the words; only a quiet way back to the start menu stays, top right
+          root.style.transition = 'background 6s'; root.style.background = 'transparent';
+          const end = root.querySelector('.crend'), skip = root.querySelector('.crskip');
+          if (end) { end.style.transition = 'opacity 6s'; end.style.opacity = '0'; setTimeout(() => { end.hidden = true; }, 6000); }
+          if (skip) { skip.textContent = 'Start menu'; skip.style.transition = 'opacity 6s'; skip.style.opacity = '0.4'; }
         };
         setTimeout(() => { flyover.stop(); player.carryHidden = true; player.refreshCarry(); datacenter.start(audio); }, 2500);
       },
@@ -1398,7 +1406,10 @@ async function boot() {
     const tdt = dt * SPEED.v;                                   // world time: seasons, harm and healing, the crew
     PRESSURE.update(tdt); checkEndings(tdt);
     if (!RUN.dev && started && player.locked && !interludeOn) {
-      RUN.s.played += tdt * (((player.sitting && player.sit > 0.9) || hammock.lying) && arcPhase < 3 ? 4 : 1);   // sit and wait: the day goes by faster around you (but not the night: sit and watch the stars)
+      const fastDay = ((player.sitting && player.sit > 0.9) || hammock.lying) && arcPhase < 3;
+      RUN.s.played += tdt * (fastDay ? 4 : 1);
+      timelapse += ((fastDay ? 1 : 0) - timelapse) * Math.min(1, dt * 1.5);                       // eases in and out
+      atmosphere.skyUniforms.uCloudOff.value += dt * 0.005 * 14 * timelapse;                     // the clouds race over, like a time-lapse   // sit and wait: the day goes by faster around you (but not the night: sit and watch the stars)
       document.querySelector('#seasonbar i').style.width = `${Math.min(100, RUN.s.played / RUN.len * 100)}%`;
       if ((dayRingT -= dt) <= 0) { dayRingT = 0.5; const d = dayProgress(), r = (dayRing ||= document.querySelector('#bMood .dayring')); if (r) { r.style.setProperty('--day', d.toFixed(4)); r.style.setProperty('--dayc', d >= 0.66 ? 'rgba(150,180,255,.95)' : d >= 0.56 ? 'rgba(255,150,90,.95)' : 'rgba(255,214,140,.95)'); } }   // gold by day, sunset orange, moonlight after dusk
       if (RUN.s.played >= RUN.len) (RUN.lastSeason ? beginEnding('life') : RUN.quiet ? quietTurn() : beginInterlude());
