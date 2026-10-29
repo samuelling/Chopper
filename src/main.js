@@ -738,7 +738,10 @@ async function boot() {
   // ---- go to bed: at night, skip on to the next season instead of staying up
   const nightNow = () => started && !manual && dayProgress() >= 0.66;
   // sound on iOS: unlocked by the first real tap, click or key (it stays silent until the game starts it)
-  for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, (e) => { if (e.isTrusted) audio.unlock(); }, { capture: true, passive: true });
+  // (touchend and click, not pointerup: iOS counts the end of the touch, and the click after it, as the tap)
+  for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, (e) => { if (e.isTrusted) audio.unlock(); }, { capture: true, passive: true });
+  // back from the home screen or a call: iOS suspends sound, and only a tap can bring it back
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.ctx.resume?.().catch?.(() => {}); });
   // ---- game controllers (gamepad.js): the sticks and buttons drive the same actions as the keys and the touch buttons
   const tap = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true })); dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); };
   const pausedUp = () => !ui.els.paused.classList.contains('hidden');

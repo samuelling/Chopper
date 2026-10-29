@@ -8,9 +8,12 @@ export class Audio {
    *  every one after while the sound is suspended (iOS suspends it when you leave the app).  It makes the sound ready
    *  but silent; init() then fades it in when the game starts, from wherever that happens (a timer, the fly-in). */
   unlock() {
-    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume?.(); return; }
+    // iPhone: web sound is 'ambient' by default, which the ring/silent switch mutes entirely; a game wants to be heard
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch {}
+    if (this.ctx) { if (this.ctx.state !== 'running') { this.ctx.resume?.()?.catch?.(() => {}); this._kick(); } return; }
     this._quiet = true; this.init();
   }
+  _kick() { try { const ctx = this.ctx, sb = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource(); src.buffer = sb; src.connect(ctx.destination); src.start(0); } catch {} }
   init() {
     if (this.ctx) {
       this.ctx.resume();
@@ -22,7 +25,8 @@ export class Audio {
     const ctx = this.ctx = new C();
     try { this.master = new GainNode(ctx, { gain: 0 }); } catch { this.master = ctx.createGain(); this.master.gain.value = 0; }   // starts silent without a scheduled value
     if (!this._quiet) this.master.gain.setTargetAtTime(0.7, ctx.currentTime + 0.05, 1.2);
-    { const sb = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource(); src.buffer = sb; src.connect(ctx.destination); src.start(0); }   // iOS: a silent sound inside the tap opens the output const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.22; this.master.connect(comp); this.muff = ctx.createBiquadFilter(); this.muff.type = 'lowpass'; this.muff.frequency.value = 22000; this.muff.Q.value = 0.5; comp.connect(this.muff); this.muff.connect(ctx.destination);   // fades in rather than starting at full
+    this._kick();   // iOS: a silent sound inside the tap opens the output
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.22; this.master.connect(comp); this.muff = ctx.createBiquadFilter(); this.muff.type = 'lowpass'; this.muff.frequency.value = 22000; this.muff.Q.value = 0.5; comp.connect(this.muff); this.muff.connect(ctx.destination);   // fades in rather than starting at full
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
