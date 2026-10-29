@@ -58,16 +58,21 @@ export class DiscGolf {
   }
   get holding() { return this.state === 'hold' || this.state === 'wind'; }
   get hole() { return this.holes[this.S.hole] || null; }
-  /** what E would do here: 'tee' (start the hole), 'disc' (pick up your disc where it lies), or null */
+  /** the tee you are standing on (any hole), or -1 */
+  teeAt(p) { return this.holes.findIndex((h) => Math.hypot(p.x - h.tx, p.z - h.tz) < 4); }
+  /** what E would do here: 'tee' (start a hole: the one whose tee pad you are on), 'disc' (pick up your disc), or null */
   canPick(p) {
-    if (this.holding || this.state === 'fly' || !this.hole) return null;
-    if (this.S.lie) return Math.hypot(p.x - this.S.lie.x, p.z - this.S.lie.z) < 2.5 ? 'disc' : null;
-    return Math.hypot(p.x - this.hole.tx, p.z - this.hole.tz) < 3 ? 'tee' : null;
+    if (this.holding || this.state === 'fly' || !this.holes.length) return null;
+    if (this.S.lie && Math.hypot(p.x - this.S.lie.x, p.z - this.S.lie.z) < 2.5) return 'disc';
+    return this.teeAt(p) >= 0 ? 'tee' : null;
   }
   pick(p) {
     const what = this.canPick(p); if (!what) return null;
     if (what === 'disc') { this.disc.visible = false; this.S.lie = null; }
-    else { this.S.strokes = 0; }
+    else {   // any tee starts that hole (leaving a hole half-played is fine: the disc comes back to your hand)
+      const i = this.teeAt(p); if (i !== this.S.hole) { if (i < this.S.hole || !this.S.scores.length) this.S.scores = []; this.S.hole = i; }
+      this.S.strokes = 0; this.S.lie = null; this.disc.visible = false;
+    }
     this.state = 'hold'; this.t = 0; RUN.save?.(); return what;
   }
   press() { if (this.state === 'hold') { this.state = 'wind'; this.t = 0; } }
