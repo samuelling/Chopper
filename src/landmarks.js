@@ -363,8 +363,9 @@ export class Landmarks {
       const ty = groundY(tx, tz);
       this._box(b, tx - 0.8, ty - 0.1, tz, 0.14, 2.1, 0.14, '#5b4430');
       this._box(b, tx + 0.8, ty - 0.1, tz, 0.14, 2.1, 0.14, '#5b4430');
-      this._box(b, tx, ty + 1.0, tz, 1.9, 1.1, 0.08, '#d9c79a');
+      this._box(b, tx, ty + 1.0, tz, 1.9, 1.1, 0.08, '#4a3020');
       this._box(b, tx, ty + 2.05, tz, 2.1, 0.12, 0.2, '#5b4430');
+      this._parkSign(tx, ty + 1.0 + 0.55, tz);
     }
     this._emit(b);
 
@@ -458,6 +459,32 @@ export class Landmarks {
     return Math.hypot(p.x - this.gate.pos.x, p.z - this.gate.pos.z) < 4.2 && Math.abs(p.y - this.gate.pos.y) < 4;
   }
 
+
+  /** the park's sign on the trailhead board, both faces: dark brown routed wood, cream letters in a slab serif, the way
+   *  the Commonwealth's park signs look.  Drawn once the font has loaded (and again if it arrives late). */
+  _parkSign(x, y, z) {
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const draw = () => {
+      const c = cv.getContext('2d'), W = cv.width, H = cv.height;
+      c.fillStyle = '#4a3020'; c.fillRect(0, 0, W, H);
+      for (let i = 0; i < 70; i++) { const yy = (i / 70) * H + Math.sin(i * 7.3) * 4; c.strokeStyle = `rgba(${i % 3 ? '30,18,10' : '110,74,46'},${0.18 + (i % 5) * 0.03})`; c.lineWidth = 1 + (i % 4); c.beginPath(); c.moveTo(0, yy); for (let xx = 0; xx <= W; xx += 64) c.lineTo(xx, yy + Math.sin(xx * 0.006 + i) * 5); c.stroke(); }   // the grain
+      const routed = (fn) => { c.save(); c.translate(3, 4); c.fillStyle = c.strokeStyle = '#1f130b'; fn(); c.restore(); c.fillStyle = c.strokeStyle = '#efe2bf'; fn(); };   // carved: a dark lip, then the cream in it
+      routed(() => { c.lineWidth = 9; c.beginPath(); c.roundRect(34, 34, W - 68, H - 68, 26); c.stroke(); });
+      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      const fit = (t, size, maxW) => { let s = size; do { c.font = `700 ${s}px Bitter, Rockwell, "Roboto Slab", Georgia, serif`; s -= 4; } while (c.measureText(t).width > maxW && s > 20); };
+      fit('ASHLAND', 196, W - 160); const f1 = c.font; routed(() => { c.font = f1; c.fillText('ASHLAND', W / 2, 262); });
+      fit('STATE PARK', 112, W - 220); const f2 = c.font; routed(() => { c.font = f2; c.letterSpacing = '6px'; c.fillText('STATE PARK', W / 2, 392); c.letterSpacing = '0px'; });
+      routed(() => { c.fillRect(W / 2 - 230, 430, 460, 5); });
+      fit('Department of Conservation & Recreation', 40, W - 200); const f3 = c.font; routed(() => { c.font = f3; c.fillText('Department of Conservation & Recreation', W / 2, 496); });
+      tex.needsUpdate = true;
+    };
+    draw();
+    try { document.fonts?.load?.('700 100px Bitter').then(draw, () => {}); } catch {}
+    const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(1.86, 1.06);
+    this.parkSign = { x, y, z };
+    for (const side of [1, -1]) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z + side * 0.045); m.rotation.y = side > 0 ? 0 : Math.PI; this.group.add(m); }
+  }
   update(dt, player) {
     const t = shared.time.value;
     // wheel turns while the gate is open
