@@ -784,7 +784,18 @@ async function boot() {
   ['pointerdown', 'mousedown', 'touchstart'].forEach((ev) => soundPill.addEventListener(ev, (e) => e.stopPropagation()));
   setInterval(() => { const b = audio.blocked; if (soundPill.hidden === b) soundPill.hidden = !b; }, 600);
   // back from the home screen or a call: iOS suspends sound, and only a tap can bring it back
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.ctx.resume?.().catch?.(() => {}); });
+  // phones and tablets: the sound goes quiet while the game is in the background (iOS would otherwise keep playing it,
+  // since the sound is set to 'playback' so the silent switch does not mute it), and comes back when you return
+  const bgMute = (away) => {
+    if (!audio.ctx) return;
+    if (away) { if (audio._bg) return; audio._bg = true; try { audio._bgGain = audio.master.gain.value; audio.master.gain.cancelScheduledValues(audio.ctx.currentTime); audio.master.gain.setValueAtTime(0, audio.ctx.currentTime); } catch {} audio.ctx.suspend?.().catch?.(() => {}); }
+    else if (audio._bg) { audio._bg = false; audio.ctx.resume?.().catch?.(() => {}); try { audio.master.gain.setTargetAtTime(audio._bgGain ?? 0.7, audio.ctx.currentTime + 0.05, 0.6); } catch {} }   // back to its level (still silent if it had faded for a season's turn)
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (MOBILE) bgMute(document.hidden);
+    if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.ctx.resume?.().catch?.(() => {});
+  });
+  if (MOBILE) { addEventListener('pagehide', () => bgMute(true)); addEventListener('pageshow', () => { if (!document.hidden) bgMute(false); }); }
   // ---- game controllers (gamepad.js): the sticks and buttons drive the same actions as the keys and the touch buttons
   const tap = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true })); dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })); };
   const pausedUp = () => !ui.els.paused.classList.contains('hidden');
