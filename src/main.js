@@ -59,6 +59,7 @@ import { NightLife, NIGHT } from './nightlife.js';
 import { Goggles, GOGGLES, OWN_KEY, AI_SUB } from './goggles.js';
 import { Pad } from './gamepad.js';
 import { WaterLife } from './waterlife.js';
+import { Migrants, MIGRANTS } from './migrants.js';
 import { updateStealth } from './stealth.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
@@ -171,6 +172,8 @@ async function boot() {
   const careActs = new CareActs(scene);
   careActs.onToast = (t) => ui.toast(t, 3);
   addEventListener('keydown', (e) => { if (!started || !player.locked || e.repeat) return; if (player.boat) return; if (e.code === 'KeyE' && !landmarks.nearGate(player.pos) && !nearBoat()) careActs.pickUp(); if (e.code === 'KeyG') careActs.plant(player); });
+  // seeds and saplings in hand (Q): a click plants one where you are looking, again and again
+  addEventListener('mousedown', (e) => { if (e.button === 0 && started && player.locked && !player.cameraMode && !player.boat && player.carry === 'seeds' && document.pointerLockElement === renderer.domElement) { careActs.plant(player); if (!hasPlants()) player.setCarry('none'); } });
   const weather = new Weather(scene, { mobile: MOBILE, force: params.get('weather') });
   const critters = new Critters(scene, chunks, { mobile: MOBILE });
   const fox = new Fox(scene, chunks, { mobile: MOBILE });
@@ -551,8 +554,8 @@ async function boot() {
   // benches and picnic tables: sitting near one puts you on it, at seat height, facing the view (or the table)
   const nearSeat = () => { let best = null, bd = 1.9; for (const s of [...(landmarks.seats || []), ...structures.seats]) { const d = Math.hypot(s.x - player.pos.x, s.z - player.pos.z); if (d < bd) { bd = d; best = s; } } return best; };
   // the touch Use button says what it will do here (and sits you down when there is nothing else)
-  const TOOLNAME = { phone: 'Phone in hand', axe: 'Axe in hand', rod: 'Fishing rod in hand', binoculars: 'Binoculars in hand', skis: 'Skis on', drone: 'Drone in hand', none: 'Hands free' };
-  const TOOLSHORT = { phone: 'Phone', axe: 'Axe', rod: 'Rod', binoculars: 'Binocs', skis: 'Skis', drone: 'Drone', none: 'Hands' };
+  const TOOLNAME = { seeds: 'Seeds and saplings in hand', phone: 'Phone in hand', axe: 'Axe in hand', rod: 'Fishing rod in hand', binoculars: 'Binoculars in hand', skis: 'Skis on', drone: 'Drone in hand', none: 'Hands free' };
+  const TOOLSHORT = { seeds: 'Plant', phone: 'Phone', axe: 'Axe', rod: 'Rod', binoculars: 'Binocs', skis: 'Skis', drone: 'Drone', none: 'Hands' };
   let useT = 0;
   const useLabel = () => {
     if (!started || player.cameraMode) return '';
@@ -591,6 +594,7 @@ async function boot() {
       else if (disc.holding) { if (down) disc.press(); else disc.release(player); }
       else if (player.carry === 'rod') { player.mouseDown = down; if (down) player.events.cast?.(); }
       else if (player.carry === 'drone') { if (down) player.events.droneLaunch?.(); }
+      else if (player.carry === 'seeds') { if (down && !player.boat) { careActs.plant(player); if (!hasPlants()) player.setCarry('none'); } }
       else if (player.carry === 'binoculars') { if (down) player.events.binoc?.(); }
       else if (down && (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone')) setCameraMode(true);   // hands free: the big button is the camera
       else if (down && !player.boat) player.startSwing();
@@ -793,7 +797,8 @@ async function boot() {
   const goToBed = () => { if (!nightNow() || interludeOn) { ui.toast('Not yet: bed is for after dark.', 2); return; } torchOn = false; ui.toast('You head home to bed.', 2.5); RUN.s.played = RUN.len; };
   addEventListener('keydown', (e) => { if (!started || e.repeat || interludeOn || phone.isOpen) return; if (e.code === 'KeyL') toggleTorch(); if (e.code === 'KeyN') goToBed(); });
   // the Q kit, in order (skis only in winter, the drone once you own it)
-  const nextCarry = (c) => { const L = ['phone', 'axe', 'rod', 'binoculars', ...(IS_WINTER ? ['skis'] : []), ...(RUN.s.drone ? ['drone'] : []), 'none']; return L[(L.indexOf(c) + 1) % L.length] || 'phone'; };
+  const hasPlants = () => (RUN.s.seeds || 0) > 0 || (RUN.s.saplingStock || 0) > 0;
+  const nextCarry = (c) => { const L = ['phone', 'axe', 'rod', 'binoculars', ...(hasPlants() ? ['seeds'] : []), ...(IS_WINTER ? ['skis'] : []), ...(RUN.s.drone ? ['drone'] : []), 'none']; return L[(L.indexOf(c) + 1) % L.length] || 'phone'; };
   // cross-country skis (winter): long planks at the bottom of the view and a pole in each hand that plants as you go
   const skiModel = (() => {
     const g = new THREE.Group(), ski = simpleToon('#b8322a'), pole = simpleToon('#2a2a2e'), basket = simpleToon('#1a1a1c');
@@ -807,7 +812,15 @@ async function boot() {
   sky.onMeteor = () => { const first = GUIDE.addSeen('sky-meteor'); ui.toast(first ? `A shooting star! ${SEASON === 'summer' ? 'The Perseids are on: stay out and watch for more.' : 'Make a wish.'}` : 'Another shooting star.', first ? 5 : 1.6); if (first) JOURNAL.add('Saw a shooting star over the reservoir.', player.pos.x, player.pos.z); };
   // everything alive that can be seen (for photos, thermal and Clyde Vision)
   const waterlife = new WaterLife(scene);
-  const livingSeen = () => [...waterlife.seen, ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
+  // ---- migrants (migrants.js): birds only here while they pass through, at their real times of year; the rare ones are legendary
+  const migrants = new Migrants(scene, chunks, audio);
+  migrants.onArrive = (id, M) => { if (M.legend) return; const say = { hummingbird: 'A hummingbird is working the flowers nearby. Listen for the hum.', yrwarbler: 'A wave of yellow-rumped warblers has come through, working the treetops. They will not stay long.', magnolia: 'Magnolia warblers are passing through, high in the trees. A week or two a year, and then gone.', oriole: 'A Baltimore oriole is back, singing from the trees by the water.', grosbeak: 'A rose-breasted grosbeak is singing in the treetops: back from South America.', loon: 'A loon has stopped on the reservoir to rest. Listen for it.', bufflehead: 'A little raft of buffleheads has arrived on the water, down from the north.', nighthawk: 'Nighthawks are hawking for insects over the water: migrants, heading south.', kinglet: 'Kinglets are passing through, flicking about in the trees.', junco: 'The juncos are here: dark-eyed juncos, down from the north for the winter, in the leaves at the trail edge.', wtsparrow: 'White-throated sparrows are in the brush. Listen for Old Sam Peabody.', treesparrow: 'American tree sparrows, down from the Arctic, are feeding at the weedy edges.' }[id]; if (say) { audio.notify?.(); ui.toast(`Passing through: ${say}`, 6); } };
+  migrants.onLegend = (id, M, x, z) => {
+    audio.legend?.(); legendBan.innerHTML = `<small>Legendary sighting</small><b>${M.name}</b>`; legendBan.classList.add('on'); setTimeout(() => legendBan.classList.remove('on'), 4800);
+    setTimeout(() => ui.toast(`${M.a.replace(/^./, (c) => c.toUpperCase())}, here! Birders drive across the state for this. ${GUIDE.photographed('mig-' + id) ? '' : MOBILE ? 'Quick: Phone \u2192 Camera.' : 'Quick: the camera (V).'}`, 6.5), 900);
+    JOURNAL.add(`Saw ${M.a}: a rare bird for Massachusetts.`, x, z);
+  };
+  const livingSeen = () => [...migrants.seen, ...waterlife.seen, ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
   // ---- the charcoal grills at the picnic areas: E lights the coals (they glow and smoke for a few minutes)
   const grills = (landmarks.grills || []).map((g) => ({ ...g, lit: 0, glow: null, puffs: [] }));
   const nearGrill = () => grills.find((g) => Math.hypot(player.pos.x - g.x, player.pos.z - g.z) < 1.9) || null;
@@ -1092,7 +1105,7 @@ async function boot() {
     if (phone.isOpen) phone.close();
     else { if (player.carry !== 'phone') player.setCarry('phone'); player.raiseTo = 1; clearTimeout(phone._rt); phone._rt = setTimeout(() => { if (player.raiseTo === 1) phone.open(); }, 520); }
   };
-  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry(nextCarry(player.carry)); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', binoculars: 'Binoculars in hand. Click to look through them.', drone: 'Drone in hand. Click to throw it up and fly it.', skis: 'Skis on. Quickest in the trail\u2019s track, and out on the ice.', disc: 'A disc in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
+  addEventListener('keydown', (e) => { if (e.code === 'KeyQ' && !e.repeat && started && !interludeOn && !phone.isOpen && !player.cameraMode) { fishing.reset(); player.setCarry(nextCarry(player.carry)); ui.toast({ axe: 'Axe in hand.', rod: 'Rod in hand. Click to cast toward open water.', binoculars: 'Binoculars in hand. Click to look through them.', drone: 'Drone in hand. Click to throw it up and fly it.', seeds: `Seeds and saplings in hand (${RUN.s.saplingStock || 0} saplings, ${RUN.s.seeds || 0} seeds). Click to plant one where you are looking.`, skis: 'Skis on. Quickest in the trail\u2019s track, and out on the ice.', disc: 'A disc in hand.', none: 'Hands in your pockets.', phone: 'Phone in hand.' }[player.carry] + ' Q to change.', 1.8); }
     if (e.code === 'KeyP' && !e.repeat && started && !interludeOn && !player.cameraMode) togglePhone(); if (e.code === 'Escape' && phone.isOpen) phone.close(); if (e.code === 'Escape') { clearTimeout(phone._rt); player.raiseTo = 0; } });
   document.querySelectorAll('[data-minimap]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); minimap.cycle(); }));
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) { minimap.cycle(); if (minimap.mode !== 'off') HUD.show('map'); } });
@@ -1351,6 +1364,7 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     pad.update(dt); stepGrills(dt);
+    migrants.update(dt, started && !interludeOn, manual ? 0.4 : dayProgress(), player.pos, camera, plants.seen);
     updateStealth({ speed: player.speed, sitting: player.sitting, sneaking: player.sneaking, running: player.speed > 4.5, dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0 });
     // the first time you run at the animals: how to get close instead
     if (started && player.speed > 4.5 && !player.boat && !RUN.s.sneakHint) { sneakT = (sneakT || 0) + dt; if (sneakT > 3 && livingSeen().some((q) => !String(q.kind).startsWith('water-') && Math.hypot(q.x - player.pos.x, q.z - player.pos.z) < 30)) { RUN.s.sneakHint = true; RUN.save?.(); ui.toast(`Running, you send everything off. To get close to animals, creep (${MOBILE ? 'push the stick only a little' : 'hold Z'}) or stand still and let them come. In the dark they notice you far less.`, 7); } } else sneakT = 0;
@@ -1438,7 +1452,7 @@ async function boot() {
     ui.tick(dt);
     { const uw = document.getElementById('underwater'), on = player.underwater; if (uw.classList.contains('on') !== on) { uw.classList.toggle('on', on); audio.setUnder?.(on); if (!on) { audio.splash?.(); fx.splash(player.pos.x, lake.level + 0.05, player.pos.z, 10); } else audio.plop?.(); } if (on) uw.style.setProperty('--breath', `${Math.round(player.breath * 100)}%`); }
     if (MOBILE && (useT = (useT || 0) - dt) <= 0) { useT = 0.2; const ub = document.getElementById('bUse'), ul = useLabel(); if (ub.textContent !== (ul || 'Use')) ub.textContent = ul || 'Use'; ub.classList.toggle('idle', !ul); const tb = document.getElementById('bTool'), tl = TOOLSHORT[player.carry] || 'Hands'; if (tb.textContent !== tl) tb.textContent = tl; const hb = document.getElementById('bHop'), hl = rope.state === 'swing' ? 'Let go' : player.swimming || player.underwater ? 'Dive' : 'Hop'; if (hb.textContent !== hl) hb.textContent = hl; }
-    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone') && !skipping.holding && !disc.holding ? 'Photo' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
+    if (MOBILE) { const sb = document.getElementById('bSwing'), want = player.cameraMode ? 'Shoot' : (player.carry === 'none' || player.carry === 'skis' || player.carry === 'phone') && !skipping.holding && !disc.holding ? 'Photo' : player.carry === 'rod' ? (fishing.state === 'fight' ? 'Reel' : 'Cast') : player.carry === 'binoculars' ? (binos.up ? 'Lower' : 'Look') : player.carry === 'seeds' ? 'Plant' : player.carry === 'drone' || skipping.holding || disc.holding ? 'Throw' : 'Swing', pb = document.getElementById('bPhone'), wp = player.cameraMode ? 'Put away' : 'Phone'; if (sb.textContent !== want) sb.textContent = want; if (pb.textContent !== wp) pb.textContent = wp; }
     ui.prompt(rope.state === 'swing' ? (MOBILE ? 'HOP: let go' : 'SPACE: let go') : !player.boat && !player.swimming && rope.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  take the rope swing` : disc.holding ? (disc.state === 'wind' ? '' : MOBILE ? 'Hold THROW to wind up, let go to throw' : 'Hold the mouse button to wind up, let go to throw') : !player.boat && !player.swimming && disc.canPick(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${disc.canPick(player.pos) === 'tee' ? (() => { const i = disc.teeAt(player.pos), h = disc.holes[i]; return `disc golf: tee off on hole ${i + 1} of ${disc.holes.length} (par ${h.par}, ${h.len} m)`; })() : 'pick up your disc'}` : !player.boat && !player.swimming && nearGrill() ? `${MOBILE ? 'USE' : '[E]'}  ${nearGrill().lit > 0 ? 'the coals are going' : 'light the charcoal grill'}` : !player.boat && !player.swimming && !skipping.holding && cairns.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  add a stone to your cairn (wait until it stands still)` : !player.boat && !player.swimming && !skipping.holding && forage.near(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  pick ${FORAGE_WHAT[forage.near(player.pos).kind]}` : skipping.holding ? (skipping.state === 'wind' ? '' : MOBILE ? 'Hold THROW, let go near 20\u00b0 with the arm full' : 'Hold the mouse button, let go near 20\u00b0 with the arm full') : !player.boat && !player.swimming && skipping.near(player.pos) && skipping.state !== 'fly' ? `${MOBILE ? 'USE' : '[E]'}  pick up a flat stone` : landmarks.nearGate(player.pos) ? `${MOBILE ? 'USE' : '[E]'}  ${lake.gateOpen ? 'close' : 'open'} the drawdown gate` : !player.sitting && !player.boat && nearSeat() ? `${MOBILE ? 'Tools \u2192 Sit' : '[B]'}  sit ${nearSeat().kind === 'table' ? 'at the picnic table' : 'on the bench'}` : player.boat ? (shoreNear ? `${MOBILE ? 'USE' : '[E]'}  step out onto the shore` : boatT < 16 ? 'W / S row  \u00b7  A / D turn  \u00b7  Q rod  \u00b7  E climb out' : '') : nearBoat() ? `${MOBILE ? 'USE' : '[E]'}  get in the rowboat` : careActs.update(dt, player));
     if ((woodsHudT -= dt) <= 0) { woodsHudT = 1; woodsDeadNow = woodsDead(); }
     const cut = (RUN.s.felled?.length || 0) + chunks.felledCount;                          // this season's and every earlier one's
@@ -1449,7 +1463,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

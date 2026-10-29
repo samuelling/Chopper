@@ -8,11 +8,16 @@ import { groundY, sdfAt } from './world.js';
 import { SEASON } from './season.js';
 
 const SINGERS = {
-  spring: ['robin', 'cardinal', 'wren'], summer: ['cardinal', 'vireo', 'wren', 'robin'], autumn: ['cardinal'], winter: ['cardinal'],
+  spring: ['robin', 'cardinal', 'wren', 'titmouse', 'towhee', 'songsparrow', 'phoebe'],
+  summer: ['cardinal', 'vireo', 'wren', 'robin', 'catbird', 'goldfinch', 'towhee', 'titmouse', 'woodthrush'],
+  autumn: ['cardinal', 'titmouse', 'songsparrow'], winter: ['cardinal', 'titmouse'],
 };
 const LOOK = {   // body, breast, head, extra
   cardinal: ['#c8202a', '#d8402a', '#c8202a', '#1a1414'], robin: ['#5a5652', '#d8702a', '#2a2826', '#f2efe8'],
   wren: ['#7a5a3e', '#a8865e', '#7a5a3e', '#c8b090'], vireo: ['#7a8a5a', '#e8e6d8', '#8a8a86', '#c8202a'],
+  titmouse: ['#8a8c92', '#ece8e2', '#8a8c92', '#d89a6a'], towhee: ['#1a1616', '#f2eee8', '#1a1616', '#b8602a'], songsparrow: ['#7a5a3e', '#d8d0c0', '#7a5a3e', '#4a3828'],
+  phoebe: ['#6a645a', '#ece8d8', '#4a463e', '#2a2622'], catbird: ['#6a6e76', '#7a7e86', '#1a1a1e', '#9a4a2a'], goldfinch: ['#f2d020', '#f6e040', '#1a1a1a', '#1a1a1a'],
+  woodthrush: ['#9a6a3a', '#f2ece0', '#a8743e', '#3a2a1e'],
 };
 const OL = simpleToon('#141210', { side: THREE.BackSide });
 function birdModel(kind) {
@@ -25,6 +30,11 @@ function birdModel(kind) {
   const bk = new THREE.Mesh(cone, simpleToon(kind === 'cardinal' ? '#e8902a' : '#e0b030')); bk.scale.set(0.014, 0.04, 0.014); bk.rotation.x = Math.PI / 2; bk.position.set(0, -0.005, 0.055); h.add(bk);
   if (kind === 'cardinal') { const c = new THREE.Mesh(cone, simpleToon(body)); c.scale.set(0.022, 0.06, 0.03); c.rotation.x = -0.6; c.position.set(0, 0.045, -0.02); h.add(c); const m = new THREE.Mesh(ball, simpleToon(extra)); m.scale.set(0.03, 0.02, 0.01); m.position.set(0, -0.005, 0.042); h.add(m); }
   if (kind === 'robin') { for (const s of [-1, 1]) { const e = new THREE.Mesh(ball, simpleToon(extra)); e.scale.setScalar(0.008); e.position.set(s * 0.03, 0.012, 0.032); h.add(e); } }
+  if (kind === 'titmouse') { const c = new THREE.Mesh(cone, simpleToon(head)); c.scale.set(0.02, 0.05, 0.026); c.rotation.x = -0.5; c.position.set(0, 0.04, -0.015); h.add(c); }
+  if (kind === 'towhee') { for (const s of [-1, 1]) { const f = new THREE.Mesh(ball, simpleToon(extra)); f.scale.set(0.02, 0.03, 0.05); f.position.set(s * 0.045, 0.075, 0.0); g.add(f); } }
+  if (kind === 'woodthrush' || kind === 'songsparrow') { for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(ball, simpleToon(extra)); sp.scale.setScalar(0.007); sp.position.set((Math.random() - 0.5) * 0.06, 0.05 + Math.random() * 0.05, 0.085); g.add(sp); } }
+  if (kind === 'catbird') { const c = new THREE.Mesh(ball, simpleToon(head)); c.scale.set(0.05, 0.02, 0.05); c.position.set(0, 0.03, -0.005); h.add(c); }
+  if (kind === 'goldfinch') { const c = new THREE.Mesh(ball, simpleToon(head)); c.scale.set(0.04, 0.015, 0.03); c.position.set(0, 0.035, 0.02); h.add(c); for (const s of [-1, 1]) { const w = new THREE.Mesh(ball, simpleToon('#1a1a1a')); w.scale.set(0.012, 0.04, 0.07); w.position.set(s * 0.05, 0.085, -0.02); g.add(w); } }
   if (kind === 'vireo') { for (const s of [-1, 1]) { const e = new THREE.Mesh(ball, simpleToon('#f2efe8')); e.scale.set(0.006, 0.006, 0.02); e.position.set(s * 0.04, 0.018, 0.01); h.add(e); const r = new THREE.Mesh(ball, simpleToon(extra)); r.scale.setScalar(0.007); r.position.set(s * 0.036, 0.008, 0.03); h.add(r); } }
   add(cone, body, 0, 0.06, -0.12, 0.03, 0.12, 0.012, -Math.PI / 2 - (kind === 'wren' ? -0.9 : 0.25));   // the tail (a wren cocks it up)
   g.scale.setScalar(kind === 'wren' ? 0.8 : 1.15); g.userData.head = h;

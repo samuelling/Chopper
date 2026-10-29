@@ -7,6 +7,7 @@ import { FORAGE } from './forage.js';
 import { SKY_ENTRIES } from './sky.js';
 import { NIGHT } from './nightlife.js';
 import { WATER } from './waterlife.js';
+import { MIGRANTS, VOICE } from './migrants.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -74,6 +75,7 @@ for (const [id, of, name, hint] of [
   ['peak-maple', 'maple', 'A red maple at its peak', 'In autumn a few red maples by the water flare brighter than all the rest. Find one and photograph it'],
   ['by-ear', null, 'A singer, found by ear', 'Follow a bird\u2019s song (louder on the side it is on) until you find the singer, and photograph it'],
   ['my-cairn', 'cairn', 'Your own cairn, seven high', 'Stack a cairn of seven stones at a skipping shore (E, when it stands still) and photograph it'],
+  ['hummer-hover', 'mig-hummingbird', 'Hummingbird, hovering', 'A ruby-throated hummingbird hanging in the air at a flower, wings a blur. Come slowly, and stay still'],
   ['crayfish-claws', 'water-crayfish', 'Crayfish, claws up', 'Dive close to a crayfish and it rears up with its claws open before it shoots off backwards. Photograph it from under the water'],
   ['newt-air', 'water-newt', 'Newt, up for a breath', 'Now and then a red-spotted newt swims up to the surface for air. Watch one from under the water'],
   ['eyeshine', null, 'Eyeshine', 'Shine your flashlight at a night animal and its eyes light up. Photograph that'],
@@ -88,6 +90,25 @@ for (const [k, F] of Object.entries(FORAGE)) ENTRIES.push({ id: 'forage-' + k, c
 for (const [k, E] of Object.entries(SKY_ENTRIES)) ENTRIES.push({ id: 'sky-' + k, cat: 'Sky', name: E.name, blurb: E.blurb, hint: k === 'meteor' ? 'Night, most of all in summer' : 'Night: sit back (B) and look up' });
 // night life (nightlife.js): only after dark
 for (const [k, N] of Object.entries(NIGHT)) ENTRIES.push({ id: 'night-' + k, cat: 'Night', name: N.name, blurb: N.blurb, hint: N.hint });
+// the rest of the resident birds, heard around the park (audio.js); several also sing from a tree to be found by ear
+for (const [id, name, blurb] of [
+  ['titmouse', 'Tufted Titmouse', 'Grey, crested and bold, with a loud, clear \u201cpeter, peter, peter\u201d all year round.'],
+  ['nuthatch', 'White-breasted Nuthatch', 'Walks head-first down tree trunks, and calls a nasal \u201cyank, yank\u201d like a tiny tin horn.'],
+  ['dove', 'Mourning Dove', 'The soft, sad \u201ccoo-OOO, oo, oo, oo\u201d people often take for an owl. Its wings whistle when it takes off.'],
+  ['redwing', 'Red-winged Blackbird', 'Black with red and yellow shoulder patches, singing \u201ckonk-la-REE\u201d from a cattail. One of the first birds back in spring.'],
+  ['songsparrow', 'Song Sparrow', 'Streaky brown, and a song of three clear notes and a jumble: \u201cmaids, maids, maids, put on your tea-kettle-ettle-ettle.\u201d'],
+  ['phoebe', 'Eastern Phoebe', 'It says its own name, \u201cfee-bee,\u201d in a burry voice, and wags its tail. It nests under bridges and eaves.'],
+  ['catbird', 'Gray Catbird', 'Slate grey with a black cap. It mews like a cat, then runs off a long jumble of borrowed sounds.'],
+  ['goldfinch', 'American Goldfinch', 'Bright yellow in summer. It flies in loops calling \u201cpo-ta-to-chip\u201d at the top of each bounce.'],
+  ['woodthrush', 'Wood Thrush', 'At dusk in summer, a flute: \u201cee-oh-LAY,\u201d and a shimmer after it, two notes at once from its two voice boxes. Thoreau loved it best of all.'],
+  ['towhee', 'Eastern Towhee', 'Black, rusty and white, scratching in the leaves with both feet at once, and singing \u201cdrink your tea-ea-ea.\u201d'],
+  ['kingfisher', 'Belted Kingfisher', 'A big-headed blue bird that rattles along the shore, hovers, and dives head-first for fish.'],
+  ['pileated', 'Pileated Woodpecker', 'Crow-sized with a red crest, the bird Woody Woodpecker was drawn from. A wild, ringing \u201ckuk-kuk-kuk\u201d through the woods, and big oblong holes in dead trees.'],
+  ['pewee', 'Eastern Wood-Pewee', 'A plain little flycatcher high in the summer woods, singing a lazy, slurred \u201cpee-a-weee\u201d all afternoon and into dusk.'],
+  ['tanager', 'Scarlet Tanager', 'Blazing red with black wings, high in the oaks in summer, and hard to see up there. Its song is a robin with a sore throat.'],
+]) ENTRIES.push({ id, cat: 'Birds', name, blurb, song: id, songOnly: true });
+// migrants (migrants.js): only here while they pass through; the rare ones are legendary
+for (const [k, M] of Object.entries(MIGRANTS)) ENTRIES.push({ id: 'mig-' + k, cat: M.legend ? 'Legendary' : 'Birds', name: M.name, blurb: M.blurb, hint: M.hint, legend: !!M.legend, migrant: true, song: VOICE[k] && !['hum'].includes(VOICE[k]) ? VOICE[k] : undefined });
 // water life (waterlife.js): most of it only from under the surface
 for (const [k, W] of Object.entries(WATER)) ENTRIES.push({ id: 'water-' + k, cat: 'Water', name: W.name, blurb: W.blurb, hint: W.hint });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets

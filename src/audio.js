@@ -158,6 +158,40 @@ export class Audio {
   peep() { this._tone(2800 + Math.random() * 300, 0.09, 0.022, 'sine', 3300); }
   cricket() { for (let i = 0; i < 3; i++) setTimeout(() => this._tone(3900 + Math.random() * 100, 0.026, 0.012, 'sine'), i * 34); }
   bullfrog() { this._tone(130, 0.28, 0.07, 'sawtooth', 100); setTimeout(() => this._tone(110, 0.2, 0.06, 'sawtooth', 90), 330); }
+  // ---- more birds.  All synthesised: each is a sketch of the real song, close enough to learn it by (shape, pitch, rhythm)
+  titmouse() { const l = []; for (let i = 0; i < 3 + ((Math.random() * 2) | 0); i++) { l.push([i * 0.42, 3600, 0.12, 0.05, 3400]); l.push([i * 0.42 + 0.15, 2500, 0.16, 0.05, 2300]); } this._seq(l); }   // peter, peter, peter
+  nuthatch() { const n = 2 + ((Math.random() * 3) | 0), l = []; for (let i = 0; i < n; i++) l.push([i * 0.28, 720, 0.12, 0.03, 690, 'sawtooth']); this._seq(l); }   // yank, yank
+  dove() { this._seq([[0, 520, 0.28, 0.05, 580], [0.35, 600, 0.5, 0.06, 520], [1.0, 480, 0.42, 0.05, 470], [1.55, 470, 0.42, 0.05, 460], [2.1, 460, 0.45, 0.05, 445]]); }   // coo-OOO, oo, oo, oo
+  redwing() { const l = [[0, 1800, 0.08, 0.04, 2300], [0.12, 2700, 0.08, 0.04, 2500]]; for (let i = 0; i < 14; i++) l.push([0.25 + i * 0.04, i % 2 ? 4300 : 3800, 0.035, 0.035, null, 'triangle']); this._seq(l); }   // konk-la-REEE
+  songsparrow() { const l = [[0, 3200, 0.09, 0.05], [0.2, 3200, 0.09, 0.05], [0.4, 3200, 0.09, 0.05], [0.6, 4400, 0.28, 0.04, 3000]]; for (let i = 0; i < 9; i++) l.push([0.95 + i * 0.05, 3600 + (i % 3) * 250, 0.04, 0.035]); this._seq(l); }   // maids, maids, maids, put on your tea-kettle-ettle-ettle
+  phoebe() { this._seq([[0, 4100, 0.17, 0.035, 3800, 'sawtooth'], [0.26, 3300, 0.22, 0.035, 3650, 'sawtooth']]); }   // a buzzy fee-bree
+  catbird() { if (Math.random() < 0.5) { this._seq([[0, 1700, 0.15, 0.045, 2400], [0.15, 2400, 0.22, 0.045, 1600]]); return; } const l = []; for (let i = 0; i < 9; i++) l.push([i * 0.15, 1600 + Math.random() * 2600, 0.09, 0.04, 1600 + Math.random() * 2600]); this._seq(l); }   // a cat's mew, or a long jumble
+  goldfinch() { this._seq([[0, 3600, 0.06, 0.04, 3900], [0.1, 3100, 0.05, 0.04], [0.19, 3400, 0.05, 0.04], [0.28, 3900, 0.07, 0.04, 3600]]); }   // po-ta-to-chip
+  woodthrush() { const b = 1700 + Math.random() * 400, l = [[0, b, 0.18, 0.05], [0.22, b * 1.25, 0.16, 0.05], [0.42, b * 1.5, 0.22, 0.05, b * 1.45]]; for (let i = 0; i < 7; i++) l.push([0.7 + i * 0.03, 4200 + (i % 2) * 700, 0.025, 0.03]); this._seq(l); }   // ee-oh-LAY, and a shimmering trill
+  towhee() { const l = [[0, 2600, 0.12, 0.05], [0.18, 3500, 0.08, 0.045]]; for (let i = 0; i < 10; i++) l.push([0.32 + i * 0.03, 3100 + (i % 2) * 220, 0.022, 0.04]); this._seq(l); }   // drink your tea-ea-ea
+  kingfisher() { const l = []; for (let i = 0; i < 18; i++) l.push([i * 0.045, 2500 + Math.random() * 400, 0.025, 0.03, null, 'sawtooth']); this._seq(l); }   // a dry rattle over the water
+  pileated() { const l = []; for (let i = 0; i < 9; i++) l.push([i * 0.13, 1250 - i * 20, 0.08, 0.035, 1150 - i * 20, 'square']); this._seq(l); }   // a wild kuk-kuk-kuk through the woods
+  pewee() { this._seq([[0, 3600, 0.16, 0.04, 4200], [0.2, 4200, 0.14, 0.04, 3400], [0.45, 3400, 0.45, 0.04, 4300]]); }   // pee-a-weee, lazy and slurred
+  tanager() { const l = []; let t = 0; for (let i = 0; i < 5; i++) { const f = 2300 + Math.random() * 900; l.push([t, f, 0.12, 0.035, f * 0.85, 'sawtooth']); t += 0.2; } this._seq(l); }   // a robin with a sore throat
+  // migrants
+  chip() { this._seq([[0, 5400, 0.035, 0.03, 4800]]); }
+  hum() { this._seq([[0, 190, 0.45, 0.035, 182, 'sawtooth']]); }   // a hummingbird's wings
+  loon() { if (Math.random() < 0.6) this._seq([[0, 560, 0.9, 0.06, 760], [0.95, 760, 1.4, 0.06, 900], [2.45, 900, 1.1, 0.05, 700]]); else { const l = []; for (let i = 0; i < 12; i++) l.push([i * 0.11, i % 2 ? 900 : 760, 0.09, 0.05]); this._seq(l); } }   // the wail, or the tremolo
+  peent() { this._seq([[0, 2800, 0.16, 0.035, 2650, 'sawtooth']]); }
+  crane() { const l = []; for (let i = 0; i < 16; i++) l.push([i * 0.06, i % 2 ? 820 : 700, 0.05, 0.05, null, 'square']); this._seq(l); }   // a rolling, bugling garoo-oo
+  yrwarbler() { const l = []; for (let i = 0; i < 12; i++) l.push([i * 0.07, 3800 + Math.sin(i * 0.6) * 500, 0.05, 0.035]); this._seq(l); }   // a loose, wandering trill
+  magnolia() { this._seq([[0, 4800, 0.1, 0.035, 5600], [0.14, 4800, 0.1, 0.035, 5600], [0.3, 5400, 0.12, 0.035, 6200], [0.46, 6000, 0.08, 0.035, 4800]]); }   // weety, weety, weeteo
+  oriole() { this._seq([[0, 2400, 0.18, 0.05, 2700], [0.24, 2900, 0.15, 0.05], [0.44, 2200, 0.26, 0.05, 2500], [0.8, 2600, 0.18, 0.05, 2300], [1.05, 3000, 0.2, 0.05, 2800]]); }   // rich flute whistles
+  grosbeak() { const l = []; let t = 0; for (let i = 0; i < 7; i++) { const f = 2200 + Math.random() * 1500; l.push([t, f, 0.11, 0.05, f * (0.85 + Math.random() * 0.4)]); t += 0.12 + Math.random() * 0.06; } this._seq(l); }   // a robin with voice lessons
+  kinglet() { const l = []; for (let i = 0; i < 4; i++) l.push([i * 0.1, 7000, 0.04, 0.025]); for (let i = 0; i < 6; i++) l.push([0.5 + i * 0.07, 3500 + (i % 2) * 700, 0.05, 0.035]); for (let i = 0; i < 3; i++) l.push([0.95 + i * 0.22, 4400, 0.08, 0.035, 3600]); this._seq(l); }   // tsee-tsee, chatter, look-at-me
+  junco() { const f = 4300 + Math.random() * 500, l = []; for (let i = 0; i < 16; i++) l.push([i * 0.055, f, 0.035, 0.035]); this._seq(l); }   // a ringing one-note trill
+  wtsparrow() { const l = [[0, 3300, 0.55, 0.05], [0.62, 4100, 0.5, 0.05]]; for (let k = 0; k < 3; k++) for (let j = 0; j < 3; j++) l.push([1.2 + k * 0.38 + j * 0.12, 4100 - (j ? 200 : 0), 0.1, 0.045]); this._seq(l); }   // Old Sam Peabody, Peabody, Peabody
+  treesparrow() { const l = []; for (let i = 0; i < 8; i++) l.push([i * 0.09, 4000 + Math.random() * 1500, 0.07, 0.035, 3500 + Math.random() * 1500]); this._seq(l); }
+  waxwing() { const l = []; for (let i = 0; i < 10; i++) l.push([i * 0.04, 7400 + (i % 2) * 300, 0.035, 0.02]); this._seq(l); }   // a high, thin, buzzy sreee
+  evegrosbeak() { this._seq([[0, 3300, 0.17, 0.045, 2800], [0.4, 3300, 0.17, 0.045, 2800]]); }   // cleer! cleer!
+  crossbill() { const l = []; for (let i = 0; i < 4; i++) l.push([i * 0.16, 3900, 0.05, 0.04, 3500]); this._seq(l); }   // kip kip kip
+  prothonotary() { const l = []; for (let i = 0; i < 6; i++) l.push([i * 0.17, 4200, 0.12, 0.045, 4800]); this._seq(l); }   // sweet sweet sweet
+  swan() { this._seq([[0, 700, 0.25, 0.045, 760], [0.4, 650, 0.3, 0.045, 700]]); }   // soft hooting woo-woo
   // night voices that come from one place (panned by songAt, so they are built with _seq)
   trill() { const L = []; for (let i = 0; i < 16; i++) L.push([i * 0.045, 1250 + Math.random() * 40, 0.03, 0.035, 1180, 'triangle']); this._seq(L); }
   hoot() { this._seq([[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].map(([d, l]) => [d, l > 0.4 ? 330 : 400, l, 0.07, l > 0.4 ? 260 : 390])); }
@@ -236,6 +270,20 @@ export class Audio {
       this.insectT = 0.3 + Math.random() * 0.5;
       if (SEASON === 'spring' && s.sdf < 40 && Math.random() < 0.35 + evening * 0.6) for (let i = 0; i < 1 + ((Math.random() * 3) | 0); i++) setTimeout(() => this.peep(), i * 90 + Math.random() * 60);
     }
+    // the rest of the resident birds: by season, by time of day (wood thrushes and pewees at dusk), and by place
+    // (red-winged blackbirds and kingfishers by the water)
+    this.birdT2 = (this.birdT2 ?? 6) - dt;
+    if (this.birdT2 < 0 && cr !== 'death') {
+      this.birdT2 = 5 + Math.random() * 9;
+      const water = s.sdf < 35, dusk = s.mood === 2, night = s.mood === 3;
+      const pool = night ? [] : {
+        spring: ['titmouse', 'titmouse', 'nuthatch', 'dove', 'songsparrow', 'phoebe', 'towhee', 'goldfinch', ...(water ? ['redwing', 'redwing', 'kingfisher'] : []), 'pileated'],
+        summer: ['titmouse', 'dove', 'catbird', 'catbird', 'goldfinch', 'goldfinch', 'towhee', 'songsparrow', 'tanager', 'pewee', ...(dusk ? ['woodthrush', 'woodthrush', 'woodthrush', 'pewee'] : []), ...(water ? ['redwing', 'kingfisher'] : [])],
+        autumn: ['titmouse', 'titmouse', 'nuthatch', 'nuthatch', 'dove', 'pileated', 'songsparrow', ...(water ? ['kingfisher'] : [])],
+        winter: ['titmouse', 'nuthatch', 'nuthatch', 'dove', 'pileated'],
+      }[SEASON];
+      if (pool.length) this[pool[(Math.random() * pool.length) | 0]]();
+    }
     this.frogT -= dt;
     if (this.frogT < 0) { this.frogT = 4 + Math.random() * 9; if (SEASON === 'summer' && s.sdf < 30 && s.lakeFrac > 0.5) this.bullfrog(); }
     // night: owls from the dusk on, coyotes only in the dark
@@ -251,7 +299,7 @@ export class Audio {
 
 // Every voice reports itself so the Field Guide can log songs you actually hear.  Replays from the guide use the raw originals.
 export const RAW_VOICES = {};
-for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog', 'owl', 'coyote', 'trill', 'hoot', 'yip']) {
+for (const v of ['chickadee', 'cardinal', 'robin', 'wren', 'vireo', 'woodpecker', 'crow', 'jay', 'honk', 'hawkCry', 'peep', 'cricket', 'bullfrog', 'owl', 'coyote', 'trill', 'hoot', 'yip', 'titmouse', 'nuthatch', 'dove', 'redwing', 'songsparrow', 'phoebe', 'catbird', 'goldfinch', 'woodthrush', 'towhee', 'kingfisher', 'pileated', 'pewee', 'tanager', 'hum', 'loon', 'peent', 'crane', 'yrwarbler', 'magnolia', 'oriole', 'grosbeak', 'kinglet', 'junco', 'wtsparrow', 'treesparrow', 'waxwing', 'evegrosbeak', 'crossbill', 'prothonotary', 'swan']) {
   const f = RAW_VOICES[v] = Audio.prototype[v];
   Audio.prototype[v] = function (...a) { if (this.ready) this.onHeard?.(v); return f.apply(this, a); };
 }
