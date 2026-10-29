@@ -7,9 +7,11 @@ import * as THREE from 'three';
 
 const VERT = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const FRAG = /* glsl */ `
-uniform sampler2D tScene; uniform float uTime; uniform float uLevel; uniform vec3 uCam; uniform mat4 uInvProj; uniform mat4 uCamWorld; uniform vec2 uRes;
+uniform sampler2D tScene; uniform sampler2D tDepth; uniform float uNear; uniform float uFar; uniform float uTime; uniform float uLevel; uniform vec3 uCam; uniform mat4 uInvProj; uniform mat4 uCamWorld; uniform vec2 uRes;
 varying vec2 vUv;
 float wave(vec2 p, float t) { return sin(p.x * 1.7 + t * 1.3) * 0.5 + sin(p.y * 2.3 - t * 1.1) * 0.5 + sin((p.x + p.y) * 3.1 + t * 2.0) * 0.35 + sin((p.x - p.y) * 5.3 - t * 2.6) * 0.2; }
+// how far away the thing at this pixel is (metres along the view), from the depth buffer
+float viewDist(vec2 uv) { float d = texture2D(tDepth, uv).r * 2.0 - 1.0; return (2.0 * uNear * uFar) / (uFar + uNear - d * (uFar - uNear)); }
 void main() {
   vec4 ndc = vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
   vec4 vp = uInvProj * ndc; vp /= vp.w;
@@ -29,13 +31,19 @@ void main() {
     float near = exp(-t * 0.3);                                       // far off, the ripples blur into one colour (no aliasing)
     vec3 mirror = mix(deep, shallow, 0.5 + 0.25 * w0 * near) * (0.82 + 0.18 * near * sin(hit.x * 2.0 + hit.y * 1.5 + uTime));
     col = mix(mirror, above, win);
+    float nd = viewDist(vUv) * length(vp.xyz) / max(1e-3, -vp.z);
+    if (nd < t - 0.05) { vec3 thing = texture2D(tScene, vUv).rgb * vec3(0.8, 0.97, 0.97); col = mix(thing, shallow, 1.0 - exp(-nd * 0.14)); }   // a newt, a fish, between you and the surface
     col += vec3(0.85, 1.0, 0.95) * smoothstep(0.03, 0.0, abs(dir.y - 0.66 + 0.01 * w0)) * 0.35;   // the bright rim of the window
     col = mix(col, shallow, clamp(t * 0.012, 0.0, 0.6));               // seen through a few metres of water
   } else {
     vec2 off = vec2(sin(vUv.y * 30.0 + uTime * 2.2), cos(vUv.x * 26.0 - uTime * 1.8)) * 0.003;
     vec3 under = texture2D(tScene, clamp(vUv + off, 0.001, 0.999)).rgb;
     float down = clamp(-dir.y * 1.6, 0.0, 1.0);
-    col = mix(under * vec3(0.55, 0.85, 0.85) + shallow * 0.25, deep, 0.45 + 0.35 * down);
+    // clear close up, fading into green-blue with distance (about ten metres of visibility), darker looking down
+    float dist = viewDist(vUv) * length(vp.xyz) / max(1e-3, -vp.z);
+    float fog = 1.0 - exp(-dist * 0.16);
+    vec3 water = mix(shallow, deep, 0.35 + 0.45 * down);
+    col = mix(under * vec3(0.72, 0.93, 0.93) + shallow * 0.08, water, clamp(0.12 + fog * 0.88, 0.0, 1.0));
   }
   // the surface seen edge-on, right at eye level: a bright, wavering seam
   float seam = smoothstep(0.035, 0.0, abs(dir.y - 0.004 * sin(vUv.x * 40.0 + uTime * 3.0)));
@@ -51,8 +59,9 @@ void main() {
 export class Underwater {
   constructor(renderer) {
     this.r = renderer; this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }); this.rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
+    this.rt.depthTexture = new THREE.DepthTexture(4, 4); this.rt.depthTexture.type = THREE.UnsignedIntType;
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { tScene: { value: this.rt.texture }, uTime: { value: 0 }, uLevel: { value: 0 }, uCam: { value: new THREE.Vector3() }, uInvProj: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() }, uRes: { value: new THREE.Vector2() } },
+      uniforms: { tScene: { value: this.rt.texture }, tDepth: { value: this.rt.depthTexture }, uNear: { value: 0.1 }, uFar: { value: 1000 }, uTime: { value: 0 }, uLevel: { value: 0 }, uCam: { value: new THREE.Vector3() }, uInvProj: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() }, uRes: { value: new THREE.Vector2() } },
       vertexShader: VERT, fragmentShader: FRAG, depthTest: false, depthWrite: false,
     });
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat); this.quad.frustumCulled = false;
@@ -66,7 +75,7 @@ export class Underwater {
     if (this.rt.width !== sz.x || this.rt.height !== sz.y) this.rt.setSize(sz.x, sz.y);
     this.r.setRenderTarget(this.rt); this.r.render(scene, camera); this.r.setRenderTarget(null);
     const u = this.mat.uniforms; u.uTime.value = time; u.uLevel.value = level; u.uCam.value.copy(camera.position);
-    u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uRes.value.copy(sz);
+    u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uNear.value = camera.near; u.uFar.value = camera.far; u.uCamWorld.value.copy(camera.matrixWorld); u.uRes.value.copy(sz);
     this.r.render(this.qs, this.qc);
     return true;
   }

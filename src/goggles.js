@@ -125,7 +125,7 @@ export class Goggles {
     let nb = 0;
     if (this.mode === 'thermal' && ok) {
       for (const c of cands) {
-        if (COLD.has(c.kind) || c.y == null) continue;
+        if (COLD.has(c.kind) || c.kind?.startsWith?.('water-') || c.y == null) continue;   // water life is all cold-blooded
         const d = Math.hypot(c.x - cam.x, c.z - cam.z); if (d > 140 || d < 0.6) continue;
         let b = this.blobs[nb]; if (!b) { b = new THREE.Mesh(this.blobGeo, this.blobMat); b.frustumCulled = false; this.bs.add(b); this.blobs.push(b); }
         b.visible = true; nb++;

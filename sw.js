@@ -1,7 +1,7 @@
 // Offline play for the web build (and an iPad or phone home-screen install): network first, so an update is picked up
 // whenever there is a connection, with everything the game has loaded kept as a fallback for when there is not.
 // Bump VERSION to drop old caches.  Packaged desktop apps load the game from disk and do not register this.
-const VERSION = 'ashland-1';
+const VERSION = 'ashland-2';
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(VERSION).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest']))); });
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== VERSION) await caches.delete(k);
@@ -12,7 +12,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   e.respondWith((async () => {
     try {
-      const res = await fetch(req);
+      const res = await fetch(req, { cache: 'no-cache' });   // always ask the server (cheap when nothing changed), so a push shows up at the next load, not up to ten minutes later
       if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
       return res;
     } catch {

@@ -139,7 +139,7 @@ export class Phone {
       const n = document.createElement('div'); n.className = 'bubble';
       n.innerHTML = `<b>Field Guide</b> &middot; ${GUIDE.count()} of ${ENTRIES.length} found.<br>Press V for the camera and photograph trees, wildflowers, birds and animals. Fish go in when you catch them (Q for the rod). Songs you hear go in too. These are species typical of a Massachusetts reservoir forest, not a survey of the real park.`;
       body.appendChild(n);
-      for (const cat of ['Legendary', 'Trees', 'Plants', 'Foraged', 'Birds', 'Animals', 'Moments', 'Fish', 'Sounds', 'Night', 'Sky']) {
+      for (const cat of ['Legendary', 'Trees', 'Plants', 'Foraged', 'Birds', 'Animals', 'Moments', 'Fish', 'Water', 'Sounds', 'Night', 'Sky']) {
         const h = document.createElement('h4'); h.textContent = cat; h.style.cssText = 'margin:14px 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.7'; body.appendChild(h);
         for (const e of ENTRIES.filter((x) => x.cat === cat)) {
           const d = GUIDE.d[e.id] || {}, row = document.createElement('div');
