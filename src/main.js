@@ -62,6 +62,7 @@ import { WaterLife } from './waterlife.js';
 import { Migrants, MIGRANTS } from './migrants.js';
 import { Hammock } from './hammock.js';
 import { RarePlants } from './rareplants.js';
+import { DataCenter } from './datacenter.js';
 import { updateStealth } from './stealth.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
@@ -1232,6 +1233,7 @@ async function boot() {
   showSpeed(); window.__speed = SPEED;
   // ---- the endings
   let ending = false, endingKind = null;
+  const datacenter = new DataCenter(scene, camera); let dcFog = null;
   const endStats = () => ({
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
@@ -1261,6 +1263,17 @@ async function boot() {
       onRestart: () => { RUN.reset(); try { sessionStorage.removeItem('ashland.inplay'); } catch {} const p = new URLSearchParams(location.search); ['x', 'z', 'yaw', 'end'].forEach((k) => p.delete(k)); location.search = p.toString(); },
       onStay: () => { stayBtn.hidden = false; },   // watching the drone: a way back to the menu whenever you want it
       onMenu: () => { showFinishedMenu(); ui.els.hud.classList.remove('on'); },   // back to the start menu, the drone still flying behind it
+      // the bleak endings: once the credits reach the megaZINE page, the drone climbs and goes to see the data center
+      onHold: (root) => {
+        const bleak = kind === 'drained' || kind === 'silent' || (kind === 'life' && stats.harm >= 0.6) || params.has('dcflight');
+        if (!bleak) return;
+        datacenter.onDescend = () => { const sc = root.querySelector('.crscroll'); if (sc) { sc.style.transition = 'opacity 4s'; sc.style.opacity = '0'; } };
+        datacenter.onArrive = () => {   // on the sign: the credits fade away, and it is just the building, the sign and the hum
+          root.style.transition = 'opacity 6s'; root.style.opacity = '0'; root.style.pointerEvents = 'none';
+          setTimeout(() => { stayBtn.hidden = false; stayBtn.style.opacity = '0.35'; }, 14000);   // a quiet way back to the menu, later
+        };
+        setTimeout(() => { flyover.stop(); player.carryHidden = true; player.refreshCarry(); datacenter.start(audio); }, 2500);
+      },
     });
   }
   window.__end = beginEnding;
@@ -1476,7 +1489,7 @@ async function boot() {
     if (player.swimming && !RUN.s.swam) { RUN.s.swam = true; RUN.save?.(); ui.toast(MOBILE ? 'You are swimming. Hold HOP to dive under; let go to come up.' : 'You are swimming. Hold SPACE to dive under; let go to come up.', 5); }   // the first swim only
     { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
       const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
-    flyover.update(dt); tut.update(dt);
+    flyover.update(dt); tut.update(dt); dcFog = datacenter.update(dt);
     // camera shake from big falls
     if (shake > 0.001) {
       camera.position.x += (Math.random() - 0.5) * shake * 0.25;
@@ -1485,7 +1498,8 @@ async function boot() {
     }
     chunks.update(dt, camera.position, null, 2);
     landmarks.update(dt, player);
-    atmosphere.update(dt, camera, flyover.active || droneOn ? camera.position : player.pos);
+    atmosphere.update(dt, camera, flyover.active || droneOn || datacenter.flying ? camera.position : player.pos);
+    if (dcFog != null && scene.fog) scene.fog.density = dcFog;   // the closing flight: the haze thins so the data center can loom out of it
     const focus = droneOn ? drone.pos : player.pos;      // wildlife and flowers gather around whoever is looking
     water.update(dt);
     wildlife.update(dt, focus, player.speed);
@@ -1499,6 +1513,7 @@ async function boot() {
       setTimeout(() => ui.toast(msg, 4.5), 1500); JOURNAL.add(k === 1 ? 'Saw a great blue heron fishing the shallows.' : `The heron again, for the ${k}${['th', 'st', 'nd', 'rd'][k % 10 < 4 && (k % 100 - k % 10) !== 10 ? k % 10 : 0]} season.`, player.pos.x, player.pos.z);
     }
     if (snowTrail) snowTrail.update(dt, player.pos, sdfAt(player.pos.x, player.pos.z) > 1.5);
+    litter.mesh.visible = !datacenter.flying;   // the park's leaf litter does not belong on the data center's tarmac
     litter.update(camera.position, lightCol.copy(atmosphere.state.sunColor).lerp(atmosphere.state.hemiSky, 0.55).multiplyScalar(0.95));
     fx.update(dt);
 
@@ -1519,7 +1534,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { datacenter, rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

@@ -192,6 +192,20 @@ export class Audio {
   crossbill() { const l = []; for (let i = 0; i < 4; i++) l.push([i * 0.16, 3900, 0.05, 0.04, 3500]); this._seq(l); }   // kip kip kip
   prothonotary() { const l = []; for (let i = 0; i < 6; i++) l.push([i * 0.17, 4200, 0.12, 0.045, 4800]); this._seq(l); }   // sweet sweet sweet
   swan() { this._seq([[0, 700, 0.25, 0.045, 760], [0.4, 650, 0.3, 0.045, 700]]); }   // soft hooting woo-woo
+  /** the data center (ending): the low electrical hum (60 Hz and its harmonics, the tone neighbours complain of), two
+   *  slightly detuned fan tones beating, a broad roar of fans, and a faint high whine.  v: 0 (gone) to 1 (at the fence) */
+  dcHum(v) {
+    if (!this.ready) return;
+    if (!this._dc) {
+      const c = this.ctx, g = c.createGain(); g.gain.value = 0; g.connect(this.master);
+      const tone = (type, f, gn) => { const o = c.createOscillator(); o.type = type; o.frequency.value = f; const gg = c.createGain(); gg.gain.value = gn; o.connect(gg); gg.connect(g); o.start(); };
+      tone('sine', 60, 0.5); tone('sine', 120, 0.42); tone('triangle', 180, 0.16); tone('sawtooth', 240, 0.05); tone('sine', 97, 0.14); tone('sine', 99.4, 0.14);
+      const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; const ng = c.createGain(); ng.gain.value = 0.9; n.connect(lp); lp.connect(ng); ng.connect(g); n.start();
+      const w = c.createOscillator(); w.frequency.value = 6900; const wg = c.createGain(); wg.gain.value = 0.008; w.connect(wg); wg.connect(g); w.start();
+      this._dc = g;
+    }
+    this._dc.gain.setTargetAtTime(Math.max(0, Math.min(1, v)) * 0.32, this.ctx.currentTime, 0.5);
+  }
   // night voices that come from one place (panned by songAt, so they are built with _seq)
   trill() { const L = []; for (let i = 0; i < 16; i++) L.push([i * 0.045, 1250 + Math.random() * 40, 0.03, 0.035, 1180, 'triangle']); this._seq(L); }
   hoot() { this._seq([[0, 0.22], [0.3, 0.2], [0.6, 0.2], [0.95, 0.26], [1.6, 0.2], [1.9, 0.2], [2.2, 0.2], [2.55, 0.5]].map(([d, l]) => [d, l > 0.4 ? 330 : 400, l, 0.07, l > 0.4 ? 260 : 390])); }

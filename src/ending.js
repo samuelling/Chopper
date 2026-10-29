@@ -48,7 +48,7 @@ export function creditsHTML(kind, st) {
 }
 
 /** scrolls the credits, then shows the end buttons.  Returns a stop function. */
-export function rollCredits(root, html, { onRestart, onStay, onMenu }) {
+export function rollCredits(root, html, { onRestart, onStay, onMenu, onHold }) {
   stopMz?.();
   root.classList.remove('hidden');
   root.innerHTML = `<div class="crscroll">${html}</div><button class="crskip" data-cr-menu>Skip to the start menu</button><div class="crend" hidden><button data-cr-stay>Stay and watch</button><button data-cr-restart>Begin again</button></div>`;
@@ -60,7 +60,7 @@ export function rollCredits(root, html, { onRestart, onStay, onMenu }) {
     y -= 34 * SPEED * dt; sc.style.transform = `translateY(${y}px)`;
     // stop with the megaZINE masthead held a little above centre, so the QR can be scanned
     const mz = sc.querySelector('.mz'), stopAt = mz ? -(mz.offsetTop + mz.offsetHeight / 2 - innerHeight * 0.42) : -(sc.scrollHeight - innerHeight * 0.45);
-    if (y <= stopAt) { y = stopAt; sc.style.transform = `translateY(${y}px)`; if (!done) { done = true; end.hidden = false; } }
+    if (y <= stopAt) { y = stopAt; sc.style.transform = `translateY(${y}px)`; if (!done) { done = true; end.hidden = false; onHold?.(root); } }
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
