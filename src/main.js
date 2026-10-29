@@ -60,6 +60,7 @@ import { Goggles, GOGGLES, OWN_KEY, AI_SUB } from './goggles.js';
 import { Pad } from './gamepad.js';
 import { WaterLife } from './waterlife.js';
 import { Migrants, MIGRANTS } from './migrants.js';
+import { NoticeBoard } from './noticeboard.js';
 import { Hammock } from './hammock.js';
 import { RarePlants } from './rareplants.js';
 import { DataCenter } from './datacenter.js';
@@ -1010,6 +1011,26 @@ async function boot() {
     if (how === 'kindling') JOURNAL.add('The dying woods caught like kindling. A big fire, seen from town.', fire.x, fire.z); };
   // ---- poachers (poachers.js): only the drone's AI spotter can pick them out; the fine goes to the park fund
   const poachers = new Poachers(scene, { force: params.has('poachers') });
+  // ---- the noticeboard: the back of the park sign by the beach, cork, with things pinned to it (noticeboard.js)
+  const noticeboard = landmarks.parkSign ? new NoticeBoard(scene, landmarks.parkSign, landmarks.fill?.gradientMap) : null;
+  const gatherNotices = () => {
+    const out = [], ph = new Set(), n = RUN.n || 0;
+    // your latest photos, a print of each of the last three species
+    for (let i = GUIDE.photos.length - 1; i >= 0 && out.length < 3; i--) { const p = GUIDE.photos[i]; if (ph.has(p.id) || !(p.thumb || p.data)) continue; ph.add(p.id); out.push({ id: `ph${p.at}`, kind: 'photo', src: p.thumb || p.data, title: BY_ID[p.id]?.name || 'A photo' }); }
+    // what is going on, most pressing first
+    if (fire.burning) out.push({ id: `fire${n}`, head: 'FIRE', title: 'Smoke reported in the woods', body: 'Stay on the trails and well away from it. If you can see where it is, call it in.' });
+    if (poachers.active) out.push({ id: `poach${n}`, head: 'NOTICE', title: 'Shots heard off the trails', body: 'Hunting is not permitted in the park. If you see anyone with a rifle, do not approach. Report it to the Environmental Police.' });
+    const lf = clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1);
+    if (lf < 0.6) out.push({ id: `lake${n}_${Math.round(lf * 10)}`, head: 'NOTICE', headColor: '#2f5f8a', title: lf < 0.15 ? 'The reservoir is nearly empty' : 'Low water', body: `The reservoir is down to about ${Math.round(lf * 10) * 10}% of its level. The beach line has moved. The boat ramp is closed.` });
+    for (const p of migrants.plan || []) if (p.live || p.done) { const M = MIGRANTS[p.id]; if (M) out.push({ id: `mig${p.id}${n}`, hand: true, color: '#fff9e8', title: M.legend ? `${M.name}!!` : `${M.name}, seen this week`, body: M.legend ? 'Here. In Ashland. I am not making this up. Bring a camera.' : M.hint }); }
+    if (rareplants.out && RUN.s.rareRumour === n) out.push({ id: `rare${n}`, hand: true, color: '#f4f7e8', title: 'A botanist’s note', body: `Someone saw ${rareplants.out.rumour} in the park this season. Look, photograph, please don’t pick.` });
+    if (hammock.waiting && RUN.s.hammockLead) out.push({ id: 'hammock', hand: true, title: 'Found (sort of)', body: 'An orange hammock, strung between two trees off the trail. Been there a while. Finders keepers.' });
+    for (const l of explore.leads || []) if (l.src === 'note' && !l.done) out.push({ id: l.id, hand: true, title: 'In pencil:', body: String(l.text).replace(/^A note pinned to the trailhead board, in pencil:\s*/, '') });
+    if (RUN.phaseTwo) out.push({ id: 'clydepermit', head: 'PUBLIC NOTICE', headColor: '#1f2c44', title: 'Clyde Corp. water withdrawal permit', body: 'Application to draw from the Ashland aquifer for data center cooling. Public comment period open.' });
+    out.push({ id: `rules${SEASON}`, head: 'PARK RULES', headColor: '#4a3020', title: { winter: 'Thin ice. Stay off the reservoir.', summer: 'No lifeguard on duty.', spring: 'Ticks are out.', autumn: 'Carry in, carry out.' }[SEASON] || 'Carry in, carry out.', body: { winter: 'The ice is never safe to walk on, whatever it looks like.', summer: 'Swim at your own risk. Stay inside the buoys.', spring: 'Check yourself after the trails, especially behind the knees.', autumn: 'Leave nothing behind but footprints. Dogs on a leash.' }[SEASON] });
+    return out;
+  };
+  if (noticeboard) noticeboard.onNew = () => { if (started && !interludeOn && Math.hypot(player.pos.x - noticeboard.at.x, player.pos.z - noticeboard.at.z) > 25) ui.toast('Something new is pinned to the board by the beach.', 3.5); };
   poachers.onShot = () => { audio.shot?.(); if (!RUN.s.shotHeard) { RUN.s.shotHeard = true; RUN.save?.(); ui.toast('A shot, somewhere off in the woods. Hunting isn\u2019t allowed in the park.', 5); } };
   poachers.onFled = () => ui.toast('Someone crashes off through the brush ahead of you, fast. Whoever it was is gone.', 4.5);
   poachers.onFined = (amt) => { ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
@@ -1526,6 +1547,7 @@ async function boot() {
     { if (player.swimming && player.carry !== 'none') { fishing.reset(); player.setCarry('none'); }
       const near = player.swimming ? 0.3 : player.boat ? 1 : Math.max(0, 1 - Math.hypot(player.pos.x - boat.x, player.pos.z - boat.z) / 22); audio.waterUpdate?.(dt, { vol: near, v: player.swimming ? 0 : boat.v, tl: boat._tl, tr: boat._tr, reel: fishing.audioState() }); }
     flyover.update(dt); tut.update(dt); dcFog = datacenter.update(dt);
+    noticeboard?.update(dt, player.pos, gatherNotices);
     // camera shake from big falls
     if (shake > 0.001) {
       camera.position.x += (Math.random() - 0.5) * shake * 0.25;
@@ -1573,7 +1595,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { atmosphere, datacenter, rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { noticeboard, atmosphere, datacenter, rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

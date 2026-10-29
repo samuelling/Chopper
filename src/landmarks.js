@@ -460,7 +460,7 @@ export class Landmarks {
   }
 
 
-  /** the park's sign on the trailhead board, both faces: an off-white face in a brown wooden frame, brown letters in Helvetica (or Arial),
+  /** the park's sign on the trailhead board, its front: an off-white face in a brown wooden frame, brown letters in Helvetica (or Arial),
    *  the way the Commonwealth's park signs look. */
   _parkSign(x, y, z) {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
@@ -487,7 +487,7 @@ export class Landmarks {
     draw();
     const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(1.86, 1.06);
     this.parkSign = { x, y, z };
-    for (const side of [1, -1]) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z + side * 0.045); m.rotation.y = side > 0 ? 0 : Math.PI; this.group.add(m); }
+    { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z + 0.045); this.group.add(m); }   // (the back is the noticeboard: noticeboard.js)
   }
   update(dt, player) {
     const t = shared.time.value;
