@@ -425,8 +425,12 @@ async function boot() {
       setTimeout(() => { if (!player.locked && !tut.active) tut.start(); }, 700);
     }
   };
+  // stepping into the park: the world's news holds off a while (longest the very first time), then comes one at a time
+  const settleIn = () => { ui.quiet(RUN.n === 0 && !RUN.s.settled ? 50 : 14); if (!RUN.s.settled && !RUN.dev) { RUN.s.settled = true; RUN.save?.(); } };
+  { const raw = audio.notify.bind(audio); audio.notify = () => { if (ui.holding && performance.now() - ui._input > 1500) ui.chimeNext = true; else raw(); }; ui.onChime = raw; }   // a held message chimes when it shows
   const begin = () => {
     audio.init();
+    if (!started) settleIn();
     started = true; flyover.stop();
     if (needKnob()) { ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
     if (MOBILE) {
@@ -635,13 +639,15 @@ async function boot() {
     if (yt) {                               // Year One ... dissolve ... Autumn
       const ag = document.getElementById('scage'); ag.textContent = ageLine(); ag.classList.remove('dim');
       setTimeout(() => { nm.classList.add('dim'); ag.classList.add('dim'); }, 1800 + CARD);
-      setTimeout(() => { nm.textContent = SEASON_DEF.label; nm.classList.remove('dim'); ag.textContent = ''; }, 2600 + CARD);
+      // once it has faded right out, a fresh title replaces it (Safari could leave the old words' shadows painted under
+      // new ones when the text of the same element changed), and fades in
+      setTimeout(() => { const fresh = nm.cloneNode(false); fresh.classList.add('dim'); fresh.textContent = SEASON_DEF.label; nm.replaceWith(fresh); ag.textContent = ''; requestAnimationFrame(() => requestAnimationFrame(() => fresh.classList.remove('dim'))); }, 2700 + CARD);
     }
     const go = () => {
       card.classList.add('hidden');
       if (spawnFromDrone && !player.boat && !player.onIce) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
       flyover.glideTo(() => {
-        audio.init(); started = true; autoCard = false;
+        audio.init(); if (!started) settleIn(); started = true; autoCard = false;
         if (needKnob()) { ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
         if (MOBILE) { player.softLock = true; player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else if (padLed()) { softPlay(); tut.start(); }
