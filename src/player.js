@@ -183,7 +183,10 @@ export class Player {
     if (!this.swimming) { this.dive = 0; this.underwater = false; this.breath = Math.min(1, this.breath + dt / 4); }
     if (!this.swimOK && depth > 0.85 && (fx || fz) && this.coldCool <= 0) { this.coldCool = 7; this.events.cold?.(); }
     this.onIce = onDeck && !!this.iceAt?.(this.pos.x, this.pos.z);
-    let sp = (sprint ? 6.2 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
+    // sneaking: hold Z (or push the stick only part way): slow, and much less noticeable to animals
+    const tm = Math.hypot(this.touch.x, this.touch.y);
+    this.sneaking = !sprint && !this.swimming && ((k.KeyZ && (fx || fz)) || (tm > 0.12 && tm < 0.55));
+    let sp = (sprint ? 6.2 : k.KeyZ ? 1.6 : 3.6) * (depth > 0.2 ? 1 - Math.min(0.5, depth * 0.4) : 1);
     if (this.skis && !this.swimming) sp *= this.onIce ? 1.5 : (this.onTrail?.(this.pos.x, this.pos.z) ? 1.9 : 1.45);   // cross-country skis: quickest in the trail's track
     if (this.swimming) {
       const moving = !!(fx || fz);

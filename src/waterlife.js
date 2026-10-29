@@ -9,6 +9,7 @@
 // Everything under the surface can only be photographed from under it.  Every species here lives in Massachusetts fresh
 // water (the crayfish is the native spinycheek, not the invasive rusty or virile); their numbers and places are invented.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { simpleToon } from './toon.js';
 import { groundY, waterDepthAt, sdfAt, lake } from './world.js';
 import { SEASON } from './season.js';
@@ -178,14 +179,14 @@ export class WaterLife {
       let y = bottom, act = null;
       switch (a.kind) {
         case 'crayfish': {
-          if (a.st === 'idle' && under && dist < 1.7) { a.st = 'claws'; a.t = 0; }
+          if (a.st === 'idle' && under && dist < 1.7 * STEALTH.move) { a.st = 'claws'; a.t = 0; }
           if (a.st === 'claws') { act = 'crayfish-claws'; M.claws.forEach((c, i) => { c.rotation.x = -0.9; c.rotation.y = (i ? 1 : -1) * (0.7 + Math.sin(a.t * 9) * 0.1); }); M.root.rotation.x = -0.35; if (a.t > 2.2) { a.st = 'flee'; a.t = 0; } }
           else if (a.st === 'flee') { const s = Math.max(0, 3.5 - a.t * 6); a.x -= Math.sin(a.h) * s * dt; a.z -= Math.cos(a.h) * s * dt; M.root.rotation.x = 0; M.claws.forEach((c) => { c.rotation.set(0, 0, 0); }); if (a.t > 4) { a.st = 'idle'; a.t = 0; } }
           else { a.h += Math.sin(a.t * 0.5 + a.x) * dt * 0.4; if (Math.sin(a.t * 0.7) > 0.3) { a.x += Math.sin(a.h) * 0.05 * dt; a.z += Math.cos(a.h) * 0.05 * dt; } M.root.rotation.x = 0; M.claws.forEach((c, i) => { c.rotation.y = (i ? 1 : -1) * 0.35; c.rotation.x = 0; }); }
           y = bottom; break;
         }
         case 'tadpoles': {
-          const scatter = under && dist < 1.6 ? 1 : 0; a.sc = (a.sc || 0) + (scatter - (a.sc || 0)) * Math.min(1, dt * (scatter ? 6 : 0.6));
+          const scatter = under && dist < 1.6 * STEALTH.move ? 1 : 0; a.sc = (a.sc || 0) + (scatter - (a.sc || 0)) * Math.min(1, dt * (scatter ? 6 : 0.6));
           a.x += Math.sin(a.t * 0.23 + a.z) * 0.08 * dt; a.z += Math.cos(a.t * 0.19 + a.x) * 0.08 * dt; y = bottom + 0.08;
           for (const t of M.list) { const u = t.userData, k = 1 + a.sc * 2.5; t.position.set(u.ox * k + Math.sin(a.t * 1.3 + u.ph) * 0.06, u.oy + Math.sin(a.t * 2 + u.ph) * 0.03, u.oz * k + Math.cos(a.t * 1.1 + u.ph) * 0.06); t.rotation.y = a.t * 0.8 + u.ph; u.tail.rotation.y = Math.sin(a.t * 18 + u.ph) * 0.6; }
           break;

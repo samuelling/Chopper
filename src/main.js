@@ -59,6 +59,7 @@ import { NightLife, NIGHT } from './nightlife.js';
 import { Goggles, GOGGLES, OWN_KEY, AI_SUB } from './goggles.js';
 import { Pad } from './gamepad.js';
 import { WaterLife } from './waterlife.js';
+import { updateStealth } from './stealth.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
 import { RopeSwing } from './ropeswing.js';
@@ -402,7 +403,8 @@ async function boot() {
     knobEl.querySelector('[data-keep]')?.addEventListener('click', () => { Usage.checkin(Math.round(prev), 'kept'); finish(); });
   };
   // in play without capturing the mouse: on a touch screen, or when a game controller started it
-  let pad = null, cardT = 0;   // the game controller (made further down)
+  let pad = null, cardT = 0, sneakT = 0;
+  const deerYou = { x: 0, y: 0, z: 0, speed: 0 };   // the game controller (made further down)
   const padLed = () => !!(pad?.synthetic || pad?.lastWasPad);
   const softPlay = () => { player.softLock = true; player.locked = true; player.onLockChange?.(true); ui.els.title.classList.add('hidden'); ui.els.paused.classList.add('hidden'); ui.els.hud.classList.add('on'); };
   const intoPlay = () => {
@@ -1325,6 +1327,9 @@ async function boot() {
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
     pad.update(dt);
+    updateStealth({ speed: player.speed, sitting: player.sitting, sneaking: player.sneaking, running: player.speed > 4.5, dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0 });
+    // the first time you run at the animals: how to get close instead
+    if (started && player.speed > 4.5 && !player.boat && !RUN.s.sneakHint) { sneakT = (sneakT || 0) + dt; if (sneakT > 3 && livingSeen().some((q) => !String(q.kind).startsWith('water-') && Math.hypot(q.x - player.pos.x, q.z - player.pos.z) < 30)) { RUN.s.sneakHint = true; RUN.save?.(); ui.toast(`Running, you send everything off. To get close to animals, creep (${MOBILE ? 'push the stick only a little' : 'hold Z'}) or stand still and let them come. In the dark they notice you far less.`, 7); } } else sneakT = 0;
     { const camUnder = camera.position.y < lake.level - 0.02;
       waterlife.update(dt, started && !interludeOn && !droneOn, player.pos, camera.position, camUnder);
       if (camUnder && player.underwater && !RUN.s.diveLifeHint && waterlife.list.length) { RUN.s.diveLifeHint = true; RUN.save?.(); ui.toast(`There is life down here: crayfish on the bottom, tadpoles in the shallows, newts, mussels, and in the deep, sometimes, a snapping turtle. Take the camera down with you (${MOBILE ? 'Phone \u2192 Camera, or the big button' : 'V'}): things under the water can only be photographed from under it.`, 8); } }
@@ -1391,7 +1396,7 @@ async function boot() {
     water.update(dt);
     wildlife.update(dt, focus, player.speed);
     squirrels.update(dt, focus);
-    deer.update(dt, player.pos, player.stillT, player.sitting); flyers.update(dt, focus, mood); critters.update(dt, focus, mood); fox.update(dt, player, mood); plants.update(dt, focus); stepSit(dt); stepDay(dt);
+    deerYou.x = player.pos.x; deerYou.y = player.pos.y; deerYou.z = player.pos.z; deerYou.speed = player.speed; deer.update(dt, deerYou, player.stillT, player.sitting);   // with your speed, so a running person spooks them from further flyers.update(dt, focus, mood); critters.update(dt, focus, mood); fox.update(dt, player, mood); plants.update(dt, focus); stepSit(dt); stepDay(dt);
     birds.update(dt, focus);
     // a regular: the same heron, season after season
     if (!RUN.dev && (RUN.s.herons ||= []).indexOf(RUN.n) < 0 && birds.seen.some((b) => b.kind === 'heron' && Math.hypot(b.x - player.pos.x, b.z - player.pos.z) < 60)) {

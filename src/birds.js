@@ -6,6 +6,7 @@
 // NOTE the species list is a sensible guess for this habitat (common residents and visitors of reservoirs and mixed
 // forest in the Boston metrowest area), not a survey of this particular park.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix, branchMatrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt } from './world.js';
@@ -259,7 +260,7 @@ export class Birds {
       }
       const sp = this.sp[b.kind], S = sp.S;
       const dp = Math.hypot(b.x - px, b.z - pz);
-      if (b.mode === 'perch' && dp < 6) { b.mode = 'away'; b.timer = 0; this._startFlight(b, b.x + (b.x - px) / (dp || 1) * 60, b.z + (b.z - pz) / (dp || 1) * 60, b.y + 6, 'away'); }
+      if (b.mode === 'perch' && dp < 6 * STEALTH.k) { b.mode = 'away'; b.timer = 0; this._startFlight(b, b.x + (b.x - px) / (dp || 1) * 60, b.z + (b.z - pz) / (dp || 1) * 60, b.y + 6, 'away'); }
       let o;
       if (b.mode === 'perch') {
         b.timer -= dt; b.lookT -= dt;
@@ -318,7 +319,7 @@ export class Birds {
     }
     const dp = Math.hypot(hs.x - px, hs.z - pz);
     if (hs.mode === 'wade') {
-      if (dp < 15 || !full) { hs.mode = 'takeoff'; hs.timer = 0; hs.th = Math.atan2(hs.x - px, hs.z - pz) + (this.rng() - 0.5) * 0.8; hs.v = 0; hs.y = groundY(hs.x, hs.z) + 0.1; }
+      if (dp < 15 * STEALTH.k || !full) { hs.mode = 'takeoff'; hs.timer = 0; hs.th = Math.atan2(hs.x - px, hs.z - pz) + (this.rng() - 0.5) * 0.8; hs.v = 0; hs.y = groundY(hs.x, hs.z) + 0.1; }
       else {
         hs.nextStrike -= dt; hs.strike = Math.max(0, hs.strike - dt);
         if (hs.nextStrike <= 0) { hs.strike = 0.9; hs.nextStrike = 12 + this.rng() * 30; }
@@ -408,7 +409,7 @@ export class Birds {
       f.h += Math.sin(t * 0.07 + f.birds[0].ph) * 0.1 * dt;
       const nx = f.cx + Math.sin(f.h) * 0.12 * dt, nz = f.cz + Math.cos(f.h) * 0.12 * dt;
       if (sdfAt(nx, nz) < -8) { f.cx = nx; f.cz = nz; } else f.h += 1.0 * dt;
-      if (dp < 14 || !full || f.age > f.dur) { f.mode = 'run'; f.timer = 0; f.th = Math.atan2(f.cx - px, f.cz - pz); f.v = 0; for (const b of f.birds) b.y = lake.level; }
+      if (dp < 14 * STEALTH.k || !full || f.age > f.dur) { f.mode = 'run'; f.timer = 0; f.th = Math.atan2(f.cx - px, f.cz - pz); f.v = 0; for (const b of f.birds) b.y = lake.level; }
     }
     for (const b of f.birds) {
       if (f.mode === 'float') {

@@ -3,6 +3,7 @@
 // two-jointed legs (shoulder/hip, knee/hock) that walk in a four-beat sequence, trot in diagonal pairs and gallop when bolting.
 // They steer round trunks, boulders, walls and the lake edge by looking ahead, and unstick themselves if they ever wedge.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt } from './world.js';
@@ -176,8 +177,8 @@ export class Deer {
       const dx = d.x - player.x, dz = d.z - player.z, dp = Math.hypot(dx, dz);
       if (dp > 150) { d.active = false; d.wait = 40 + this.rng() * 60; continue; }
       const calm = sitting || still > 3, spd = player.speed || 0;
-      const alertR = calm ? 16 : 34, fleeR = calm ? 6 : (spd > 4.5 ? 28 : 13);
-      const seen = dp < alertR || (spd > 4.5 && dp < 45);
+      const alertR = (calm ? 16 : 34) * STEALTH.q, fleeR = (calm ? 6 : (spd > 4.5 ? 28 : 13)) * STEALTH.q;   // sneaking, and the dark, let you closer
+      const seen = dp < alertR || (spd > 4.5 && dp < 45 * STEALTH.light);
       let want = null, v = 0, turn = 2.2, gait = 0;
       const away = Math.atan2(dx, dz);
       if (d.st === 'flee') {

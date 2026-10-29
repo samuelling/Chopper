@@ -3,6 +3,7 @@
 // Creatures live just under the water surface (the water is semi-transparent in the shallows, so they read as
 // shapes through it), keep to water that is deep enough, and leave when the lake is drawn down.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix } from './builder.js';
 import { fillMaterial, outlineMaterial } from './toon.js';
 import { groundY, sdfAt } from './world.js';
@@ -196,7 +197,7 @@ export class Wildlife {
       const fs = sc.bass ? this.bass : this.sunfish, spec = sc.bass ? this.fishSpec.bass : this.fishSpec.sun;
       // burst-and-coast swimming: the school surges, then glides, and the tail beats faster on each surge
       const surge = 0.5 + 0.5 * Math.sin(this.t * 0.9 + sc.dy * 11);
-      const flee = dp < 5 ? 1 : 0;
+      const flee = dp < 5 * STEALTH.k ? 1 : 0;
       for (const m of sc.mem) {
         const tx = sc.x + Math.cos(sc.h) * m.ox + Math.sin(sc.h) * m.oz, tz = sc.z - Math.sin(sc.h) * m.ox + Math.cos(sc.h) * m.oz;
         m.x += (tx - m.x) * Math.min(1, dt * 1.6); m.z += (tz - m.z) * Math.min(1, dt * 1.6);
@@ -296,7 +297,7 @@ export class Wildlife {
       tu.bad = this.depthAt(tu.x, tu.z) < 0.6 ? tu.bad + dt : 0;
       const dp = Math.hypot(tu.x - px, tu.z - pz);
       tu.cycle -= dt;
-      if (dp < 4 && tu.surf > 0) tu.cycle = Math.min(tu.cycle, 0.01);
+      if (dp < 4 * STEALTH.k && tu.surf > 0) tu.cycle = Math.min(tu.cycle, 0.01);
       // surface for ~6 s every so often, then dive
       if (tu.cycle <= 0 && tu.surf <= 0) { tu.surf = 6 + this.rng() * 4; tu.cycle = 25 + this.rng() * 40; }
       if (tu.surf > 0) tu.surf -= dt;

@@ -4,6 +4,7 @@
 // Seeing one is a moment; a photo of one is the biggest thing the park's page ever gets.  Which animals turn up in which
 // season follows their habits (bears sleep through winter, eagles come to open water in winter); the rest is invented.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { simpleToon } from './toon.js';
 import { groundY, sdfAt, waterDepthAt, lake } from './world.js';
 import { RUN } from './run.js';
@@ -181,7 +182,7 @@ export class Legends {
     }
     // ---- walkers and the otter
     const leaving = a.state === 'leave';
-    if (!leaving && (dy < (K === 'bobcat' ? 26 : K === 'bear' ? 22 : 18) || a.age > 60)) { a.state = 'leave'; a.pause = 0; if (you) a.dir = Math.atan2(a.x - you.x, a.z - you.z); }
+    if (!leaving && (dy < (K === 'bobcat' ? 26 : K === 'bear' ? 22 : 18) * STEALTH.k || a.age > 60)) { a.state = 'leave'; a.pause = 0; if (you) a.dir = Math.atan2(a.x - you.x, a.z - you.z); }
     const base = { bear: 0.85, moose: 1.1, bobcat: 1.0, otter: 1.3 }[K], sp = a.state === 'leave' ? base * (K === 'bobcat' ? 3.4 : K === 'otter' ? 1.6 : 1.9) : base;
     let moving = true;
     if (a.state === 'walk' && (a.pause -= dt) < 0) { if (a.pause < -3) a.pause = 5 + Math.random() * 7; moving = false; }

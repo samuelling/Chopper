@@ -2,6 +2,7 @@
 // can bound along the ground, sit up and nibble with its paws at its mouth, look about, flick its tail, and
 // scramble up a trunk.  Same toon fill + outline as the trees.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt } from './world.js';
@@ -143,7 +144,7 @@ export class Squirrels {
       let y = groundY(a.x, a.z);
       let vTarget = 0, nowSit = a.st === 'sit';
 
-      if (a.st !== 'flee' && a.st !== 'climb' && dp < this.spookR) {
+      if (a.st !== 'flee' && a.st !== 'climb' && dp < this.spookR * STEALTH.k) {
         // spooked: bolt for the nearest trunk, or just away from the player
         a.tree = this.chunks.nearestTree(a.x, a.z, 14);
         if (a.tree) { a.tx = a.tree.x; a.tz = a.tree.z; } else { const l = dp || 1; a.tx = a.x + (a.x - px) / l * 14; a.tz = a.z + (a.z - pz) / l * 14; }

@@ -6,6 +6,7 @@
 // in late summer and autumn, foxfire glows faintly green, but only with your light off.  Moths come to your light.
 // All of it is habitat-typical, not a survey.  Each goes in the Field Guide under Night.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { simpleToon } from './toon.js';
 import { quad, part, G } from './legends.js';
 import { groundY, sdfAt, waterDepthAt, trailDistAt } from './world.js';
@@ -182,7 +183,7 @@ export class NightLife {
     for (const a of this.list) {
       a.t += dt; const M = a.m, dx = a.x - you.x, dz = a.z - you.z, dy = Math.hypot(dx, dz);
       // a flashlight in its face makes it bolt from twice as far; with no light at all you can creep closer
-      const sk = (a.seenLit || 0) > 0.25 ? 2 : torch.on ? 1 : 0.6;
+      const sk = ((a.seenLit || 0) > 0.25 ? 2 : torch.on ? 1 : 0.6) * STEALTH.move;   // and how you move: run at it and it goes sooner, creep and you get closer
       // behaviour
       if (a.kind === 'bat') {   // loops over you, quick and erratic
         a.ph += dt * (2 + Math.sin(a.t * 3) * 0.6); const r = 9 + 5 * Math.sin(a.t * 0.7);

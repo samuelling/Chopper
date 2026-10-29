@@ -4,6 +4,7 @@
 // sits with its tail curled round, and hunts mice the way foxes do: a still listen with the head cocked, a crouch, a high
 // arcing leap and a nose-first landing.  It notices you, stares with its ears up, and slips away.  Every pose eases.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt, trailDistAt } from './world.js';
@@ -131,7 +132,7 @@ export class Fox {
         f.timer -= dt; let v = 0, gait = 1, turn = 3.2, want = null;
         if (f.st !== f.lastSt) { f.lastSt = f.st; f.stT = 0; } f.stT += dt;                          // time in the current state
         let tgt = { crouch: 0, sit: 0, headP: 0.15, headY: 0, headR: 0, ears: 0.5, tailUp: 0.15, tailCurl: 0, pitch: 0 };
-        const aware = dp < (still ? 12 : 22) || (spd > 4.5 && dp < 32);
+        const aware = dp < (still ? 12 : 22) * STEALTH.q || (spd > 4.5 && dp < 32 * STEALTH.q);
         if (f.st !== 'flee' && f.st !== 'stare' && f.st !== 'leap' && aware) { f.st = 'stare'; f.timer = still ? 5 + r() * 3 : 1.6 + r(); }
         switch (f.st) {
           case 'trot': {

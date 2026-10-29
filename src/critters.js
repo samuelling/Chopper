@@ -1,6 +1,7 @@
 // Small and shy: eastern chipmunks (day), frogs on the shore (warm months, evening), a beaver
 // swimming at dusk, and a pair of wood ducks on the water by day.  Each is a few toon parts moved by simple procedural gaits.
 import * as THREE from 'three';
+import { STEALTH } from './stealth.js';
 import { GeoBuilder, matrix } from './builder.js';
 import { makeInstanced } from './wildlife.js';
 import { groundY, sdfAt, lake } from './world.js';
@@ -97,7 +98,7 @@ export class Critters {
       if (!c.active) { c.wait -= dt; if (c.wait > 0 || mood >= 2 || SEASON === 'winter' || life < 0.4) continue; if (!this._land(c, px, pz, 10, 28)) { c.wait = 5; continue; } c.active = true; c.st = 'sit'; c.timer = 1 + this.rng() * 2; c.v = 0; }
       const dp = Math.hypot(c.x - px, c.z - pz); if (dp > 60) { c.active = false; c.wait = 25; continue; }
       c.timer -= dt; let v = 0;
-      if (c.st !== 'run' && dp < (still ? 3 : 6)) { c.st = 'run'; c.timer = 3; const tr = this.chunks.nearestTree(c.x, c.z, 14); c.tx = tr ? tr.x : c.x + (c.x - px) * 3; c.tz = tr ? tr.z : c.z + (c.z - pz) * 3; }
+      if (c.st !== 'run' && dp < (still ? 3 : 6) * STEALTH.q) { c.st = 'run'; c.timer = 3; const tr = this.chunks.nearestTree(c.x, c.z, 14); c.tx = tr ? tr.x : c.x + (c.x - px) * 3; c.tz = tr ? tr.z : c.z + (c.z - pz) * 3; }
       if (c.st === 'run') { v = 5.5; this._walk(c, v, dt, 12); if (c.timer <= 0 || Math.hypot(c.tx - c.x, c.tz - c.z) < 0.5) { c.active = false; c.wait = 40 + this.rng() * 40; continue; } }
       else if (c.st === 'sit') { if (c.timer <= 0) { c.st = 'dart'; c.timer = 0.5 + this.rng() * 0.6; const a = this.rng() * 6.283; c.tx = c.x + Math.sin(a) * 3; c.tz = c.z + Math.cos(a) * 3; } }
       else if (c.st === 'dart') { v = 4; this._walk(c, v, dt, 12); if (c.timer <= 0) { c.st = 'sit'; c.timer = 1.5 + this.rng() * 3; } }
@@ -113,7 +114,7 @@ export class Critters {
       if (!f.active) { f.wait -= dt; if (f.wait > 0 || SEASON === 'winter' || (SEASON === 'autumn' && this.rng() < 0.7) || life < 0.4) continue; let ok = false; for (let k = 0; k < 30 && !ok; k++) { const a = this.rng() * 6.283, r = 6 + this.rng() * 22, x = px + Math.cos(a) * r, z = pz + Math.sin(a) * r, s = sdfAt(x, z); if (s > 0.8 && s < 4 && groundY(x, z) < lake.level + 0.6) { f.x = x; f.z = z; f.h = this.rng() * 6.283; ok = true; } } if (!ok) { f.wait = 6; continue; } f.active = true; f.st = 'sit'; f.hop = 0; f.timer = 3; }
       const dp = Math.hypot(f.x - px, f.z - pz); if (dp > 50) { f.active = false; f.wait = 20; continue; }
       let y = groundY(f.x, f.z);
-      if (f.st === 'sit' && dp < (still ? 1.6 : 3.8)) { f.st = 'hop'; f.hop = 0; f.timer = 3; f.tx = f.x - (px - f.x) * 0 + Math.sin(f.h) * 0; const l = dp || 1; f.dx = (f.x - px) / l; f.dz = (f.z - pz) / l; }
+      if (f.st === 'sit' && dp < (still ? 1.6 : 3.8) * STEALTH.q) { f.st = 'hop'; f.hop = 0; f.timer = 3; f.tx = f.x - (px - f.x) * 0 + Math.sin(f.h) * 0; const l = dp || 1; f.dx = (f.x - px) / l; f.dz = (f.z - pz) / l; }
       let lift = 0;
       if (f.st === 'hop') { f.hop += dt * 2.6; const k = f.hop % 1; lift = Math.sin(k * Math.PI) * 0.3; f.x += f.dx * dt * 1.8; f.z += f.dz * dt * 1.8; f.h = Math.atan2(f.dx, f.dz); if (sdfAt(f.x, f.z) < 0 || f.hop > 3) { if (sdfAt(f.x, f.z) < 0) this.onSplash?.(f.x, f.z); f.active = false; f.wait = 30 + this.rng() * 40; continue; } }
       y = Math.max(groundY(f.x, f.z), lake.level - 0.02) + lift;
@@ -150,7 +151,7 @@ export class Critters {
       const lead = pair[0], dp = Math.hypot(d.x - px, d.z - pz);
       if (dp > 130 || (i === 0 && lead.st === 'fly' && lead.timer > 3)) { for (const q of pair) { q.active = false; q.wait = 70 + this.rng() * 60; } if (i === 1) continue; break; }
       if (i === 0) {
-        if (lead.st === 'swim') { d.timer += dt; if (dp < (still ? 10 : 20)) { d.st = 'flee'; d.timer = 0; } if (Math.hypot(d.tx - d.x, d.tz - d.z) < 2) this._swimGoal(d, 12); }
+        if (lead.st === 'swim') { d.timer += dt; if (dp < (still ? 10 : 20) * STEALTH.q) { d.st = 'flee'; d.timer = 0; } if (Math.hypot(d.tx - d.x, d.tz - d.z) < 2) this._swimGoal(d, 12); }
         if (d.st === 'flee') { d.timer += dt; d.tx = d.x + (d.x - px) * 3; d.tz = d.z + (d.z - pz) * 3; if (d.timer > 2) { d.st = 'fly'; d.timer = 0; } }
         if (d.st === 'fly') d.timer += dt;
       } else { d.st = lead.st; d.timer = lead.timer; d.tx = lead.tx + 0.9; d.tz = lead.tz - 0.5; }
