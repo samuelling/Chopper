@@ -1238,7 +1238,7 @@ async function boot() {
   showSpeed(); window.__speed = SPEED;
   // ---- the endings
   let ending = false, endingKind = null;
-  const datacenter = new DataCenter(scene, camera); let dcFog = null;
+  const datacenter = new DataCenter(scene, camera); let dcFog = null; let dcFogBase = null; const DC_DARK = new THREE.Color('#030406');
   const endStats = () => ({
     years: RUN.dev ? 1 : Math.min(RUN.yearNo, RUN.lifeYears ?? 99), age0: RUN.s.age0, ageEnd: RUN.s.age0 == null ? null : RUN.s.age0 + Math.min(RUN.yearNo, RUN.lifeYears ?? 99),
     felled: RUN.s.felled.length + chunks.felledCount, planted: RUN.s.planted || 0, litter: (RUN.s.litterGone || []).length,
@@ -1453,7 +1453,7 @@ async function boot() {
     { const camUnder = camera.position.y < lake.level - 0.02;
       waterlife.update(dt, started && !interludeOn && !droneOn, player.pos, camera.position, camUnder);
       if (camUnder && player.underwater && !RUN.s.diveLifeHint && waterlife.list.length) { RUN.s.diveLifeHint = true; RUN.save?.(); ui.toast(`There is life down here: crayfish on the bottom, tadpoles in the shallows, newts, mussels, and in the deep, sometimes, a snapping turtle. Take the camera down with you (${MOBILE ? 'Phone \u2192 Camera, or the big button' : 'V'}): things under the water can only be photographed from under it.`, 8); } }
-    if (MOBILE && (cardT = (cardT || 0) - dt) <= 0) { cardT = 0.5; const cd = document.querySelector('#hud .card'); if (cd) document.documentElement.style.setProperty('--cardh', `${(cd.offsetHeight || 130) + 12}px`); }
+    if (MOBILE && (cardT = (cardT || 0) - dt) <= 0) { cardT = 0.5; const cd = document.querySelector('#hud .card'); if (cd) { document.documentElement.style.setProperty('--cardh', `${(cd.offsetHeight || 130) + 12}px`); document.documentElement.style.setProperty('--cardw', `${cd.offsetWidth ? cd.offsetWidth + 12 : 0}px`); } }
     player.inputLock = fishing.state === 'fight' || drone.active; boat.update(dt, player.boat === boat); player.update(dt);
     fire.update(dt * SPEED.v, started && player.locked && !interludeOn);
     if (grandStag && !stagSaid) { const st = deer.seen.find((q) => q.kind === 'stag'); if (st && Math.hypot(st.x - camera.position.x, st.z - camera.position.z) < 80) { const v = new THREE.Vector3(st.x, st.y, st.z).project(camera); if (v.z < 1 && Math.abs(v.x) < 0.8 && Math.abs(v.y) < 0.8) { stagSaid = true; legends.onSeen?.('stag', st.x, st.z); } } }
@@ -1515,6 +1515,8 @@ async function boot() {
     landmarks.update(dt, player);
     atmosphere.update(dt, camera, flyover.active || droneOn || datacenter.flying ? camera.position : player.pos);
     if (dcFog != null && scene.fog) scene.fog.density = dcFog;   // the closing flight: the haze thins so the data center can loom out of it
+    if (datacenter.fogMix > 0.001 && scene.fog) { dcFogBase ||= scene.fog.color.clone(); scene.fog.color.copy(dcFogBase).lerp(DC_DARK, datacenter.fogMix); }   // inside the hall: the haze goes black
+    else if (dcFogBase && scene.fog) { scene.fog.color.copy(dcFogBase); dcFogBase = null; }
     const focus = droneOn ? drone.pos : player.pos;      // wildlife and flowers gather around whoever is looking
     water.update(dt);
     wildlife.update(dt, focus, player.speed);

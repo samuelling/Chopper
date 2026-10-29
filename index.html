@@ -302,6 +302,11 @@
   /* touch screens: the map sits under the status card, clear of the joystick */
   body.mobile #minimap { left:max(18px, env(safe-area-inset-left)) !important; top:calc(max(18px, env(safe-area-inset-top)) + var(--cardh, 150px)) !important; bottom:auto !important; width:150px !important; height:150px !important; }
   body.mobile #minimap.full { width:min(220px, 30vw) !important; height:auto !important; }
+  /* phones on their side are too short for the map to fit between the card and the joystick: it goes beside the card, smaller */
+  @media (max-height:500px) {
+    body.mobile #minimap { left:calc(max(18px, env(safe-area-inset-left)) + var(--cardw, 0px)) !important; top:max(18px, env(safe-area-inset-top)) !important; width:112px !important; height:112px !important; }
+    body.mobile #minimap.full { width:min(160px, 24vw) !important; height:auto !important; }
+  }
   .pname { font-size:20px; font-weight:800; letter-spacing:.04em; color:#ffd9a0; } .pbar small { font-size:11px; opacity:.7; letter-spacing:.08em; }
   .ptabs { display:flex; background:#25222c; } .ptabs button { flex:1; font:inherit; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); background:none; border:0; border-bottom:3px solid transparent; padding:10px 0; cursor:pointer; opacity:.6; } .ptabs button.on { opacity:1; border-color:#ffd9a0; }
   .pscroll { overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:14px 16px 20px; flex:1; min-height:0; }
