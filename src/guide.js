@@ -8,6 +8,7 @@ import { SKY_ENTRIES } from './sky.js';
 import { NIGHT } from './nightlife.js';
 import { WATER } from './waterlife.js';
 import { MIGRANTS, VOICE } from './migrants.js';
+import { RARE_PLANTS } from './rareplants.js';
 
 const KEY = 'ashland.guide', PKEY = 'ashland.photos', MAXPHOTOS = 36;
 export const ENTRIES = [
@@ -79,6 +80,7 @@ for (const [id, of, name, hint] of [
   ['crayfish-claws', 'water-crayfish', 'Crayfish, claws up', 'Dive close to a crayfish and it rears up with its claws open before it shoots off backwards. Photograph it from under the water'],
   ['newt-air', 'water-newt', 'Newt, up for a breath', 'Now and then a red-spotted newt swims up to the surface for air. Watch one from under the water'],
   ['eyeshine', null, 'Eyeshine', 'Shine your flashlight at a night animal and its eyes light up. Photograph that'],
+  ['porcupine-tree', 'night-porcupine', 'Porcupine asleep up a tree', 'By day a porcupine sleeps high in a tree, curled against the trunk. Some autumn and winter days, look up'],
   ['possum-dead', 'night-opossum', 'Opossum, playing dead', 'Walk up close to an opossum at night and it may fall over and play dead. Photograph it, then leave it be'],
   ['skunk-warn', 'night-skunk', 'Skunk, stamping a warning', 'Get too close to a skunk and it stamps and lifts its tail. Photograph it from there, and do not go closer'],
   ['squirrel-glide', 'night-flyingsquirrel', 'Flying squirrel, mid-glide', 'At night a flying squirrel glides from one trunk to the next. Watch a trunk, and be ready'],
@@ -109,6 +111,8 @@ for (const [id, name, blurb] of [
 ]) ENTRIES.push({ id, cat: 'Birds', name, blurb, song: id, songOnly: true });
 // migrants (migrants.js): only here while they pass through; the rare ones are legendary
 for (const [k, M] of Object.entries(MIGRANTS)) ENTRIES.push({ id: 'mig-' + k, cat: M.legend ? 'Legendary' : 'Birds', name: M.name, blurb: M.blurb, hint: M.hint, legend: !!M.legend, migrant: true, song: VOICE[k] && !['hum'].includes(VOICE[k]) ? VOICE[k] : undefined });
+// legendary plants (rareplants.js)
+for (const [k, P] of Object.entries(RARE_PLANTS)) ENTRIES.push({ id: 'rare-' + k, cat: 'Legendary', name: P.name, blurb: P.blurb, hint: P.hint, legend: true });
 // water life (waterlife.js): most of it only from under the surface
 for (const [k, W] of Object.entries(WATER)) ENTRIES.push({ id: 'water-' + k, cat: 'Water', name: W.name, blurb: W.blurb, hint: W.hint });
 // legendary animals (legends.js): very rare, and the biggest thing the park's page ever gets

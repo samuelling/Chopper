@@ -61,6 +61,7 @@ import { Pad } from './gamepad.js';
 import { WaterLife } from './waterlife.js';
 import { Migrants, MIGRANTS } from './migrants.js';
 import { Hammock } from './hammock.js';
+import { RarePlants } from './rareplants.js';
 import { updateStealth } from './stealth.js';
 import { Cairns, Caches } from './pastimes.js';
 import { DiscGolf } from './discgolf.js';
@@ -448,7 +449,7 @@ async function boot() {
   GUIDE.onNew = (kind, en) => { if (kind === 'caught' || kind === 'foraged') return; JOURNAL.add(kind === 'song' ? `Heard a ${en.name}.` : `Photographed a ${en.name}.`, player.pos.x, player.pos.z); ui.toast(kind === 'song' ? `\u266a Heard: ${en.name}` : `New in your Field Guide: ${en.name}`, 3.5); };
   player.events.photo = () => {
     tut.shot = true;
-    const cands = [...treeCandidates(chunks, camera.position), ...livingSeen(), ...plants.seen, ...explore.seen, ...skipping.seen, ...forage.subjects, ...cairns.seen];
+    const cands = [...treeCandidates(chunks, camera.position), ...livingSeen(), ...plants.seen, ...rareplants.seen, ...explore.seen, ...skipping.seen, ...forage.subjects, ...cairns.seen];
     const pick = pickSubject(camera, cands);
     audio.shutter?.();
     const fl = vf.querySelector('.vfflash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 90);
@@ -845,6 +846,14 @@ async function boot() {
     const d = dayProgress(); if (d < 0.22 || d > 0.6 || !started || interludeOn || phone.isOpen || droneOn || knobOn) return;
     S.n = n; if (clydeNudge()) S.last = n; RUN.save?.();
   };
+  // ---- legendary plants (rareplants.js): one of the rarest, maybe, out somewhere this season; a rumour says so
+  const rareplants = new RarePlants(scene, { life: PRESSURE.life, force: params.get('rareplant') });
+  rareplants.onLegend = (id, P, x, z) => {
+    audio.legend?.(); legendBan.innerHTML = `<small>Legendary find</small><b>${P.name}</b>`; legendBan.classList.add('on'); setTimeout(() => legendBan.classList.remove('on'), 4800);
+    setTimeout(() => ui.toast(`${P.name}. Hardly anyone ever finds one here. ${GUIDE.photographed('rare-' + id) ? '' : MOBILE ? 'Photograph it: Phone \u2192 Camera.' : 'Photograph it (V).'}`, 6.5), 900);
+    JOURNAL.add(`Found ${P.name.toLowerCase()}. A rare plant for these woods.`, x, z);
+  };
+  const stepRumour = () => { const P = rareplants.out; if (!P || RUN.s.rareRumour === (RUN.n || 0) || !started || interludeOn || dayProgress() < 0.18) return; RUN.s.rareRumour = RUN.n || 0; RUN.save?.(); audio.notify?.(); ui.toast(`Overheard at the parking lot: a botanist says there is ${P.rumour} this season. She would not say where.`, 7.5); JOURNAL.add(`A rumour: ${P.rumour}. Somewhere in the park, this season only.`); };
   // ---- the hammock (hammock.js): found left in the woods, then yours to hang between any two trees and lie back in
   const hammock = new Hammock(scene, chunks);
   hammock.onMoved = (at) => { if (waypoint?.label === 'A hammock?') setWaypoint(at.x, at.z, 'A hammock?'); };
@@ -863,7 +872,7 @@ async function boot() {
     setTimeout(() => ui.toast(`${M.a.replace(/^./, (c) => c.toUpperCase())}, here! Birders drive across the state for this. ${GUIDE.photographed('mig-' + id) ? '' : MOBILE ? 'Quick: Phone \u2192 Camera.' : 'Quick: the camera (V).'}`, 6.5), 900);
     JOURNAL.add(`Saw ${M.a}: a rare bird for Massachusetts.`, x, z);
   };
-  const livingSeen = () => [...migrants.seen, ...waterlife.seen, ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
+  const livingSeen = () => [...(nightlife.dayseen || []), ...migrants.seen, ...waterlife.seen, ...birds.seen, ...wildlife.seen, ...squirrels.seen, ...deer.seen, ...flyers.seen, ...critters.seen, ...fox.seen, ...legends.seen, ...birding.seen, ...nightlife.seen];
   // ---- the charcoal grills at the picnic areas: E lights the coals (they glow and smoke for a few minutes)
   const grills = (landmarks.grills || []).map((g) => ({ ...g, lit: 0, glow: null, puffs: [] }));
   const nearGrill = () => grills.find((g) => Math.hypot(player.pos.x - g.x, player.pos.z - g.z) < 1.9) || null;
@@ -1407,7 +1416,7 @@ async function boot() {
     WILDLIFE.geeseRate = (WILDLIFE._gs ??= WILDLIFE.geeseRate) / PRESSURE.life;
     if (lake.drained && lake.level > lake.floor + 0.2) lake.drained = false;
 
-    pad.update(dt); stepGrills(dt); hammock.update(dt, player.pos); stepNudge();
+    pad.update(dt); stepGrills(dt); hammock.update(dt, player.pos); stepNudge(); rareplants.update(dt, camera); stepRumour();
     if (hammock.waiting && !RUN.s.hammockLead && started && !interludeOn) { RUN.s.hammockLead = true; RUN.save?.(); setTimeout(() => { setWaypoint(hammock.S.at.x, hammock.S.at.z, 'A hammock?'); audio.notify?.(); ui.toast('A note pinned to the trailhead board: \u201cLeft my old hammock strung up in the woods. Don\u2019t need it any more. Finders keepers.\u201d Somebody has marked the spot on the park map. It is on your map now.', 8); JOURNAL.add('A note on the trailhead board: a hammock left strung up in the woods, finders keepers. Marked on my map.'); }, 30000); }
     migrants.update(dt, started && !interludeOn, manual ? 0.4 : dayProgress(), player.pos, camera, plants.seen);
     updateStealth({ speed: player.speed, sitting: player.sitting || hammock.lying, sneaking: player.sneaking, running: player.speed > 4.5, dark: mood === 3 ? 1 : mood === 2 ? 0.45 : 0 });
@@ -1430,7 +1439,7 @@ async function boot() {
     sky.update(dt, mood === 3 || (PRESETS[mood]?.name || '').toLowerCase().includes('night') ? 1 : 0);
     birding.update(dt, started && !interludeOn && !droneOn && !player.boat && mood !== 3, player.pos);
     { const gok = started && !interludeOn && !droneOn;
-      gog.update(dt, { ok: gok, cands: gog.mode === 'thermal' || gog.mode === 'ai' ? [...livingSeen(), ...(gog.mode === 'ai' ? [...plants.seen, ...forage.subjects] : [])] : [], hidden: gog.mode === 'ai' ? explore.targets().map((t) => ({ ...t, y: groundY(t.x, t.z) })) : [], name: (k) => BY_ID[k]?.name || (NIGHT[k.replace('night-', '')]?.name) || null, isNew: (k) => !GUIDE.photographed(k) });
+      gog.update(dt, { ok: gok, cands: gog.mode === 'thermal' || gog.mode === 'ai' ? [...livingSeen(), ...(gog.mode === 'ai' ? [...plants.seen, ...rareplants.seen, ...forage.subjects] : [])] : [], hidden: gog.mode === 'ai' ? explore.targets().map((t) => ({ ...t, y: groundY(t.x, t.z) })) : [], name: (k) => BY_ID[k]?.name || (NIGHT[k.replace('night-', '')]?.name) || null, isNew: (k) => !GUIDE.photographed(k) });
       if (gog.mode === 'ai' && gok) PRESSURE.bump(0.00008 * dt); }
     { const dark = started && !interludeOn && (nightNow() || mood === 3), tp = camera.getWorldPosition(new THREE.Vector3()), td = camera.getWorldDirection(new THREE.Vector3());
       nightlife.update(dt, dark ? 1 : 0, player.pos, { on: torchOn && !droneOn, ir: gog.mode === 'nv' && !droneOn, pos: tp, dir: td });
@@ -1510,7 +1519,7 @@ async function boot() {
   const render = drawFrame;
   // Clear and level a circular building site on demand (hook for the future building mechanic).
   const buildSite = (x, z, r, opts) => { const y = flattenArea(x, z, r, opts); chunks.clearArea(x, z, r + 2); return y; };
-  window.chopper = { clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
+  window.chopper = { rareplants, clydeNudge, hammock, migrants, waterlife, pad, gog, nightlife, fire, poachers, legends, skipping, forage, sky, birding, cairns, caches, disc, rope, drone, explore, plants, fox, phone, togglePhone, boat, fishing, embark, disembark, careActs, weather, critters, flyers, deer, discoveries, GUIDE, setCameraMode, structures, CARE, PRESSURE, audio, birds, snowTrail, buildSite, flattenArea, editTerrain, MOBILE, touch, render, THREE, scene, camera, renderer, player, chunks, lake, atmosphere, landmarks, water, wildlife, squirrels, fx, step, groundY, sdfAt, setMood };
   window.__ready = true;
   if (!params.has('manual')) requestAnimationFrame(frame);
 }

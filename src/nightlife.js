@@ -162,6 +162,26 @@ export class NightLife {
     }
     this.list.push(a);
   }
+  /** by day in autumn and winter, sometimes, a porcupine asleep high in a tree near you: where they spend the day */
+  _dayPorc(dt, night, you) {
+    if (this.porcDay === undefined) this.porcDay = (SEASON === 'autumn' || SEASON === 'winter') && (Math.random() < 0.4 || (typeof location !== 'undefined' && /[?&]porcupine/.test(location.search)));
+    const P = this.porc;
+    if (night || !this.porcDay) { if (P) { this.scene.remove(P.m.root); this.porc = null; } return; }
+    if (!P) {
+      if ((this._porcT = (this._porcT ?? 40) - dt) > 0) return; this._porcT = 15;
+      const tr = this.chunks.treesNear(you.x, you.z, 38).filter((t) => t.H > 8 && Math.hypot(t.x - you.x, t.z - you.z) > 14)[0]; if (!tr) return;
+      const m = BUILD.porcupine(); m.root.traverse((o) => { o.frustumCulled = false; }); this.scene.add(m.root);
+      const side = Math.atan2(you.z - tr.z, you.x - tr.x) + (Math.random() - 0.5);
+      m.root.position.set(tr.x + Math.cos(side) * (tr.radius + 0.25), tr.y + tr.H * 0.55, tr.z + Math.sin(side) * (tr.radius + 0.25)); m.root.rotation.set(0, Math.PI / 2 - side + 1.5, 0.25);
+      if (m.legs) m.legs.forEach((L) => { L.up.rotation.x = 1.2; });   // legs tucked in, asleep
+      this.porc = { m, tree: tr };
+      return;
+    }
+    const p = P.m.root.position, d = Math.hypot(p.x - you.x, p.z - you.z);
+    if (d > 90) { this.scene.remove(P.m.root); this.porc = null; this.porcDay = false; return; }   // one a day: once you have wandered off, it is gone
+    P.m.root.position.y += Math.sin(performance.now() / 1600) * 0.0006;   // breathing
+    this.dayseen = [{ kind: 'night-porcupine', act: 'porcupine-tree', x: p.x, y: p.y + 0.2, z: p.z, r: 0.4 }];
+  }
   _call(a, voice) {
     if (!this.audio?.songAt || !this.camera) return;
     const c = this.camera.position, dx = a.x - c.x, dz = a.z - c.z, d = Math.hypot(dx, dz);
@@ -171,8 +191,9 @@ export class NightLife {
   }
   /** each frame.  night: 0..1; you: player position; torch: { on, pos, dir } */
   update(dt, night, you, torch) {
-    this.t += dt; this.seen.length = 0;
+    this.t += dt; this.seen.length = 0; this.dayseen = null;
     const on = night > 0.5;
+    this._dayPorc(dt, on, you);
     if (!on) { for (const a of this.list) this.scene.remove(a.m.root); this.list.length = 0; for (const mo of this.moths) mo.m.visible = false; return; }
     // keep three to five creatures about, from this season's list
     if ((this._spawnT = (this._spawnT || 0) - dt) <= 0 && SEASONAL.length) {
