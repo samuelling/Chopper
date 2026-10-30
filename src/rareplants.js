@@ -20,7 +20,7 @@ export const RARE_PLANTS = {
   wintergreen: { name: 'Spotted wintergreen', pay: 2000, hint: 'Rare. Any season, under pines; easiest to see in winter', blurb: 'A low evergreen with dark leaves striped white down the middle, like small brushstrokes. Uncommon here, and easiest to spot in winter, green above the snow.', rumour: 'spotted wintergreen, green above the snow, under the pines', hab: 'woods' },
 };
 const POOL = { spring: ['pogonia', 'trillium'], summer: ['chestnut', 'orchid', 'pinesap'], autumn: ['gentian', 'pinesap'], winter: ['wintergreen'] }[SEASON] || [];
-const CHANCE = 0.33;
+const CHANCE = 0.15;
 
 const ball = new THREE.SphereGeometry(1, 10, 8), cyl = new THREE.CylinderGeometry(1, 1, 1, 7), cone = new THREE.ConeGeometry(1, 1, 7);
 const OL = simpleToon('#120f0d', { side: THREE.BackSide }), mats = {};

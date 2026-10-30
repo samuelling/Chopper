@@ -187,7 +187,7 @@ async function boot() {
   // a grand stag: some seasons the buck is a big one with a twelve-point rack (mostly in the autumn rut; never once the
   // antlers have dropped, in winter and spring)
   const grandStag = (() => {
-    const S = RUN.s; if (!S.stagS || S.stagS.n !== RUN.n || params.has('stag')) { S.stagS = { n: RUN.n, on: params.has('stag') || Math.random() < ({ autumn: 0.22, summer: 0.07 }[SEASON] || 0) }; RUN.save?.(); }
+    const S = RUN.s; if (!S.stagS || S.stagS.n !== RUN.n || params.has('stag')) { S.stagS = { n: RUN.n, on: params.has('stag') || Math.random() < ({ autumn: 0.13, summer: 0.04 }[SEASON] || 0) }; RUN.save?.(); }
     return S.stagS.on;
   })();
   const deer = new Deer(scene, chunks, { mobile: MOBILE, grand: grandStag });

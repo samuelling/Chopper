@@ -24,7 +24,7 @@ const WEIGHT = {
   autumn: { bear: 3, moose: 3, bobcat: 2, otter: 2, eagle: 1 },
   winter: { bear: 0, moose: 2, bobcat: 3, otter: 0, eagle: 4 },
 };
-const CHANCE = 0.2;
+const CHANCE = 0.12;
 
 const ball = new THREE.SphereGeometry(1, 12, 9), cyl = new THREE.CylinderGeometry(1, 1, 1, 8), cone = new THREE.ConeGeometry(1, 1, 8);
 const OL = simpleToon('#120f0d', { side: THREE.BackSide });

@@ -37,7 +37,7 @@ export const MIGRANTS = {
 };
 // legendary migrants: in a season, one of these might come through (about one season in four)
 const LEGEND_POOL = { spring: ['crane', 'prothonotary', 'swan', 'pelican'], summer: ['pelican'], autumn: ['rufous', 'goldeneagle', 'crane', 'swan'], winter: ['snowyowl', 'waxwing', 'evegrosbeak', 'crossbill'] }[SEASON] || [];
-const LEGEND_CHANCE = 0.25;
+const LEGEND_CHANCE = 0.12;
 // the song or call each one makes (audio.js); the Field Guide logs it when you hear it
 export const VOICE = { hummingbird: 'hum', rufous: 'hum', yrwarbler: 'yrwarbler', magnolia: 'magnolia', oriole: 'oriole', grosbeak: 'grosbeak', loon: 'loon', nighthawk: 'peent', kinglet: 'kinglet', junco: 'junco', wtsparrow: 'wtsparrow', treesparrow: 'treesparrow', waxwing: 'waxwing', evegrosbeak: 'evegrosbeak', crossbill: 'crossbill', crane: 'crane', prothonotary: 'prothonotary', swan: 'swan' };
 // who comes through in which season, and how likely in any one of them
