@@ -1,4 +1,4 @@
-// Forest fire: rare, likelier as the woods die.  Once a season there is a small chance of a fire (none in winter, none
+// Forest fire: rare, likelier as the woods die, and much likelier while poachers camp in the woods unchecked.  Once a season there is a small chance of a fire (none in winter, none
 // before Clyde's year); the odds rise steeply with the share of the woods standing dead.  You smell smoke and see the
 // column, but finding the fire takes the drone's AI spotter or a lookout crew paid from the Park Fund.  Once it is
 // located the fire service puts it out (off screen), and it leaves a circle of ash and charred snags: fallow ground that
@@ -57,6 +57,25 @@ export class Fire {
       return { x, z };
     }
     return null;
+  }
+  /** poachers left alone are a fire risk whatever the state of the woods: a camp in the thick woods, a fire to keep warm,
+   *  cigarettes.  While they are there (and for a while after they slip away, if nobody caught them) a fire can start
+   *  near their camp: about a 70% chance over a whole stay.  Catching them ends it.  Not in winter. */
+  poacherRisk(P, playing) {
+    const s = this.s, ps = P?.s;
+    if (!ps?.on || !playing || SEASON === 'winter' || s.phase !== 'wait') { this._pc = null; return; }
+    const clock = RUN.dev ? this.t : RUN.s.played, dc = Math.max(0, clock - (this._pc ?? clock)); this._pc = clock;
+    const rate = ps.phase === 'active' ? 1 : ps.phase === 'gone' && ps.goneAt != null && clock - ps.goneAt < 0.08 * RUN.len ? 0.6 : 0;   // (the camp they left, still smouldering)
+    if (!rate || !dc) return;
+    const lam = -Math.log(0.3) / (0.4 * RUN.len);
+    if (Math.random() < 1 - Math.exp(-lam * rate * dc)) this._igniteNear(ps.x, ps.z, 'poachers');
+  }
+  _igniteNear(x0, z0, cause) {
+    let spot = null;
+    for (let i = 0; i < 200 && !spot; i++) { const a = Math.random() * 6.283, r = 8 + Math.random() * 40, x = x0 + Math.cos(a) * r, z = z0 + Math.sin(a) * r; if (sdfAt(x, z) > 25 && (landcoverAt(x, z)?.dens ?? 0) >= 0.4 && !(BURNS.at(x, z) > 0)) spot = { x, z }; }
+    spot ||= { x: x0, z: z0 };
+    Object.assign(this.s, { start: true, x: spot.x, z: spot.z, phase: 'burning', r: R0, age: 0, located: null, foundAt: 0, cause, kindle: this.kindleDev ? 1 : Math.min(1, woodsDead() * 4) });
+    this._slowSaid = false; this.slow = 1; RUN.save?.(); this.onStart?.();
   }
   /** start a fire now (the secret code): in thick woods a little way off from (near.x, near.z), so you see the smoke */
   ignite(near) {

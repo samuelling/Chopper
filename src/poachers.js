@@ -62,8 +62,8 @@ export class Poachers {
     if (!s.on) return;
     const clock = RUN.dev ? this.t : RUN.s.played;
     if (s.phase === 'wait' && playing && clock >= s.t0) { s.phase = 'active'; RUN.save?.(); }
-    if (s.phase === 'active' && clock >= s.t1) { s.phase = 'gone'; RUN.save?.(); }
-    if (s.phase === 'active' && you && Math.hypot(you.x - s.x, you.z - s.z) < HEAR) { s.phase = 'gone'; RUN.save?.(); this.onFled?.(); }
+    if (s.phase === 'active' && clock >= s.t1) { s.phase = 'gone'; s.goneAt = clock; RUN.save?.(); }
+    if (s.phase === 'active' && you && Math.hypot(you.x - s.x, you.z - s.z) < HEAR) { s.phase = 'gone'; s.goneAt = clock; RUN.save?.(); this.onFled?.(); }
     if (s.phase === 'caught' && this.t - s.caughtAt > 7 && !s.fined) { s.fined = true; RUN.s.fund = (RUN.s.fund || 0) + FINE; RUN.s.poachFines = (RUN.s.poachFines || 0) + FINE; RUN.save?.(); this.onFined?.(FINE); }
     if (s.phase === 'caught' && this.t - s.caughtAt > 25) { s.phase = 'done'; RUN.save?.(); }
     this.model.visible = s.phase === 'active' || s.phase === 'caught';

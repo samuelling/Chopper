@@ -59,6 +59,25 @@ export class Audio {
   /** let everything sink away over `sec` seconds (the season turning through black) */
   /** head under the surface: the world goes dull and far away */
   /** a phone notification: two soft, bright notes */
+  /** a siren, far off: the fire service (or the police) on the way.  A wailing tone sweeping up and down, muffled by the
+   *  distance, with an echo off the hills; from the side the trouble is on (pan -1..1); about `sec` seconds, fading in and out */
+  siren(pan = 0, sec = 9, vol = 0.12) {
+    if (!this.ready) return;
+    const c = this.ctx, t = c.currentTime, end = t + sec;
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.24;             // the slow wail: up and down every four seconds or so
+    const dep = c.createGain(); dep.gain.value = 380; o.frequency.value = 1050; lfo.connect(dep); dep.connect(o.frequency);
+    const yelp = c.createOscillator(), yd = c.createGain(); yelp.frequency.value = 5.5; yd.gain.value = 14; yelp.connect(yd); yd.connect(o.frequency);   // a little warble
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.Q.value = 0.4;                 // far away: the top worn off
+    const bp = c.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 900; bp.gain.value = 5;
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + sec * 0.35); g.gain.linearRampToValueAtTime(vol * 0.8, t + sec * 0.7); g.gain.linearRampToValueAtTime(0, end);
+    const pn = c.createStereoPanner ? c.createStereoPanner() : null; if (pn) pn.pan.value = Math.max(-1, Math.min(1, pan)) * 0.7;
+    const dl = c.createDelay(1.5), fb = c.createGain(), wet = c.createGain(); dl.delayTime.value = 0.42; fb.gain.value = 0.32; wet.gain.value = 0.45;   // the echo off the hills
+    o.connect(lp); lp.connect(bp); bp.connect(g); const out = pn || g; if (pn) g.connect(pn);
+    out.connect(this.master); out.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(this.master);
+    for (const x of [o, lfo, yelp]) { x.start(t); x.stop(end + 0.1); }
+    setTimeout(() => { try { wet.disconnect(); out.disconnect(); } catch {} }, (sec + 3) * 1000);
+  }
   notify() { if (!this.ready) return; this._tone(1318.5, 0.5, 0.05, 'sine'); setTimeout(() => this._tone(1975.5, 0.7, 0.04, 'sine'), 120); }
   setUnder(on) { if (!this.ready) return; this.muff.frequency.setTargetAtTime(on ? 520 : 22000, this.ctx.currentTime, on ? 0.12 : 0.18); }
   fadeOut(sec = 1.5) { if (!this.ready) return; const t = this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(this.master.gain.value, t); this.master.gain.linearRampToValueAtTime(0, t + sec); }

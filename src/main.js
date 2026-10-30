@@ -1007,7 +1007,9 @@ async function boot() {
   const fire = new Fire(scene, { force: params.has('fire') }); fire.kindleDev = params.get('fire') === 'kindle';
   fire.onStart = () => { audio.notify?.(); ui.toast('You smell smoke. A fire has started somewhere in the park. Find it and call it in: follow the smoke, look with the binoculars (Q), fly the drone with its AI spotter, or send a lookout crew from the Park Fund.', 9); JOURNAL.add('Smoke over the trees: a fire somewhere in the park.'); };
   const fixWords = (p) => p > 0.93 ? 'Clyde gives them its position to the metre: they will be there fast.' : p > 0.75 ? 'They know just where it is.' : p > 0.5 ? 'Your fix is fair; they will find it soon enough.' : p > 0.3 ? 'From this far, your fix is rough: they will have to search for it while it grows.' : 'From so far off it is little more than a direction: they will be a long time finding it.';
-  fire.onLocated = (how) => { setTimeout(() => ui.toast(fixWords(fire.s.prec ?? 0.6), 4.5), 4200); setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', droneai: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', drone: 'From the drone you can see exactly where it is, and you phone it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
+  // a siren far off, from the trouble's side of you (behind you counts as off to one side)
+  const sirenFrom = (x, z, delay = 2.5, sec = 9) => setTimeout(() => { const yaw = player.yaw, dx = x - camera.position.x, dz = z - camera.position.z, rx = Math.cos(yaw) * dx - Math.sin(yaw) * dz; audio.siren?.(Math.max(-1, Math.min(1, rx / Math.max(30, Math.hypot(dx, dz)))), sec); }, delay * 1000);
+  fire.onLocated = (how) => { sirenFrom(fire.x, fire.z); setTimeout(() => ui.toast(fixWords(fire.s.prec ?? 0.6), 4.5), 4200); setWaypoint(fire.x, fire.z, 'The fire'); ui.toast({ crew: 'The lookout crew has found the fire and called it in. The fire service is on its way.', droneai: 'Clyde has the fire\u2019s position from the drone and called it in. The fire service is on its way.', drone: 'From the drone you can see exactly where it is, and you phone it in. The fire service is on its way.', binoculars: 'Through the binoculars you find where the smoke is coming from, and phone it in. The fire service is on its way.', you: 'You have found the fire and phoned it in. The fire service is on its way. Cutting down trees in a ring around it slows it until they come.', seen: 'The smoke is big enough now to be seen from town. Someone has called it in, and the fire service is on its way.', kindling: 'The dead, dry trees went up like kindling. The fire is huge now; half of Ashland can see the smoke, and the fire service is on its way.' }[how], 7);
     if (how === 'kindling') JOURNAL.add('The dying woods caught like kindling. A big fire, seen from town.', fire.x, fire.z); };
   // ---- poachers (poachers.js): only the drone's AI spotter can pick them out; the fine goes to the park fund
   const poachers = new Poachers(scene, { force: params.has('poachers') });
@@ -1018,7 +1020,7 @@ async function boot() {
     // your latest photos, a print of each of the last three species
     for (let i = GUIDE.photos.length - 1; i >= 0 && out.length < 3; i--) { const p = GUIDE.photos[i]; if (ph.has(p.id) || !(p.thumb || p.data)) continue; ph.add(p.id); out.push({ id: `ph${p.at}`, kind: 'photo', src: p.thumb || p.data, title: BY_ID[p.id]?.name || 'A photo' }); }
     // what is going on, most pressing first
-    if (fire.burning) out.push({ id: `fire${n}`, head: 'FIRE', title: 'Smoke reported in the woods', body: 'Stay on the trails and well away from it. If you can see where it is, call it in.' });
+    if (fire.burning) out.push({ id: `fire${n}`, head: 'FIRE', title: 'Smoke reported in the woods', body: fire.s.cause === 'poachers' ? 'It looks to have started at an illegal camp off the trails. Stay well away. If you can see where it is, call it in.' : 'Stay on the trails and well away from it. If you can see where it is, call it in.' });
     if (poachers.active) out.push({ id: `poach${n}`, head: 'NOTICE', title: 'Shots heard off the trails', body: 'Hunting is not permitted in the park. If you see anyone with a rifle, do not approach. Report it to the Environmental Police.' });
     const lf = clamp((lake.level - lake.floor) / (lake.originalLevel - lake.floor), 0, 1);
     if (lf < 0.6) out.push({ id: `lake${n}_${Math.round(lf * 10)}`, head: 'NOTICE', headColor: '#2f5f8a', title: lf < 0.15 ? 'The reservoir is nearly empty' : 'Low water', body: `The reservoir is down to about ${Math.round(lf * 10) * 10}% of its level. The beach line has moved. The boat ramp is closed.` });
@@ -1033,7 +1035,7 @@ async function boot() {
   if (noticeboard) noticeboard.onNew = () => { if (started && !interludeOn && Math.hypot(player.pos.x - noticeboard.at.x, player.pos.z - noticeboard.at.z) > 25) ui.toast('Something new is pinned to the board by the beach.', 3.5); };
   poachers.onShot = () => { audio.shot?.(); if (!RUN.s.shotHeard) { RUN.s.shotHeard = true; RUN.save?.(); ui.toast('A shot, somewhere off in the woods. Hunting isn\u2019t allowed in the park.', 5); } };
   poachers.onFled = () => ui.toast('Someone crashes off through the brush ahead of you, fast. Whoever it was is gone.', 4.5);
-  poachers.onFined = (amt) => { ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
+  poachers.onFined = (amt) => { sirenFrom(poachers.x, poachers.z, 0, 7); ui.toast(`The Environmental Police caught the poachers Clyde spotted. Their fine, $${amt.toLocaleString('en-US')}, goes to the park fund.`, 6); JOURNAL.add(`Poachers in the woods, spotted from the drone. Caught, and fined $${amt.toLocaleString('en-US')} for the park.`, poachers.x, poachers.z); };
   // ---- legendary animals (legends.js): a bear, a moose, a bobcat, an otter, an eagle; very rare, and a huge deal
   const legends = new Legends(scene, { force: params.get('legend'), life: PRESSURE.life });
   let stagSaid = false;
@@ -1063,6 +1065,17 @@ async function boot() {
     ui.toast(unfound ? `Nobody found the fire in time. It burned itself out over a patch about ${across} m across.` : `The fire is out. It burned a patch about ${across} m across. Ash is fertile: trees planted there grow fast.`, 7);
     JOURNAL.add(unfound ? `The fire burned itself out, about ${across} m across. Nobody found it in time.` : `The fire service put the fire out. It left a burn about ${across} m across, ash and black snags.`, fire.x, fire.z);
     if (unfound) PRESSURE.bump(0.02);
+    // the trails close while it burns and the smoke hangs about, and visitors stay away: the longer it went unfound and
+    // the bigger it grew, the more parking and donations the park fund loses (a quick find costs next to nothing)
+    if (RUN.phaseTwo || RUN.dev) {
+      const t = unfound ? fire.s.age : (fire.s.foundAt || 0), cost = Math.min(12000, Math.round((Math.max(0, t - 15) * 35 + Math.max(0, r - 8) * 40) / 50) * 50);
+      const took = Math.min(cost, Math.max(0, RUN.s.fund || 0)), days = Math.max(1, Math.round(t / 20) + Math.round(r / 15));
+      if (cost >= 50) {
+        RUN.s.fund = (RUN.s.fund || 0) - took; RUN.s.fireLosses = (RUN.s.fireLosses || 0) + took; RUN.save?.();
+        const msg = `The trails were closed ${days} day${days > 1 ? 's' : ''} for the fire and the smoke, and visitors stayed away. Lost parking and donations: ${took ? `−$${took.toLocaleString('en-US')} from the park fund` : 'the fund had nothing left to lose'}.`;
+        setTimeout(() => ui.toast(msg, 6.5), 7500); JOURNAL.add(msg, fire.x, fire.z);
+      }
+    }
   };
   // ---- the drone (bought from the Park Fund): thrown from the hand, flown first-person from the phone held sideways
   let droneOn = false;
@@ -1525,6 +1538,7 @@ async function boot() {
     skipping.update(dt, { ok: started && player.carry === 'none' && !player.boat && !player.swimming && !phone.isOpen && !interludeOn, cameraMode: player.cameraMode });
     legends.update(dt, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null, camera);
     poachers.update(dt * SPEED.v, started && player.locked && !interludeOn, started && !droneOn ? player.pos : null);
+    fire.poacherRisk(poachers, started && player.locked && !interludeOn);
     binos.show(player.carry === 'binoculars' && !player.cameraMode && !player.carryHidden && !phone.isOpen && !drone.active); if (!droneOn) binos.update(dt, player.cameraMode ? 26 : 68);
     // finding the fire yourself: close enough to see the flames, or the smoke's source in the middle of the binoculars
     if (fire.burning && started && !interludeOn) {
