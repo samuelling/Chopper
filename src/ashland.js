@@ -202,7 +202,9 @@ export const WRECK = (() => {
   return { x: best.x, z };
 })();
 
-// where the player starts: on the dam crest, looking south down the reservoir
-// start at 42.24246 N, 71.46356 W (on the shore, facing the water)
-const _s = project([42.24246, -71.46356]);
-export const SPAWN = { x: Math.round(_s[0]), z: Math.round(_s[1]), yaw: -2.9 };
+// where the player starts: on the beach, a few steps up the sand from the water, looking out over the reservoir
+// (8 m inland of the beach's middle, 5 m along the shore from it, clear of the lifeguard chair; the park sign is behind you)
+export const SPAWN = (() => {
+  const u = 8, v = -5, x = BEACH.x + BEACH.ex * u - BEACH.ez * v, z = BEACH.z + BEACH.ez * u + BEACH.ex * v;
+  return { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, yaw: Math.atan2(BEACH.ex, BEACH.ez) };   // facing out, away from inland
+})();
