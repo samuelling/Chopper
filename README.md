@@ -31,7 +31,7 @@ Not shipped yet, but prepared: the game is self-contained (no CDN), `npm run bui
 | V | camera: narrows the view; click to photograph a tree, bird or animal in the frame |
 | M | optional minimap: off, nearby, or whole park (also a Map button on the pause screen; north is up, the dam at the top) |
 | C | make choices (from Year Two, once the AI phase begins) |
-| Fullscreen | a button on the title and pause screens, and on the phone HUD (no key) |
+| Fullscreen | phones and tablets only: a button on the touch controls (and the title and pause screens). On desktop there is no toggle; use the browser's own |
 
 ## On a phone or tablet
 

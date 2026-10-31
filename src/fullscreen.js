@@ -19,7 +19,9 @@ export async function toggleFullscreen() {
 
 export function initFullscreen({ mobile, onChange }) {
   const buttons = document.querySelectorAll('[data-fullscreen]');
-  for (const b of buttons) {
+  // desktop: no fullscreen toggle anywhere (the browser's own, or the app's window, does that job); touch screens keep theirs
+  if (!mobile) { for (const b of buttons) b.remove(); try { sessionStorage.removeItem('ashland.fs'); } catch {} }
+  for (const b of mobile ? buttons : []) {
     if (!fullscreenSupported) { b.style.display = 'none'; continue; }
     const act = (e) => { e.preventDefault(); e.stopPropagation(); toggleFullscreen(); };
     b.addEventListener('click', act);
@@ -32,9 +34,9 @@ export function initFullscreen({ mobile, onChange }) {
   // (no key for it: F sat too close to the season and light keys; the buttons on the title and pause screens do it)
   // a season turn reloads the page, and a browser always drops fullscreen on reload and only lets it back after a click or key.
   // So remember it on the way out, and take the first click or key of the new season (the one that captures the mouse anyway) to restore it.
-  addEventListener('beforeunload', () => { try { sessionStorage.setItem('ashland.fs', isFullscreen() ? '1' : '0'); } catch {} });
+  if (mobile) addEventListener('beforeunload', () => { try { sessionStorage.setItem('ashland.fs', isFullscreen() ? '1' : '0'); } catch {} });
   let want = false; try { want = sessionStorage.getItem('ashland.fs') === '1'; } catch {}
-  if (want && fullscreenSupported && !mobile) {
+  if (want && fullscreenSupported && !mobile) {   // (never now: desktop no longer goes fullscreen from here)
     const back = (e) => {
       if (e.type === 'keydown' && e.code === 'Escape') return;
       removeEventListener('mousedown', back, true); removeEventListener('keydown', back, true);
