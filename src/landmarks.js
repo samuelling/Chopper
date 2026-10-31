@@ -363,10 +363,12 @@ export class Landmarks {
       const [tx, tz] = at(14, -22);
       const ty = groundY(tx, tz), ry = Math.atan2(LOT.x - tx, LOT.z - tz), cx = Math.cos(ry), sx = Math.sin(ry);
       const P = (lx) => [tx + lx * cx, tz - lx * sx];   // a point along the board's width
-      for (const lx of [-0.8, 0.8]) { const [px, pz] = P(lx); this._box(b, px, ty - 0.1, pz, 0.14, 2.1, 0.14, '#5b4430', { ry }); }
-      this._box(b, tx, ty + 1.0, tz, 1.9, 1.1, 0.08, '#4a3020', { ry });
-      this._box(b, tx, ty + 2.05, tz, 2.1, 0.12, 0.2, '#5b4430', { ry });
-      this._parkSign(tx, ty + 1.0 + 0.55, tz, ry);
+      // a big board (2.6 by 1.5 m) on two posts, with a cap rail
+      for (const lx of [-1.18, 1.18]) { const [px, pz] = P(lx); this._box(b, px, ty - 0.1, pz, 0.16, 2.65, 0.16, '#5b4430', { ry }); this.colliders.add(px, pz, 0.25, { tag: 'sign' }); }
+      { const [px, pz] = P(0); this.colliders.add(px, pz, 0.5, { tag: 'sign' }); }
+      this._box(b, tx, ty + 0.92, tz, 2.62, 1.52, 0.08, '#4a3020', { ry });
+      this._box(b, tx, ty + 2.5, tz, 2.86, 0.13, 0.22, '#5b4430', { ry });
+      this._parkSign(tx, ty + 0.92 + 0.76, tz, ry);
     }
     this._emit(b);
 
@@ -464,7 +466,7 @@ export class Landmarks {
   /** the park's sign on the trailhead board, its front: an off-white face in a brown wooden frame, brown letters in Helvetica (or Arial),
    *  the way the Commonwealth's park signs look. */
   _parkSign(x, y, z, ry = 0) {
-    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 586;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     const draw = () => {
       const c = cv.getContext('2d'), W = cv.width, H = cv.height;
@@ -479,14 +481,14 @@ export class Landmarks {
       const fit = (t, size, maxW, wt = 400) => { let s = size; do { c.font = `${wt} ${s}px ${FONT}`; s -= 4; } while (c.measureText(t).width > maxW && s > 20); };
       // ASHLAND in capitals, a little heavier than the rest (a regular weight with a thin outline of itself: medium, the
       // same on every device, whatever weights its Helvetica or Arial has)
-      fit('ASHLAND', 200, W - 170); const f1 = c.font; routed(() => { c.font = f1; c.lineWidth = 5; c.lineJoin = 'round'; c.fillText('ASHLAND', W / 2, 262); c.strokeText('ASHLAND', W / 2, 262); });
-      fit('State Park', 118, W - 260); const f2 = c.font; routed(() => { c.font = f2; c.fillText('State Park', W / 2, 390); });
-      routed(() => { c.fillRect(W / 2 - 230, 430, 460, 5); });
-      fit('Department of Conservation & Recreation', 40, W - 200); const f3 = c.font; routed(() => { c.font = f3; c.fillText('Department of Conservation & Recreation', W / 2, 496); });
+      fit('ASHLAND', 168, W - 330); const f1 = c.font; routed(() => { c.font = f1; c.lineWidth = 4; c.lineJoin = 'round'; c.fillText('ASHLAND', W / 2, 252); c.strokeText('ASHLAND', W / 2, 252); });
+      fit('State Park', 96, W - 440); const f2 = c.font; routed(() => { c.font = f2; c.fillText('State Park', W / 2, 362); });
+      routed(() => { c.fillRect(W / 2 - 180, 404, 360, 4); });
+      fit('Department of Conservation & Recreation', 33, W - 360); const f3 = c.font; routed(() => { c.font = f3; c.fillText('Department of Conservation & Recreation', W / 2, 462); });
       tex.needsUpdate = true;
     };
     draw();
-    const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(1.86, 1.06);
+    const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(2.58, 1.48);
     this.parkSign = { x, y, z, ry };
     { const m = new THREE.Mesh(geo, mat); m.position.set(x + Math.sin(ry) * 0.045, y, z + Math.cos(ry) * 0.045); m.rotation.y = ry; this.group.add(m); }   // (the back is the noticeboard: noticeboard.js)
   }

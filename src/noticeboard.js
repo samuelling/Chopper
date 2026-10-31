@@ -5,7 +5,7 @@
 // data center's water.  Nothing opens: you walk up to it and read it.  It is redrawn when what is on it changes.
 import * as THREE from 'three';
 
-const W = 2048, H = 1168;
+const W = 2048, H = 1175;
 const PAPER = ['#f6f1e4', '#fbf6df', '#f2efe8', '#fff9e8'], PINS = ['#c8352b', '#2f6fb3', '#e0b12c', '#3c8a4a', '#d9572b'];
 
 export class NoticeBoard {
@@ -14,7 +14,7 @@ export class NoticeBoard {
     this.at = at; this.sig = ''; this.imgs = new Map(); this.t = 0; this.seenIds = new Set();
     this.cv = document.createElement('canvas'); this.cv.width = W; this.cv.height = H;
     this.tex = new THREE.CanvasTexture(this.cv); this.tex.colorSpace = THREE.SRGBColorSpace; this.tex.anisotropy = 8;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.86, 1.06), new THREE.MeshToonMaterial({ map: this.tex, gradientMap }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.58, 1.48), new THREE.MeshToonMaterial({ map: this.tex, gradientMap }));
     const ry = at.ry || 0; m.position.set(at.x - Math.sin(ry) * 0.046, at.y, at.z - Math.cos(ry) * 0.046); m.rotation.y = ry + Math.PI; m.frustumCulled = false; scene.add(m); this.mesh = m;
     this._draw([]);
   }
@@ -44,10 +44,10 @@ export class NoticeBoard {
     c.save(); c.strokeStyle = 'rgba(30,18,8,.5)'; c.lineWidth = 10; c.strokeRect(65, 65, W - 130, H - 130); c.restore();
     if (!items.length) { this._paper(c, { id: 'empty', kind: 'note', title: 'Ashland State Park', body: 'Notices and lost & found.' }, W / 2 - 260, H / 2 - 160, 520, 320, -0.02, 0); this.tex.needsUpdate = true; return; }
     // slots: two rows of four, each paper tilted a little and pinned at the top
-    const cols = 4, rows = items.length > 4 ? 2 : 1, mx = 110, my = 100, cw = (W - 2 * mx) / cols, ch = (H - 2 * my) / rows;
+    const cols = 4, rows = items.length > 4 ? 2 : 1, mx = 190, my = 150, cw = (W - 2 * mx) / cols, ch = (H - 2 * my) / rows;
     items.forEach((it, k) => {
       const col = k % cols, row = (k / cols) | 0, h = ((String(it.id || '').length * 37 + k * 11) % 100) / 100;
-      const w = it.kind === 'photo' ? 330 : 400, hh = it.kind === 'photo' ? 400 : 420;
+      const w = it.kind === 'photo' ? 290 : 350, hh = it.kind === 'photo' ? 352 : 372;
       const x = mx + col * cw + (cw - w) / 2 + (h - 0.5) * 30, y = my + row * ch + (ch - hh) / 2 + (h - 0.5) * 24, rot = (h - 0.5) * 0.09;
       this._paper(c, it, x, y, w, hh, rot, k);
     });
@@ -62,15 +62,15 @@ export class NoticeBoard {
     if (it.kind === 'photo') {
       const im = this._img(it.src); c.fillStyle = '#2a2622'; c.fillRect(22, 22, w - 44, w - 44);
       if (im.complete && im.naturalWidth) { const s = Math.max((w - 44) / im.naturalWidth, (w - 44) / im.naturalHeight), iw = im.naturalWidth * s, ih = im.naturalHeight * s; c.save(); c.beginPath(); c.rect(22, 22, w - 44, w - 44); c.clip(); c.drawImage(im, 22 + (w - 44 - iw) / 2, 22 + (w - 44 - ih) / 2, iw, ih); c.restore(); }
-      c.fillStyle = '#3a3228'; c.font = `38px ${HAND}`; c.textAlign = 'center'; this._wrap(c, it.title, w / 2, w + 20, w - 30, 40, 2);
+      c.fillStyle = '#3a3228'; c.font = `33px ${HAND}`; c.textAlign = 'center'; this._wrap(c, it.title, w / 2, w + 14, w - 26, 35, 2);
     } else {
       c.textAlign = 'left';
-      if (it.head) { c.fillStyle = it.headColor || '#7a1f16'; c.fillRect(0, 36, w, 62); c.fillStyle = '#fff'; c.font = `700 36px ${FONT}`; c.fillText(it.head, 22, 80); }   // (below the pin)
+      if (it.head) { c.fillStyle = it.headColor || '#7a1f16'; c.fillRect(0, 36, w, 62); c.fillStyle = '#fff'; c.font = `700 32px ${FONT}`; c.fillText(it.head, 20, 78); }   // (below the pin)
       const top = it.head ? 146 : 84;
-      c.fillStyle = '#231a12'; c.font = it.hand ? `40px ${HAND}` : `700 36px ${FONT}`;
-      const ty = this._wrap(c, it.title, 24, top, w - 48, it.hand ? 44 : 42, 3);
-      c.fillStyle = '#3d342b'; c.font = it.hand ? `33px ${HAND}` : `29px ${FONT}`;
-      this._wrap(c, it.body || '', 24, ty + 14, w - 48, it.hand ? 38 : 36, it.head ? 5 : 7);
+      c.fillStyle = '#231a12'; c.font = it.hand ? `36px ${HAND}` : `700 31px ${FONT}`;
+      const ty = this._wrap(c, it.title, 22, top, w - 44, it.hand ? 40 : 37, 3);
+      c.fillStyle = '#3d342b'; c.font = it.hand ? `29px ${HAND}` : `25px ${FONT}`;
+      this._wrap(c, it.body || '', 22, ty + 12, w - 44, it.hand ? 34 : 31, it.head ? 6 : 7);
     }
     // the pin
     c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.arc(w / 2 + 6, 24, 15, 0, 7); c.fill();
