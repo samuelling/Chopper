@@ -646,14 +646,17 @@ async function boot() {
     }
     const go = () => {
       card.classList.add('hidden');
-      if (spawnFromDrone && !player.boat && !player.onIce) { const sp = flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.05); } }
+      // the very first season comes down at the park's way in (by the lot, facing the sign); later ones wherever the drone is
+      const firstTime = RUN.n === 0 && !RUN.s.settled;
+      if (spawnFromDrone && !player.boat && !player.onIce) { const sp = firstTime ? SPAWN : flyover.landingSpot(); if (sp) { player.teleport(sp.x, sp.z, sp.yaw, -0.03); } }
+      const far = Math.hypot(camera.position.x - player.pos.x, camera.position.y - player.pos.y, camera.position.z - player.pos.z);   // from the drone down to you
       flyover.glideTo(() => {
         audio.init(); if (!started) settleIn(); started = true; autoCard = false;
         if (needKnob()) { ui.els.hud.classList.add('on'); askKnob(intoPlay); return; }
         if (MOBILE) { player.softLock = true; player.locked = true; ui.els.hud.classList.add('on'); touch.show(); }
         else if (padLed()) { softPlay(); tut.start(); }
         else { ui.els.hud.classList.add('on'); tut.start(); }   // the browser needs one click to capture the mouse: a soft prompt, not the pause menu
-      });
+      }, Math.min(7, Math.max(2.8, far / 55)));   // a longer glide when it has further to come
     };
     setTimeout(() => {
       if (tapToStep && !(audio.ctx && audio.ctx.state === 'running')) { stepIn = go; document.getElementById('sctap').hidden = false; }

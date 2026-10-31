@@ -9,13 +9,13 @@ const W = 2048, H = 1168;
 const PAPER = ['#f6f1e4', '#fbf6df', '#f2efe8', '#fff9e8'], PINS = ['#c8352b', '#2f6fb3', '#e0b12c', '#3c8a4a', '#d9572b'];
 
 export class NoticeBoard {
-  /** at: the sign's centre {x, y, z}; the board is its back face (facing -z); gradientMap: the toon shading */
+  /** at: the sign's centre {x, y, z, ry} (ry: which way its front faces); the board is its back face; gradientMap: the toon shading */
   constructor(scene, at, gradientMap) {
     this.at = at; this.sig = ''; this.imgs = new Map(); this.t = 0; this.seenIds = new Set();
     this.cv = document.createElement('canvas'); this.cv.width = W; this.cv.height = H;
     this.tex = new THREE.CanvasTexture(this.cv); this.tex.colorSpace = THREE.SRGBColorSpace; this.tex.anisotropy = 8;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.86, 1.06), new THREE.MeshToonMaterial({ map: this.tex, gradientMap }));
-    m.position.set(at.x, at.y, at.z - 0.046); m.rotation.y = Math.PI; m.frustumCulled = false; scene.add(m); this.mesh = m;
+    const ry = at.ry || 0; m.position.set(at.x - Math.sin(ry) * 0.046, at.y, at.z - Math.cos(ry) * 0.046); m.rotation.y = ry + Math.PI; m.frustumCulled = false; scene.add(m); this.mesh = m;
     this._draw([]);
   }
   /** each frame (cheap): every couple of seconds, gather what should be pinned; redraw if it changed */

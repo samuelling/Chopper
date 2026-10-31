@@ -359,13 +359,14 @@ export class Landmarks {
     }
     // trailhead signboard
     {
+      // it faces the parking lot, the way you come in: the park's name toward the lot, its noticeboard toward the beach
       const [tx, tz] = at(14, -22);
-      const ty = groundY(tx, tz);
-      this._box(b, tx - 0.8, ty - 0.1, tz, 0.14, 2.1, 0.14, '#5b4430');
-      this._box(b, tx + 0.8, ty - 0.1, tz, 0.14, 2.1, 0.14, '#5b4430');
-      this._box(b, tx, ty + 1.0, tz, 1.9, 1.1, 0.08, '#4a3020');
-      this._box(b, tx, ty + 2.05, tz, 2.1, 0.12, 0.2, '#5b4430');
-      this._parkSign(tx, ty + 1.0 + 0.55, tz);
+      const ty = groundY(tx, tz), ry = Math.atan2(LOT.x - tx, LOT.z - tz), cx = Math.cos(ry), sx = Math.sin(ry);
+      const P = (lx) => [tx + lx * cx, tz - lx * sx];   // a point along the board's width
+      for (const lx of [-0.8, 0.8]) { const [px, pz] = P(lx); this._box(b, px, ty - 0.1, pz, 0.14, 2.1, 0.14, '#5b4430', { ry }); }
+      this._box(b, tx, ty + 1.0, tz, 1.9, 1.1, 0.08, '#4a3020', { ry });
+      this._box(b, tx, ty + 2.05, tz, 2.1, 0.12, 0.2, '#5b4430', { ry });
+      this._parkSign(tx, ty + 1.0 + 0.55, tz, ry);
     }
     this._emit(b);
 
@@ -462,7 +463,7 @@ export class Landmarks {
 
   /** the park's sign on the trailhead board, its front: an off-white face in a brown wooden frame, brown letters in Helvetica (or Arial),
    *  the way the Commonwealth's park signs look. */
-  _parkSign(x, y, z) {
+  _parkSign(x, y, z, ry = 0) {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 592;
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     const draw = () => {
@@ -486,8 +487,8 @@ export class Landmarks {
     };
     draw();
     const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: this.fill.gradientMap }), geo = new THREE.PlaneGeometry(1.86, 1.06);
-    this.parkSign = { x, y, z };
-    { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z + 0.045); this.group.add(m); }   // (the back is the noticeboard: noticeboard.js)
+    this.parkSign = { x, y, z, ry };
+    { const m = new THREE.Mesh(geo, mat); m.position.set(x + Math.sin(ry) * 0.045, y, z + Math.cos(ry) * 0.045); m.rotation.y = ry; this.group.add(m); }   // (the back is the noticeboard: noticeboard.js)
   }
   update(dt, player) {
     const t = shared.time.value;

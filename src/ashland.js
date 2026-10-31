@@ -202,9 +202,11 @@ export const WRECK = (() => {
   return { x: best.x, z };
 })();
 
-// where the player starts: on the beach, a few steps up the sand from the water, looking out over the reservoir
-// (8 m inland of the beach's middle, 5 m along the shore from it, clear of the lifeguard chair; the park sign is behind you)
+// where a new game starts: at the park's way in, between the parking lot and the park sign, facing the sign (and the
+// beach and the water beyond it), as if you had just parked and walked over.  The sign stands 14 m up from the beach's
+// middle and 22 m along the shore (landmarks.js), turned to face the lot.
 export const SPAWN = (() => {
-  const u = 8, v = -5, x = BEACH.x + BEACH.ex * u - BEACH.ez * v, z = BEACH.z + BEACH.ez * u + BEACH.ex * v;
-  return { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, yaw: Math.atan2(BEACH.ex, BEACH.ez) };   // facing out, away from inland
+  const sx = BEACH.x + BEACH.ex * 14 + BEACH.ez * 22, sz = BEACH.z + BEACH.ez * 14 - BEACH.ex * 22;
+  const dx = LOT.x - sx, dz = LOT.z - sz, d = Math.hypot(dx, dz) || 1, k = 7.5 / d;
+  return { x: Math.round((sx + dx * k) * 10) / 10, z: Math.round((sz + dz * k) * 10) / 10, yaw: Math.atan2(dx, dz) };   // 7.5 m out toward the lot, looking back at the sign
 })();
