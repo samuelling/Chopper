@@ -33,6 +33,12 @@ jobs:
           ATID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           case "$AID" in ?*@?*.?*) echo "APPLE_ID looks like an email";; *) echo "APPLE_ID does NOT look like an email (${#AID} characters)";; esac
+          case "$AID" in *[[:space:]]*) echo "APPLE_ID contains a space or line break";; esac
+          echo "APPLE_ID domain: @${AID##*@}"
+          if [ -n "$AID" ] && [ -n "$ASP" ] && [ -n "$ATID" ]; then
+            if xcrun notarytool history --apple-id "$AID" --password "$ASP" --team-id "$ATID" >/dev/null 2>"$RUNNER_TEMP/n.err"; then echo "notary sign-in: OK"; else echo "notary sign-in: FAILED: $(head -c 300 "$RUNNER_TEMP/n.err" | tr '\n' ' ')"; fi
+            rm -f "$RUNNER_TEMP/n.err"
+          fi
           if printf %s "$ASP" | grep -Eq '^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$'; then echo "APPLE_APP_SPECIFIC_PASSWORD has the xxxx-xxxx-xxxx-xxxx shape"; else echo "APPLE_APP_SPECIFIC_PASSWORD does NOT have the xxxx-xxxx-xxxx-xxxx shape (${#ASP} characters)"; fi
           if printf %s "$ATID" | grep -Eq '^[A-Z0-9]{10}$'; then echo "APPLE_TEAM_ID is 10 letters and digits"; else echo "APPLE_TEAM_ID is NOT 10 letters and digits (${#ATID} characters)"; fi
           if [ -z "$P12" ]; then echo "no certificate secret"; exit 0; fi
