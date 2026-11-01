@@ -28,7 +28,13 @@ jobs:
         env:
           P12: ${{ secrets.MAC_CERT_P12_BASE64 }}
           PW: ${{ secrets.MAC_CERT_PASSWORD }}
+          AID: ${{ secrets.APPLE_ID }}
+          ASP: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          ATID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          case "$AID" in ?*@?*.?*) echo "APPLE_ID looks like an email";; *) echo "APPLE_ID does NOT look like an email (${#AID} characters)";; esac
+          if printf %s "$ASP" | grep -Eq '^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$'; then echo "APPLE_APP_SPECIFIC_PASSWORD has the xxxx-xxxx-xxxx-xxxx shape"; else echo "APPLE_APP_SPECIFIC_PASSWORD does NOT have the xxxx-xxxx-xxxx-xxxx shape (${#ASP} characters)"; fi
+          if printf %s "$ATID" | grep -Eq '^[A-Z0-9]{10}$'; then echo "APPLE_TEAM_ID is 10 letters and digits"; else echo "APPLE_TEAM_ID is NOT 10 letters and digits (${#ATID} characters)"; fi
           if [ -z "$P12" ]; then echo "no certificate secret"; exit 0; fi
           echo "certificate text: ${#P12} characters; password: ${#PW} characters"
           case "$PW" in *[[:space:]]*) echo "the password contains a space or line break";; esac
