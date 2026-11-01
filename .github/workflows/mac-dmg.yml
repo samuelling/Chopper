@@ -1,0 +1,70 @@
+# Builds Ashland for the Mac as a universal (Apple silicon + Intel) .dmg on GitHub's macOS runners, and publishes it as
+# a release on this repo, so it can be downloaded at a stable address:
+#   https://github.com/samuelling/chopper/releases/latest/download/Ashland-mac.dmg
+# Run it from the Actions tab (Mac app (DMG) > Run workflow), or push a tag like v0.9.1.
+#
+# Signing: with no secrets set, the app gets an ad-hoc signature. It opens, but the first time macOS says it cannot
+# verify the developer (System Settings > Privacy & Security > Open Anyway).  Add these repository secrets and the same
+# workflow signs it with your Developer ID and notarizes it, so it opens with no warning:
+#   MAC_CERT_P12_BASE64   your "Developer ID Application" certificate exported as .p12, base64-encoded
+#   MAC_CERT_PASSWORD     the password you gave that .p12
+#   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   for Apple's notary service
+name: Mac app (DMG)
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  dmg:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the game and the app
+        working-directory: packaging/electron
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          npm ci
+          if [ -n "$CSC_LINK" ]; then
+            echo "Signing with the Developer ID certificate and notarizing."
+            npm run dist:mac
+          else
+            echo "No certificate in the secrets: ad-hoc signature, not notarized."
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            npm run prebuild-game
+            npx electron-builder --mac dmg --universal -c.mac.identity=- -c.mac.notarize=false -c.mac.hardenedRuntime=false
+          fi
+          ls -la dist
+      - name: Check the app
+        working-directory: packaging/electron
+        run: |
+          app=$(ls -d dist/mac-universal/*.app | head -1)
+          lipo -info "$app/Contents/MacOS/Ashland"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv "$app" 2>&1 | grep -E "Authority|Signature|TeamIdentifier" || true
+          hdiutil imageinfo dist/*.dmg | grep -E "Format:|Checksum Type" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ashland-mac
+          path: packaging/electron/dist/*.dmg
+      - name: Publish as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -p "require('./packaging/electron/package.json').version")
+          TAG="mac-v$V"
+          cp "$(ls packaging/electron/dist/*.dmg | head -1)" Ashland-mac.dmg
+          NOTES="Ashland for the Mac: one universal app for Apple silicon and Intel, macOS 13 or later. Open the .dmg and drag Ashland to Applications."
+          if [ -z "${{ secrets.MAC_CERT_P12_BASE64 }}" ]; then NOTES="$NOTES The first time, macOS says it cannot verify the developer: open System Settings, Privacy & Security, and click Open Anyway."; fi
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Ashland $V for Mac" --notes "$NOTES" --latest
+          gh release upload "$TAG" Ashland-mac.dmg --clobber
