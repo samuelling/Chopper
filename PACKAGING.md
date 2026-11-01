@@ -1,6 +1,6 @@
 # Packaging Ashland (Mac, Windows, iPad), free
 
-Not shipped yet. This is what is in place, and the steps for when it is time.
+The Mac app is out as a .dmg (built on GitHub, below). The rest is what is in place, and the steps for when it is time.
 
 ## What is ready now
 
@@ -48,6 +48,20 @@ errors.
     npm run dist:win     # NSIS installer, on Windows (or a Windows CI runner)
 
 The installer is about 100 MB, mostly Chromium. The game itself is 4 MB.
+
+**The Mac .dmg, built on GitHub (no Mac needed).** `.github/workflows/mac-dmg.yml` builds the universal app on
+GitHub's macOS runners (free for this public repo) and publishes it as a release, at a stable address:
+`https://github.com/samuelling/chopper/releases/latest/download/Ashland-mac.dmg`. Run it from the Actions tab
+(**Mac app (DMG)**, **Run workflow**) or push a tag like `v0.9.1`; bump `version` in `packaging/electron/package.json`
+for a new release (the same version re-uploads over its release). With no secrets the app is ad-hoc signed: it opens,
+but the first time macOS says it cannot verify the developer (System Settings, Privacy & Security, Open Anyway). With
+the secrets below it is signed with your Developer ID and notarized, and opens with no warning:
+
+| Repository secret | What |
+| --- | --- |
+| `MAC_CERT_P12_BASE64` | your Developer ID Application certificate, exported from Keychain Access as .p12, then `base64 -i cert.p12 \| pbcopy` |
+| `MAC_CERT_PASSWORD` | the password you gave the .p12 |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | for Apple's notary service (as below) |
 
 **Signing (Mac).** You have an Apple Developer membership, so the Mac build can be signed and notarized and open with no
 warning. The config is in place: hardened runtime, the entitlements Electron needs (`build/entitlements.mac.plist`),

@@ -10,7 +10,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 
 ## Packaging (Mac, Windows, iPad)
 
-Not shipped yet, but prepared: the game is self-contained (no CDN), `npm run build` makes a clean `dist/`, it installs to an iPad home screen and plays offline, an Electron wrapper for Mac and Windows (set up for Developer ID signing and notarization) is in `packaging/electron/`, and an iPad Xcode project (Capacitor) is in `packaging/ipad/`. See [PACKAGING.md](PACKAGING.md) for the plan, signing and where to give it away, and [THIRD_PARTY.md](THIRD_PARTY.md) for licences.
+**Mac:** a universal app (Apple silicon and Intel, macOS 13+) is out as a .dmg: [Ashland-mac.dmg](https://github.com/samuelling/chopper/releases/latest/download/Ashland-mac.dmg), built on GitHub's Mac runners by `.github/workflows/mac-dmg.yml` (ad-hoc signed for now: the first launch needs System Settings, Privacy & Security, Open Anyway). The rest is prepared: the game is self-contained (no CDN), `npm run build` makes a clean `dist/`, it installs to an iPad home screen and plays offline, an Electron wrapper for Mac and Windows (set up for Developer ID signing and notarization) is in `packaging/electron/`, and an iPad Xcode project (Capacitor) is in `packaging/ipad/`. See [PACKAGING.md](PACKAGING.md) for the plan, signing and where to give it away, and [THIRD_PARTY.md](THIRD_PARTY.md) for licences.
 
 ## Controls
 
