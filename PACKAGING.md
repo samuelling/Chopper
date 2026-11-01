@@ -53,7 +53,7 @@ The installer is about 100 MB, mostly Chromium. The game itself is 4 MB.
 GitHub's macOS runners (free for this public repo) and publishes it as a release, at a stable address:
 `https://github.com/samuelling/chopper/releases/latest/download/Ashland-mac.dmg`. Run it from the Actions tab
 (**Mac app (DMG)**, **Run workflow**) or push a tag like `v0.9.1`; bump `version` in `packaging/electron/package.json`
-for a new release (the same version re-uploads over its release). With no secrets the app is ad-hoc signed: it opens,
+for a new release (the same version re-uploads over its release). The repo's secrets are set (since 2026-11-01), so it is signed with Sam's Developer ID (team Y4HDFDP479) and notarized; the notary account is the Apple ID that owns the app-specific password, samling@bu.edu. A first step checks the secrets (sizes and yes/no only) and tests the notary sign-in, so a wrong one fails within a minute. Without secrets the app would be ad-hoc signed: it opens,
 but the first time macOS says it cannot verify the developer (System Settings, Privacy & Security, Open Anyway). With
 the secrets below it is signed with your Developer ID and notarized, and opens with no warning:
 
