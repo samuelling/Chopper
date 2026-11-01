@@ -68,3 +68,4 @@ jobs:
           if [ -z "${{ secrets.MAC_CERT_P12_BASE64 }}" ]; then NOTES="$NOTES The first time, macOS says it cannot verify the developer: open System Settings, Privacy & Security, and click Open Anyway."; fi
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Ashland $V for Mac" --notes "$NOTES" --latest
           gh release upload "$TAG" Ashland-mac.dmg --clobber
+          gh release edit "$TAG" --notes "$NOTES"   # (so a signed rebuild drops the Open Anyway note)
