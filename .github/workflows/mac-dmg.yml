@@ -24,6 +24,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check the signing secrets (prints sizes and yes/no only, never values)
+        env:
+          P12: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          PW: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          if [ -z "$P12" ]; then echo "no certificate secret"; exit 0; fi
+          echo "certificate text: ${#P12} characters; password: ${#PW} characters"
+          case "$PW" in *[[:space:]]*) echo "the password contains a space or line break";; esac
+          if printf %s "$P12" | base64 -D > "$RUNNER_TEMP/c.p12" 2>/dev/null && [ -s "$RUNNER_TEMP/c.p12" ]; then echo "decodes to $(wc -c < "$RUNNER_TEMP/c.p12") bytes"; else echo "the certificate text does not decode as base64"; fi
+          OSSL=$(ls /opt/homebrew/opt/openssl@3/bin/openssl /usr/local/opt/openssl@3/bin/openssl 2>/dev/null | head -1); OSSL=${OSSL:-openssl}
+          if "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin env:PW 2>/dev/null; then echo "the password opens it"; else echo "the password does NOT open it"; fi
+          if "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin pass: 2>/dev/null; then echo "it opens with an EMPTY password"; fi
+          "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -passin env:PW 2>/dev/null | grep -E "^subject|friendlyName" | sed 's/^/  /' || true
+          rm -f "$RUNNER_TEMP/c.p12"
       - name: Build the game and the app
         working-directory: packaging/electron
         env:
