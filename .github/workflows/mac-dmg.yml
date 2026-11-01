@@ -40,7 +40,7 @@ jobs:
           case "$PW" in *[[:space:]]*) echo "the password contains a space or line break";; esac
           if printf %s "$P12" | base64 -D > "$RUNNER_TEMP/c.p12" 2>/dev/null && [ -s "$RUNNER_TEMP/c.p12" ]; then echo "decodes to $(wc -c < "$RUNNER_TEMP/c.p12") bytes"; else echo "the certificate text does not decode as base64"; fi
           OSSL=$(ls /opt/homebrew/opt/openssl@3/bin/openssl /usr/local/opt/openssl@3/bin/openssl 2>/dev/null | head -1); OSSL=${OSSL:-openssl}
-          if "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin env:PW 2>/dev/null; then echo "the password opens it"; else echo "the password does NOT open it"; fi
+          if "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin env:PW 2>/dev/null || "$OSSL" pkcs12 -legacy -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin env:PW 2>/dev/null; then echo "the password opens it"; else echo "the password does NOT open it"; fi
           if "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -noout -passin pass: 2>/dev/null; then echo "it opens with an EMPTY password"; fi
           "$OSSL" pkcs12 -in "$RUNNER_TEMP/c.p12" -nokeys -passin env:PW 2>/dev/null | grep -E "^subject|friendlyName" | sed 's/^/  /' || true
           rm -f "$RUNNER_TEMP/c.p12"
